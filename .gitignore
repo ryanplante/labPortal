@@ -1,0 +1,59 @@
+# Ignore node_modules directory
+node_modules/
+
+# Ignore macOS system files
+.DS_Store
+
+# Ignore log files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Ignore environment variable files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Ignore build output
+build/
+dist/
+tmp/
+temp/
+
+# Ignore Expo specific files
+.expo/
+.expo-shared/
+
+# Ignore React Native specific files
+android/.gradle/
+android/app/build/
+ios/Pods/
+ios/build/
+ios/DerivedData/
+
+# Ignore metro and watchman config
+.metro/
+.watchmanconfig
+
+# Ignore miscellaneous files
+*.log
+*.swp
+*.lock
+*.lockfile
+*.tmp
+*.temp
+*.cache
+
+# Ignore the main project node_modules if the project is in a subdirectory
+**/node_modules/
+**/package_lock.json
+
+# Ignore Visual Studio appsettings files
+appsettings.json
+appsettings.*.json
+
+# Explicitly ignore appsettings.json in all subdirectories
+**/appsettings.json
+**/appsettings.*.json
