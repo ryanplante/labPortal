@@ -57,3 +57,7 @@ appsettings.*.json
 # Explicitly ignore appsettings.json in all subdirectories
 **/appsettings.json
 **/appsettings.*.json
+
+# Ignore bin and obj directories in any of the subdirectories
+**/bin/
+**/obj/
