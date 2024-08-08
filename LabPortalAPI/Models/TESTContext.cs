@@ -31,6 +31,7 @@ namespace LabPortal.Models
         public virtual DbSet<Schedule> Schedules { get; set; } = null!;
         public virtual DbSet<ScheduleTypeLookup> ScheduleTypeLookups { get; set; } = null!;
         public virtual DbSet<User> Users { get; set; } = null!;
+        public virtual DbSet<UserToken> UserTokens { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -362,8 +363,6 @@ namespace LabPortal.Models
                     .HasMaxLength(32)
                     .HasColumnName("fName");
 
-                entity.Property(e => e.IsBanned).HasColumnName("isBanned");
-
                 entity.Property(e => e.IsTeacher).HasColumnName("isTeacher");
 
                 entity.Property(e => e.LName)
@@ -398,6 +397,23 @@ namespace LabPortal.Models
                     .WithMany(p => p.Users)
                     .HasForeignKey(d => d.UserDept)
                     .HasConstraintName("FK__Users__userDept__534D60F1");
+            });
+
+            modelBuilder.Entity<UserToken>(entity =>
+            {
+                entity.HasKey(e => e.TokenId)
+                    .HasName("PK__UserToke__658FEEEACD69E905");
+
+                entity.Property(e => e.TokenId).ValueGeneratedNever();
+
+                entity.Property(e => e.Expiration).HasColumnType("datetime");
+
+                entity.Property(e => e.FkUserId).HasColumnName("FK_UserID");
+
+                entity.HasOne(d => d.FkUser)
+                    .WithMany(p => p.UserTokens)
+                    .HasForeignKey(d => d.FkUserId)
+                    .HasConstraintName("FK__UserToken__FK_Us__160F4887");
             });
 
             OnModelCreatingPartial(modelBuilder);

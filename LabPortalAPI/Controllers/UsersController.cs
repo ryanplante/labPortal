@@ -6,6 +6,9 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LabPortal.Models;
+using System.Text;
+using System.Security.Cryptography;
+using LabPortal.Models.Dto;
 
 namespace LabPortal.Controllers
 {
@@ -25,13 +28,26 @@ namespace LabPortal.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<IEnumerable<User>>> GetUsers()
+        public async Task<ActionResult<IEnumerable<UserDto>>> GetUsers()
         {
-          if (_context.Users == null)
-          {
-              return NotFound();
-          }
-            return await _context.Users.ToListAsync();
+            if (_context.Users == null)
+            {
+                return NotFound();
+            }
+
+            var users = await _context.Users.ToListAsync();
+            var userDtos = users.Select(user => new UserDto
+            {
+                UserId = user.UserId,
+                FName = user.FName,
+                LName = user.LName,
+                UserDept = user.UserDept,
+                PrivLvl = user.PrivLvl,
+                Position = user.Position,
+                IsTeacher = user.IsTeacher
+            }).ToList();
+
+            return Ok(userDtos);
         }
 
         // GET: api/Users/5
@@ -39,20 +55,31 @@ namespace LabPortal.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<User>> GetUser(int id)
+        public async Task<ActionResult<UserDto>> GetUser(int id)
         {
-          if (_context.Users == null)
-          {
-              return NotFound();
-          }
-            var user = await _context.Users.FindAsync(id);
+            if (_context.Users == null)
+            {
+                return NotFound();
+            }
 
+            var user = await _context.Users.FindAsync(id);
             if (user == null)
             {
                 return NotFound();
             }
 
-            return user;
+            var userDto = new UserDto
+            {
+                UserId = user.UserId,
+                FName = user.FName,
+                LName = user.LName,
+                UserDept = user.UserDept,
+                PrivLvl = user.PrivLvl,
+                Position = user.Position,
+                IsTeacher = user.IsTeacher
+            };
+
+            return Ok(userDto);
         }
 
         // PUT: api/Users/5
@@ -60,12 +87,25 @@ namespace LabPortal.Controllers
         [HttpPut("{id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> PutUser(int id, User user)
+        public async Task<IActionResult> PutUser(int id, UserDto userDto)
         {
-            if (id != user.UserId)
+            if (id != userDto.UserId)
             {
                 return BadRequest();
             }
+
+            var user = await _context.Users.FindAsync(id);
+            if (user == null)
+            {
+                return NotFound();
+            }
+
+            user.FName = userDto.FName;
+            user.LName = userDto.LName;
+            user.UserDept = userDto.UserDept;
+            user.PrivLvl = userDto.PrivLvl;
+            user.Position = userDto.Position;
+            user.IsTeacher = userDto.IsTeacher;
 
             _context.Entry(user).State = EntityState.Modified;
 
@@ -93,12 +133,23 @@ namespace LabPortal.Controllers
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<ActionResult<User>> PostUser(User user)
+        public async Task<ActionResult<UserDto>> PostUser(UserDto userDto)
         {
-          if (_context.Users == null)
-          {
-              return Problem("Entity set 'TESTContext.Users'  is null.");
-          }
+            if (_context.Users == null)
+            {
+                return Problem("Entity set 'TESTContext.Users' is null.");
+            }
+
+            var user = new User
+            {
+                FName = userDto.FName,
+                LName = userDto.LName,
+                UserDept = userDto.UserDept,
+                PrivLvl = userDto.PrivLvl,
+                Position = userDto.Position,
+                IsTeacher = userDto.IsTeacher
+            };
+
             _context.Users.Add(user);
             try
             {
@@ -116,7 +167,9 @@ namespace LabPortal.Controllers
                 }
             }
 
-            return CreatedAtAction("GetUser", new { id = user.UserId }, user);
+            userDto.UserId = user.UserId;
+
+            return CreatedAtAction("GetUser", new { id = user.UserId }, userDto);
         }
 
         // DELETE: api/Users/5
@@ -129,6 +182,7 @@ namespace LabPortal.Controllers
             {
                 return NotFound();
             }
+
             var user = await _context.Users.FindAsync(id);
             if (user == null)
             {
@@ -144,6 +198,89 @@ namespace LabPortal.Controllers
         private bool UserExists(int id)
         {
             return (_context.Users?.Any(e => e.UserId == id)).GetValueOrDefault();
+        }
+
+        // POST: api/Users/ValidateCredentials
+        [HttpPost("ValidateCredentials")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<ActionResult<string>> ValidateCredentials([FromBody] UserCredentials credentials)
+        {
+            if (_context.Users == null)
+            {
+                return Problem("Entity set 'TESTContext.Users' is null.");
+            }
+
+            var user = await _context.Users.SingleOrDefaultAsync(u => u.UserId == credentials.UserId);
+            if (user == null)
+            {
+                return BadRequest("Invalid user ID.");
+            }
+
+            // Directly compare the provided encrypted password with the stored encrypted password
+            if (credentials.Password == user.Password)
+            {
+                string token = await GenerateToken(user);
+                return Ok(token);
+            }
+            else
+            {
+                return BadRequest("Invalid password.");
+            }
+        }
+
+        private async Task<string> GenerateToken(User user)
+        {
+            var tokenData = Encoding.UTF8.GetBytes($"{user.UserId}:{DateTime.UtcNow}");
+            var token = Convert.ToBase64String(tokenData);
+
+            var userToken = new UserToken
+            {
+                TokenId = Guid.NewGuid(),
+                FkUserId = user.UserId,
+                Token = token,
+                Expiration = DateTime.UtcNow.AddHours(1) // Token expires in 1 hour
+            };
+
+            _context.UserTokens.Add(userToken);
+            await _context.SaveChangesAsync();
+
+            return token;
+        }
+
+        // GET: api/Users/GetUserByToken/{token}
+        [HttpGet("GetUserByToken/{token}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<UserDto>> GetUserByToken(string token)
+        {
+            if (_context.UserTokens == null)
+            {
+                return Problem("Entity set 'TESTContext.UserTokens' is null.");
+            }
+
+            var userToken = await _context.UserTokens
+                .Include(ut => ut.FkUser)
+                .SingleOrDefaultAsync(ut => ut.Token == token && ut.Expiration > DateTime.UtcNow);
+
+            if (userToken == null || userToken.FkUser == null)
+            {
+                return NotFound("Invalid or expired token.");
+            }
+
+            var userDto = new UserDto
+            {
+                UserId = userToken.FkUser.UserId,
+                FName = userToken.FkUser.FName,
+                LName = userToken.FkUser.LName,
+                UserDept = userToken.FkUser.UserDept,
+                PrivLvl = userToken.FkUser.PrivLvl,
+                Position = userToken.FkUser.Position,
+                IsTeacher = userToken.FkUser.IsTeacher
+            };
+
+            return Ok(userDto);
         }
     }
 }

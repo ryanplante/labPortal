@@ -14,6 +14,7 @@ namespace LabPortal.Models
             ItemLogStudents = new HashSet<ItemLog>();
             Logs = new HashSet<Log>();
             Schedules = new HashSet<Schedule>();
+            UserTokens = new HashSet<UserToken>();
         }
 
         public int UserId { get; set; }
@@ -25,7 +26,6 @@ namespace LabPortal.Models
         public int? Position { get; set; }
         public bool? IsTeacher { get; set; }
         public string? UserSalt { get; set; }
-        public bool? IsBanned { get; set; }
 
         public virtual PositionLookup? PositionNavigation { get; set; }
         public virtual PermissionLookup? PrivLvlNavigation { get; set; }
@@ -37,5 +37,6 @@ namespace LabPortal.Models
         public virtual ICollection<ItemLog> ItemLogStudents { get; set; }
         public virtual ICollection<Log> Logs { get; set; }
         public virtual ICollection<Schedule> Schedules { get; set; }
+        public virtual ICollection<UserToken> UserTokens { get; set; }
     }
 }
