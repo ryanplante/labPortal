@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { View, StyleSheet, Image, Text, TouchableOpacity, Animated, Easing } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const ProfileSidebar = ({ visible, onClose }: { visible: boolean; onClose: () => void }) => {
+const MobileProfileSidebar = ({ visible, onClose }: { visible: boolean; onClose: () => void }) => {
   const slideAnim = useRef(new Animated.Value(-300)).current;
 
   const handleLogout = async () => {
@@ -24,7 +24,7 @@ const ProfileSidebar = ({ visible, onClose }: { visible: boolean; onClose: () =>
   return (
     <Animated.View style={[styles.container, { transform: [{ translateX: slideAnim }] }]}>
       <View style={styles.profileContainer}>
-        <Image source={require('../assets/user-icon.png')} style={styles.profileImage} />
+        <Image source={require('../../assets/user-icon.png')} style={styles.profileImage} />
         <Text style={styles.profileName}>[Name]</Text>
       </View>
       <TouchableOpacity style={styles.menuItem}>
@@ -71,4 +71,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ProfileSidebar;
+export default MobileProfileSidebar;

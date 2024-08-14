@@ -13,7 +13,7 @@ const labSchedules = [
       { day: 'Thursday', hours: '12pm-5pm' },
       { day: 'Friday', hours: '9am-5pm' },
     ],
-    imageSrc: require('../../assets/lab-icon.png'),
+    imageSrc: require('../../../assets/lab-icon.png'),
   },
   {
     labName: 'Game Lab',
@@ -25,7 +25,7 @@ const labSchedules = [
       { day: 'Thursday', hours: '12pm-5pm' },
       { day: 'Friday', hours: '9am-5pm' },
     ],
-    imageSrc: require('../../assets/lab-icon.png'),
+    imageSrc: require('../../../assets/lab-icon.png'),
   },
   {
     labName: 'Nursing Lab',
@@ -37,7 +37,7 @@ const labSchedules = [
       { day: 'Thursday', hours: '12pm-5pm' },
       { day: 'Friday', hours: '9am-5pm' },
     ],
-    imageSrc: require('../../assets/lab-icon.png'),
+    imageSrc: require('../../../assets/lab-icon.png'),
   },
   {
     labName: 'AV Lab',
@@ -49,7 +49,7 @@ const labSchedules = [
       { day: 'Thursday', hours: '12pm-5pm' },
       { day: 'Friday', hours: '9am-5pm' },
     ],
-    imageSrc: require('../../assets/lab-icon.png'),
+    imageSrc: require('../../../assets/lab-icon.png'),
   },
 ];
 

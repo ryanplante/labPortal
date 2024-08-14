@@ -1,11 +1,24 @@
 import React from 'react';
+import { browserName, isMobile } from 'react-device-detect';
 import { View, Text, StyleSheet } from 'react-native';
+
+
+
+const testvalue1 = 3
+const testvalue2 = 2
+console.log(testvalue1 > testvalue2 ? "red" : "blue")
+const dynamicStyles = {
+  backgroundColor: testvalue1 > testvalue2 ? "red" : "blue"
+};
+
 
 const AdminView = () => {
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, dynamicStyles]}>
       <Text style={styles.header}>Admin View</Text>
       <Text style={styles.subHeader}>Admin Overview</Text>
+      <Text>isMobile: {isMobile ? "true" : "false"}</Text>
+      <Text>Browser: {browserName}</Text>
     </View>
   );
 };

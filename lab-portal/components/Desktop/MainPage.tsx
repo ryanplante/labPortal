@@ -1,19 +1,13 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, Image } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
-import ProfileSidebar from './Desktop/ProfileSidebar';
-import StudentView from './Desktop/Views/StudentView';
-import MonitorView from './Desktop/Views/MonitorView';
-import TutorView from './Desktop/Views/TutorView';
-import TutorMonitorView from './Desktop/Views/HybridView';
-import DepartmentHeadView from './Desktop/Views/DepartmentHeadView';
-import AdminView from './Desktop/Views/AdminView';
-import MobileStudentView from './Mobile/Views/StudentView';
-import MobileMonitorView from './Mobile/Views/MonitorView';
-import MobileTutorView from './Mobile/Views/TutorView';
-import MobileTutorMonitorView from './Mobile/Views/HybridView';
-import MobileDepartmentHeadView from './Mobile/Views/DepartmentHeadView';
-import MobileAdminView from './Mobile/Views/AdminView';
+import ProfileSidebar from './ProfileSidebar';
+import StudentView from './Views/StudentView';
+import MonitorView from './Views/MonitorView';
+import TutorView from './Views/TutorView';
+import TutorMonitorView from './Views/HybridView';
+import DepartmentHeadView from './Views/DepartmentHeadView';
+import AdminView from './Views/AdminView';
 import { isMobile } from 'react-device-detect';
 
 const MainPage = () => {
@@ -27,9 +21,7 @@ const MainPage = () => {
   const renderView = () => {
     console.log(isMobile)
     console.log(selectedView)
-    if(!isMobile){
-      console.log("is mobile == false (hopefully)")
-      
+   
       switch (selectedView) {
       case 'Student':
         return <StudentView />;
@@ -44,34 +36,12 @@ const MainPage = () => {
       case 'Admin':
       default:
         return <AdminView />;
-    }
-    } else {
-      console.log("isMobile is true (hopefully)")
-      switch (selectedView) {
-        case 'Student':
-          return <MobileStudentView />;
-        case 'Monitor':
-          return <MobileMonitorView />;
-        case 'Tutor':
-          return <MobileTutorView />;
-        case 'Tutor/Monitor':
-          return <MobileTutorMonitorView />;
-        case 'Department Head':
-          return <MobileDepartmentHeadView />;
-        case 'Admin':
-        default:
-          return <MobileAdminView />;
       }
-    }
     
   };
 
-  const responsiveMargins = {
-    marginLeft: isMobile ? 10 : 80,
-  }
-
   return (
-    <View style={[styles.container, responsiveMargins]}>
+    <View style={styles.container}>
       {isProfileSidebarVisible && !isMobile && (
         <ProfileSidebar visible={isProfileSidebarVisible} onClose={toggleProfileSidebar} />
       )}
@@ -89,7 +59,7 @@ const MainPage = () => {
           <Picker.Item label="Admin" value="Admin" />
         </Picker>
         {renderView()}
-        <Image source={require('../assets/tiger-logo.png')} style={styles.tigerLogo} />
+        <Image source={require('../../assets/tiger-logo.png')} style={styles.tigerLogo} />
       </View>
     </View>
   );
@@ -103,7 +73,7 @@ const styles = StyleSheet.create({
   mainContent: {
     flex: 1,
     padding: 20,
-    // marginLeft: 80, // Default margin when sidebar is not visible
+    marginLeft: 80, // Default margin when sidebar is not visible
   },
   picker: {
     height: 50,
