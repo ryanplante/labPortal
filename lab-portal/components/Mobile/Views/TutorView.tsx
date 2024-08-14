@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Picker, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
 
-const TutorView = () => {
+const MobileTutorView = () => {
   const [selectedFilter, setSelectedFilter] = useState('All');
 
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>Welcome, Ryan</Text>
+      <Text style={styles.header}>(Mobile) Welcome, Ryan</Text>
       <Text style={styles.subHeader}>Logs for today</Text>
       <TouchableOpacity style={styles.addButton}>
         <Text style={styles.addButtonText}>Log new student</Text>
@@ -73,4 +74,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default TutorView;
+export default MobileTutorView;

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Picker } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity} from 'react-native';
+import { Picker } from '@react-native-picker/picker';
 import { BarChart } from 'react-native-chart-kit';
 import { Dimensions } from 'react-native';
 

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image } from 'react-native';
 
-const Login = ({ setIsLoggedIn }: { setIsLoggedIn: (value: boolean) => void }) => {
+const MobileLogin = ({ setIsLoggedIn }: { setIsLoggedIn: (value: boolean) => void }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
 
@@ -12,7 +12,7 @@ const Login = ({ setIsLoggedIn }: { setIsLoggedIn: (value: boolean) => void }) =
 
   return (
     <View style={styles.container}>
-      <Image source={require('../assets/neit-logo.png')} style={styles.logo} />
+      <Image source={require('../../assets/neit-logo.png')} style={styles.logo} />
       <TextInput
         style={styles.input}
         placeholder="Username"
@@ -27,7 +27,7 @@ const Login = ({ setIsLoggedIn }: { setIsLoggedIn: (value: boolean) => void }) =
         secureTextEntry
       />
       <TouchableOpacity style={styles.button} onPress={handleLogin}>
-        <Text style={styles.buttonText}>Login</Text>
+        <Text style={styles.buttonText}>Mobile Login</Text>
       </TouchableOpacity>
       <TouchableOpacity>
         <Text style={styles.forgotPassword}>Forgot password?</Text>
@@ -73,4 +73,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default Login;
+export default MobileLogin;
