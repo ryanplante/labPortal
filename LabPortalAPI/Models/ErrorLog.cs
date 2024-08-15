@@ -8,7 +8,7 @@ namespace LabPortal.Models
         public int LogId { get; set; }
         public int? LogType { get; set; }
         public DateTime? Timestamp { get; set; }
-        public string? Descriptionription { get; set; }
+        public string? Description { get; set; }
         public string? Stack { get; set; }
         public string? Source { get; set; }
         public string? ExceptionType { get; set; }

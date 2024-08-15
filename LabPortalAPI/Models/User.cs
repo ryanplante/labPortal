@@ -25,7 +25,7 @@ namespace LabPortal.Models
         public int? PrivLvl { get; set; }
         public int? Position { get; set; }
         public bool? IsTeacher { get; set; }
-        public string? UserSalt { get; set; }
+        public DateTime LastUpdated { get; set; }
 
         public virtual PositionLookup? PositionNavigation { get; set; }
         public virtual PermissionLookup? PrivLvlNavigation { get; set; }

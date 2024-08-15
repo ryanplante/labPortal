@@ -40,9 +40,7 @@ namespace LabPortal.Models
                 entity.HasKey(e => e.LogId)
                     .HasName("PK__AuditLog__7839F62D49B4C980");
 
-                entity.Property(e => e.LogId)
-                    .ValueGeneratedNever()
-                    .HasColumnName("logID");
+                entity.Property(e => e.LogId).HasColumnName("logID");
 
                 entity.Property(e => e.Description)
                     .HasMaxLength(255)
@@ -55,9 +53,7 @@ namespace LabPortal.Models
 
             modelBuilder.Entity<Ban>(entity =>
             {
-                entity.Property(e => e.BanId)
-                    .ValueGeneratedNever()
-                    .HasColumnName("banID");
+                entity.Property(e => e.BanId).HasColumnName("banID");
 
                 entity.Property(e => e.ExpirationDate)
                     .HasColumnType("datetime")
@@ -80,9 +76,7 @@ namespace LabPortal.Models
                 entity.HasKey(e => e.LogId)
                     .HasName("PK__ChatLogs__7839F62DEB098DAD");
 
-                entity.Property(e => e.LogId)
-                    .ValueGeneratedNever()
-                    .HasColumnName("logID");
+                entity.Property(e => e.LogId).HasColumnName("logID");
 
                 entity.Property(e => e.Message)
                     .HasMaxLength(255)
@@ -105,9 +99,7 @@ namespace LabPortal.Models
                 entity.HasKey(e => e.DeptId)
                     .HasName("PK__Departme__BE2D26D6D4B52876");
 
-                entity.Property(e => e.DeptId)
-                    .ValueGeneratedNever()
-                    .HasColumnName("deptID");
+                entity.Property(e => e.DeptId).HasColumnName("deptID");
 
                 entity.Property(e => e.Name)
                     .HasMaxLength(30)
@@ -119,11 +111,9 @@ namespace LabPortal.Models
                 entity.HasKey(e => e.LogId)
                     .HasName("PK__ErrorLog__7839F62D8BADAB2E");
 
-                entity.Property(e => e.LogId)
-                    .ValueGeneratedNever()
-                    .HasColumnName("logID");
+                entity.Property(e => e.LogId).HasColumnName("logID");
 
-                entity.Property(e => e.Descriptionription).HasColumnName("descriptionription");
+                entity.Property(e => e.Description).HasColumnName("description");
 
                 entity.Property(e => e.ExceptionType).HasColumnName("exceptionType");
 
@@ -168,9 +158,7 @@ namespace LabPortal.Models
 
             modelBuilder.Entity<Item>(entity =>
             {
-                entity.Property(e => e.ItemId)
-                    .ValueGeneratedNever()
-                    .HasColumnName("itemID");
+                entity.Property(e => e.ItemId).HasColumnName("itemID");
 
                 entity.Property(e => e.Description)
                     .HasMaxLength(30)
@@ -186,9 +174,7 @@ namespace LabPortal.Models
                 entity.HasKey(e => e.LogId)
                     .HasName("PK__ItemLogs__7839F62D9DBE3424");
 
-                entity.Property(e => e.LogId)
-                    .ValueGeneratedNever()
-                    .HasColumnName("logID");
+                entity.Property(e => e.LogId).HasColumnName("logID");
 
                 entity.Property(e => e.ItemId).HasColumnName("itemID");
 
@@ -224,9 +210,7 @@ namespace LabPortal.Models
 
             modelBuilder.Entity<Lab>(entity =>
             {
-                entity.Property(e => e.LabId)
-                    .ValueGeneratedNever()
-                    .HasColumnName("labID");
+                entity.Property(e => e.LabId).HasColumnName("labID");
 
                 entity.Property(e => e.DeptId).HasColumnName("deptID");
 
@@ -246,9 +230,7 @@ namespace LabPortal.Models
 
             modelBuilder.Entity<Log>(entity =>
             {
-                entity.Property(e => e.LogId)
-                    .ValueGeneratedNever()
-                    .HasColumnName("logID");
+                entity.Property(e => e.LogId).HasColumnName("logID");
 
                 entity.Property(e => e.LabId).HasColumnName("labID");
 
@@ -307,9 +289,7 @@ namespace LabPortal.Models
 
             modelBuilder.Entity<Schedule>(entity =>
             {
-                entity.Property(e => e.ScheduleId)
-                    .ValueGeneratedNever()
-                    .HasColumnName("scheduleID");
+                entity.Property(e => e.ScheduleId).HasColumnName("scheduleID");
 
                 entity.Property(e => e.Location).HasColumnName("location");
 
@@ -369,6 +349,8 @@ namespace LabPortal.Models
                     .HasMaxLength(32)
                     .HasColumnName("lName");
 
+                entity.Property(e => e.LastUpdated).HasColumnName("lastUpdated");
+
                 entity.Property(e => e.Password)
                     .HasMaxLength(255)
                     .HasColumnName("password");
@@ -378,10 +360,6 @@ namespace LabPortal.Models
                 entity.Property(e => e.PrivLvl).HasColumnName("privLvl");
 
                 entity.Property(e => e.UserDept).HasColumnName("userDept");
-
-                entity.Property(e => e.UserSalt)
-                    .HasMaxLength(32)
-                    .HasColumnName("userSalt");
 
                 entity.HasOne(d => d.PositionNavigation)
                     .WithMany(p => p.Users)
