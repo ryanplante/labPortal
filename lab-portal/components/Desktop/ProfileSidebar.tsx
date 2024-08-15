@@ -1,18 +1,27 @@
-import React, { useEffect, useRef } from 'react';
-import { View, StyleSheet, Image, Text, TouchableOpacity, Animated, Easing } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { View, StyleSheet, Image, Text, TouchableOpacity, Animated, Easing, Alert } from 'react-native';
+import { deleteToken, getUserByToken } from '../../services/loginService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const ProfileSidebar = ({ visible, onClose }: { visible: boolean; onClose: () => void }) => {
   const slideAnim = useRef(new Animated.Value(-300)).current;
-
-  const handleLogout = async () => {
-    await AsyncStorage.clear();
-    onClose(); // Close the profile sidebar
-    // Force a reload of the app
-    window.location.reload();
-  };
+  const [userName, setUserName] = useState('[Name]'); // Default value before loading user data
 
   useEffect(() => {
+    const fetchUserData = async () => {
+      const token = await AsyncStorage.getItem('token');
+      if (token) {
+        try {
+          const user = await getUserByToken(token);
+          setUserName(`${user.fName} ${user.lName}`);
+        } catch (error) {
+          Alert.alert('Error', 'Failed to load user data');
+        }
+      }
+    };
+
+    fetchUserData();
+
     Animated.timing(slideAnim, {
       toValue: visible ? 0 : -300,
       duration: 300,
@@ -21,11 +30,19 @@ const ProfileSidebar = ({ visible, onClose }: { visible: boolean; onClose: () =>
     }).start();
   }, [visible]);
 
+  const handleLogout = async () => {
+    await deleteToken();
+
+    onClose(); // Close the profile sidebar
+    // Force a reload of the app
+    window.location.reload();
+  };
+
   return (
     <Animated.View style={[styles.container, { transform: [{ translateX: slideAnim }] }]}>
       <View style={styles.profileContainer}>
         <Image source={require('../../assets/user-icon.png')} style={styles.profileImage} />
-        <Text style={styles.profileName}>[Name]</Text>
+        <Text style={styles.profileName}>{userName}</Text>
       </View>
       <TouchableOpacity style={styles.menuItem}>
         <Text style={styles.menuText}>Change Password</Text>

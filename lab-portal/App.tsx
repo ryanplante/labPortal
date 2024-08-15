@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { ActivityIndicator, View, StyleSheet } from 'react-native';
+import { ActivityIndicator, View, StyleSheet, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import Login from './components/Desktop/Login';
-import MainPage from './components/MainPage';
+import MainPage from './components/Desktop/MainPage';
 import Labs from './components/Desktop/Labs';
 import Reports from './components/Desktop/Reports';
 import Schedule from './components/Desktop/Schedule';
@@ -30,38 +30,42 @@ import MobileAdmin from './components/Mobile/Admin';
 import MobileSidebar from './components/Mobile/Sidebar';
 import MobileProfileSidebar from './components/Mobile/ProfileSidebar';
 import { isMobile } from 'react-device-detect';
+import { getUserByToken } from './services/loginService';
 
 const Stack = createStackNavigator();
 
 const App = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
+  const [user, setUser] = useState(null);
   const [isProfileSidebarVisible, setIsProfileSidebarVisible] = useState(false);
 
   useEffect(() => {
-    const checkLoginStatus = async () => {
-      const loggedIn = await AsyncStorage.getItem('isLoggedIn');
-      setIsLoggedIn(loggedIn === 'true');
+    const validateToken = async () => {
+      const token = await AsyncStorage.getItem('token');
+      if (token) {
+        try {
+          const user = await getUserByToken();
+          setUser(user);
+        } catch (error) {
+          Alert.alert('Error', error.message);
+          await AsyncStorage.removeItem('token');
+          setUser(null);
+        }
+      } else {
+        setUser(null);
+      }
     };
-    checkLoginStatus();
+    validateToken();
   }, []);
-
-  const handleSetLoggedIn = async (value: boolean) => {
-    await AsyncStorage.setItem('isLoggedIn', value.toString());
-    setIsLoggedIn(value);
-  };
 
   const toggleProfileSidebar = () => {
     setIsProfileSidebarVisible(!isProfileSidebarVisible);
   };
 
-  if (isLoggedIn === null) {
-    return <ActivityIndicator size="large" />;
-  }
 
   return (
     <NavigationContainer>
       <View style={styles.container}>
-        {isLoggedIn && (
+        {user && (
           <>
             <Sidebar onProfilePress={toggleProfileSidebar} />
             {isProfileSidebarVisible && (
@@ -71,35 +75,36 @@ const App = () => {
         )}
         <View style={styles.mainContent}>
           <Stack.Navigator screenOptions={{ headerShown: false }}>
-            {!isLoggedIn ? (
-              <Stack.Screen name="Login">
-                {(props) => <Login {...props} setIsLoggedIn={handleSetLoggedIn} />}
-              </Stack.Screen>
+            {user ? (
+              isMobile ? (
+                <>
+                  <Stack.Screen name="Main" component={MobileMainPage} />
+                  <Stack.Screen name="Labs" component={MobileLabs} />
+                  <Stack.Screen name="Reports" component={MobileReports} />
+                  <Stack.Screen name="Schedule" component={MobileSchedule} />
+                  <Stack.Screen name="ManageLabs" component={MobileManageLabs} />
+                  <Stack.Screen name="LabSchedules" component={MobileLabSchedules} />
+                  <Stack.Screen name="Chat" component={MobileChat} />
+                  <Stack.Screen name="ScanItem" component={MobileScanItem} />
+                  <Stack.Screen name="LogHistory" component={MobileLogHistory} />
+                  <Stack.Screen name="Admin" component={MobileAdmin} />
+                </>
+              ) : (
+                <>
+                  <Stack.Screen name="Main" component={MainPage} />
+                  <Stack.Screen name="Labs" component={Labs} />
+                  <Stack.Screen name="Reports" component={Reports} />
+                  <Stack.Screen name="Schedule" component={Schedule} />
+                  <Stack.Screen name="ManageLabs" component={ManageLabs} />
+                  <Stack.Screen name="LabSchedules" component={LabSchedules} />
+                  <Stack.Screen name="Chat" component={Chat} />
+                  <Stack.Screen name="ScanItem" component={ScanItem} />
+                  <Stack.Screen name="LogHistory" component={LogHistory} />
+                  <Stack.Screen name="Admin" component={Admin} />
+                </>
+              )
             ) : (
-              isMobile ? <>
-              <Stack.Screen name="Main" component={MobileMainPage} />
-              <Stack.Screen name="Labs" component={MobileLabs} />
-              <Stack.Screen name="Reports" component={MobileReports} />
-              <Stack.Screen name="Schedule" component={MobileSchedule} />
-              <Stack.Screen name="ManageLabs" component={MobileManageLabs} />
-              <Stack.Screen name="LabSchedules" component={MobileLabSchedules} />
-              <Stack.Screen name="Chat" component={MobileChat} />
-              <Stack.Screen name="ScanItem" component={MobileScanItem} />
-              <Stack.Screen name="LogHistory" component={MobileLogHistory} />
-              <Stack.Screen name="Admin" component={MobileAdmin} />
-            </> :
-              <>
-                <Stack.Screen name="Main" component={MainPage} />
-                <Stack.Screen name="Labs" component={Labs} />
-                <Stack.Screen name="Reports" component={Reports} />
-                <Stack.Screen name="Schedule" component={Schedule} />
-                <Stack.Screen name="ManageLabs" component={ManageLabs} />
-                <Stack.Screen name="LabSchedules" component={LabSchedules} />
-                <Stack.Screen name="Chat" component={Chat} />
-                <Stack.Screen name="ScanItem" component={ScanItem} />
-                <Stack.Screen name="LogHistory" component={LogHistory} />
-                <Stack.Screen name="Admin" component={Admin} />
-              </>
+              <Stack.Screen name="Login" component={Login} />
             )}
           </Stack.Navigator>
         </View>

@@ -1,13 +1,35 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Alert } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useNavigation } from '@react-navigation/native';
+import { fetchLastUpdated, validateCredentials } from '../../services/loginService';
 
-const Login = ({ setIsLoggedIn }: { setIsLoggedIn: (value: boolean) => void }) => {
+const Login = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [errorMessage, setErrorMessage] = useState(''); // State for the error message
+  const navigation = useNavigation();
 
-  const handleLogin = () => {
-    // Implement your login logic here
-    setIsLoggedIn(true);
+  const handleLogin = async () => {
+    try {
+      console.log('Starting login process');
+  
+      const lastUpdated = await fetchLastUpdated(username);
+      console.log('Fetched lastUpdated:', lastUpdated);
+
+      const token = await validateCredentials(username, password, lastUpdated);
+      console.log('Received token:', token);
+      
+      await AsyncStorage.setItem('token', token);
+      console.log('Token stored in AsyncStorage');
+      
+      // Force a reload of the app... can't seem to get navigator to work but this is a workaround ¯\_(ツ)_/¯
+      window.location.reload();
+      console.log('Navigating to Main');
+    } catch (error) {
+      setErrorMessage('Invalid username or password'); // Show the error message
+      console.error('Login error:', error);
+    }
   };
 
   return (
@@ -29,6 +51,9 @@ const Login = ({ setIsLoggedIn }: { setIsLoggedIn: (value: boolean) => void }) =
       <TouchableOpacity style={styles.button} onPress={handleLogin}>
         <Text style={styles.buttonText}>Login</Text>
       </TouchableOpacity>
+      {errorMessage ? (
+        <Text style={styles.errorText}>{errorMessage}</Text>
+      ) : null}
       <TouchableOpacity>
         <Text style={styles.forgotPassword}>Forgot password?</Text>
       </TouchableOpacity>
@@ -66,6 +91,11 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#fff',
     fontSize: 16,
+  },
+  errorText: {
+    color: 'red',
+    marginTop: 10,
+    fontSize: 14,
   },
   forgotPassword: {
     color: '#007bff',

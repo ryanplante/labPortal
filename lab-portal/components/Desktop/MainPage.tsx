@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, Image } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
+import React, { useState, useEffect } from 'react';
+import { View, StyleSheet, Image, Alert, ActivityIndicator } from 'react-native';
 import ProfileSidebar from './ProfileSidebar';
 import StudentView from './Views/StudentView';
 import MonitorView from './Views/MonitorView';
@@ -9,20 +8,55 @@ import TutorMonitorView from './Views/HybridView';
 import DepartmentHeadView from './Views/DepartmentHeadView';
 import AdminView from './Views/AdminView';
 import { isMobile } from 'react-device-detect';
+import { getUserByToken } from '../../services/loginService';
 
 const MainPage = () => {
   const [isProfileSidebarVisible, setIsProfileSidebarVisible] = useState(false);
-  const [selectedView, setSelectedView] = useState('Admin');
+  const [selectedView, setSelectedView] = useState(null); // Initially null, indicating loading state
+  const [privLvl, setPrivLvl] = useState(null);
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const user = await getUserByToken();
+        setPrivLvl(user.privLvl);
+        setSelectedView(getViewByPrivLvl(user.privLvl));
+      } catch (error) {
+        Alert.alert('Error', 'Failed to load user data');
+      }
+    };
+
+    fetchUserData();
+  }, []);
 
   const toggleProfileSidebar = () => {
     setIsProfileSidebarVisible(!isProfileSidebarVisible);
   };
 
+  const getViewByPrivLvl = (privLvl) => {
+    switch (privLvl) {
+      case 0: // Assuming 0 is for Student
+        return 'Student';
+      case 1: // Assuming 1 is for Monitor
+        return 'Monitor';
+      case 2: // Assuming 2 is for Tutor
+        return 'Tutor';
+      case 3: // Assuming 3 is for Tutor/Monitor
+        return 'Tutor/Monitor';
+      case 4: // Assuming 4 is for Department Head
+        return 'Department Head';
+      case 5: // Assuming 5 is for Admin
+      default:
+        return 'Admin';
+    }
+  };
+
   const renderView = () => {
-    console.log(isMobile)
-    console.log(selectedView)
-   
-      switch (selectedView) {
+    if (selectedView === null) {
+      return <ActivityIndicator size="large" color="#0000ff" />;
+    }
+
+    switch (selectedView) {
       case 'Student':
         return <StudentView />;
       case 'Monitor':
@@ -36,8 +70,7 @@ const MainPage = () => {
       case 'Admin':
       default:
         return <AdminView />;
-      }
-    
+    }
   };
 
   return (
@@ -46,18 +79,6 @@ const MainPage = () => {
         <ProfileSidebar visible={isProfileSidebarVisible} onClose={toggleProfileSidebar} />
       )}
       <View style={styles.mainContent}>
-        <Picker
-          selectedValue={selectedView}
-          style={styles.picker}
-          onValueChange={(itemValue) => setSelectedView(itemValue)}
-        >
-          <Picker.Item label="Student" value="Student" />
-          <Picker.Item label="Monitor" value="Monitor" />
-          <Picker.Item label="Tutor" value="Tutor" />
-          <Picker.Item label="Tutor/Monitor" value="Tutor/Monitor" />
-          <Picker.Item label="Department Head" value="Department Head" />
-          <Picker.Item label="Admin" value="Admin" />
-        </Picker>
         {renderView()}
         <Image source={require('../../assets/tiger-logo.png')} style={styles.tigerLogo} />
       </View>
@@ -74,11 +95,6 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
     marginLeft: 80, // Default margin when sidebar is not visible
-  },
-  picker: {
-    height: 50,
-    width: 200,
-    marginBottom: 20,
   },
   tigerLogo: {
     position: 'absolute',
