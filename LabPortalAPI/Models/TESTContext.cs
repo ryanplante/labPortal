@@ -40,7 +40,9 @@ namespace LabPortal.Models
                 entity.HasKey(e => e.LogId)
                     .HasName("PK__AuditLog__7839F62D49B4C980");
 
-                entity.Property(e => e.LogId).HasColumnName("logID");
+                entity.Property(e => e.LogId)
+                    .ValueGeneratedOnAdd()  // Use this to specify that logID is auto-generated
+                    .HasColumnName("logID");
 
                 entity.Property(e => e.Description)
                     .HasMaxLength(255)
