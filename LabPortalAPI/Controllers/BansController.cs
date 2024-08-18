@@ -6,6 +6,9 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LabPortal.Models;
+using System.Text;
+using System.Security.Cryptography;
+using LabPortal.Models.Dto;
 
 namespace LabPortal.Controllers
 {
@@ -25,13 +28,23 @@ namespace LabPortal.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<IEnumerable<Ban>>> GetBans()
+        public async Task<ActionResult<IEnumerable<BanDto>>> GetBans()
         {
-          if (_context.Bans == null)
-          {
-              return NotFound();
-          }
-            return await _context.Bans.ToListAsync();
+            if (_context.Bans == null)
+            {
+                return NotFound();
+            }
+
+            var bans = await _context.Bans.ToListAsync();
+            var banDtos = bans.Select(Ban => new BanDto
+            {
+                BanId = Ban.BanId,
+                UserId = Ban.UserId,
+                Reason = Ban.Reason,
+                ExpirationDate = Ban.ExpirationDate
+            }).ToList();
+
+            return Ok(banDtos);
         }
 
         // GET: api/BanControllerActions/5
@@ -39,12 +52,12 @@ namespace LabPortal.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<Ban>> GetBan(int id)
+        public async Task<ActionResult<BanDto>> GetBan(int id)
         {
-          if (_context.Bans == null)
-          {
-              return NotFound();
-          }
+            if (_context.Bans == null)
+            {
+                return NotFound();
+            }
             var ban = await _context.Bans.FindAsync(id);
 
             if (ban == null)
@@ -52,7 +65,15 @@ namespace LabPortal.Controllers
                 return NotFound();
             }
 
-            return ban;
+            var banDto = new BanDto
+            {
+                BanId = ban.BanId,
+                UserId = ban.UserId,
+                Reason = ban.Reason,
+                ExpirationDate = ban.ExpirationDate
+            };
+
+            return Ok(banDto);
         }
 
         // PUT: api/BanControllerActions/5
@@ -60,12 +81,22 @@ namespace LabPortal.Controllers
         [HttpPut("{id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> PutBan(int id, Ban ban)
+        public async Task<IActionResult> PutBan(int id, BanDto banDto)
         {
-            if (id != ban.BanId)
+            if (id != banDto.BanId)
             {
                 return BadRequest();
             }
+
+            var ban = await _context.Bans.FindAsync(id);
+            if (ban == null)
+            {
+                return NotFound();
+            }
+
+            ban.UserId = banDto.UserId;
+            ban.Reason = banDto.Reason;
+            ban.ExpirationDate = banDto.ExpirationDate;
 
             _context.Entry(ban).State = EntityState.Modified;
 
@@ -93,30 +124,32 @@ namespace LabPortal.Controllers
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<ActionResult<Ban>> PostBan(Ban ban)
+        public async Task<ActionResult<BanDto>> PostBan(BanDto banDto)
         {
-          if (_context.Bans == null)
-          {
-              return Problem("Entity set 'TESTContext.Bans'  is null.");
-          }
+            if (_context.Bans == null)
+            {
+                return Problem("Entity set 'TESTContext.Bans'  is null.");
+            }
+
+            var ban = new Ban
+            {
+                UserId = banDto.UserId,
+                Reason = banDto.Reason,
+                ExpirationDate = banDto.ExpirationDate
+            };
+
             _context.Bans.Add(ban);
+
             try
             {
                 await _context.SaveChangesAsync();
             }
-            catch (DbUpdateException)
+            catch (DbUpdateException ex)
             {
-                if (BanExists(ban.BanId))
-                {
-                    return Conflict();
-                }
-                else
-                {
-                    throw;
-                }
+                return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while creating ban.");
             }
 
-            return CreatedAtAction("GetBan", new { id = ban.BanId }, ban);
+            return Ok();
         }
 
         // DELETE: api/BanControllerActions/5
