@@ -17,14 +17,12 @@ builder.Services.AddDbContext<TESTContext>(options => options.UseSqlServer(build
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowSpecificOrigin",
+    options.AddPolicy("AllowAllOrigins",
         builder => builder
-            .WithOrigins("http://localhost:8082") // Allow React Native app's origin
+            .AllowAnyOrigin()  // Allow requests from any origin
             .AllowAnyHeader()
-            .AllowAnyMethod()
-            .AllowCredentials());
+            .AllowAnyMethod());
 });
-
 
 var app = builder.Build();
 
@@ -33,15 +31,12 @@ var port = app.Environment.IsDevelopment()
     ? (args.Length > 0 && int.TryParse(args[0], out var parsedPort) && parsedPort >= 49152 && parsedPort <= 65535 ? parsedPort : 5000)
     : (args.Length > 0 && int.TryParse(args[0], out parsedPort) && parsedPort >= 49152 && parsedPort <= 65535 ? parsedPort : 80);
 
-
-
 app.UseHttpsRedirection();
 
 app.UseAuthorization();
 
 app.MapControllers();
-app.UseCors("AllowSpecificOrigin");
-
+app.UseCors("AllowAllOrigins");
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -55,5 +50,5 @@ if (app.Environment.IsDevelopment())
 else
 {
     // Use the specified port in production mode
-    app.Run($"http://0.0.0.0:{port}");
+    app.Run($"http://0.0.0.0:{port}"); // Make the API accessible on any network interface
 }
