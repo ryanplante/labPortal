@@ -6,6 +6,9 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LabPortal.Models;
+using System.Text;
+using System.Security.Cryptography;
+using LabPortal.Models.Dto;
 
 namespace LabPortal.Controllers
 {
@@ -25,13 +28,21 @@ namespace LabPortal.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<IEnumerable<ScheduleTypeLookup>>> GetScheduleTypeLookups()
+        public async Task<ActionResult<IEnumerable<ScheduleTypeLookupDto>>> GetScheduleTypeLookups()
         {
-          if (_context.ScheduleTypeLookups == null)
-          {
-              return NotFound();
-          }
-            return await _context.ScheduleTypeLookups.ToListAsync();
+            if (_context.ScheduleTypeLookups == null)
+            {
+                return NotFound();
+            }
+            var scheduleTypeLookups = await _context.ScheduleTypeLookups.ToListAsync();
+            var scheduleTypeLookupDtos = scheduleTypeLookups.Select(ScheduleTypeLookup => new ScheduleTypeLookupDto
+            {
+                TypeId = ScheduleTypeLookup.TypeId,
+                TypeName = ScheduleTypeLookup.TypeName
+
+            }).ToList();
+
+            return Ok(scheduleTypeLookupDtos);
         }
 
         // GET: api/ScheduleTypes/5
@@ -39,12 +50,12 @@ namespace LabPortal.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<ScheduleTypeLookup>> GetScheduleTypeLookup(int id)
+        public async Task<ActionResult<ScheduleTypeLookupDto>> GetScheduleTypeLookup(int id)
         {
-          if (_context.ScheduleTypeLookups == null)
-          {
-              return NotFound();
-          }
+            if (_context.ScheduleTypeLookups == null)
+            {
+                return NotFound();
+            }
             var scheduleTypeLookup = await _context.ScheduleTypeLookups.FindAsync(id);
 
             if (scheduleTypeLookup == null)
@@ -52,7 +63,13 @@ namespace LabPortal.Controllers
                 return NotFound();
             }
 
-            return scheduleTypeLookup;
+            var scheduleTypeLookupDto = new ScheduleTypeLookupDto
+            {
+                TypeId = scheduleTypeLookup.TypeId,
+                TypeName = scheduleTypeLookup.TypeName
+            };
+
+            return Ok(scheduleTypeLookupDto);
         }
 
         // PUT: api/ScheduleTypes/5
@@ -60,12 +77,20 @@ namespace LabPortal.Controllers
         [HttpPut("{id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> PutScheduleTypeLookup(int id, ScheduleTypeLookup scheduleTypeLookup)
+        public async Task<IActionResult> PutScheduleTypeLookup(int id, ScheduleTypeLookupDto scheduleTypeLookupDto)
         {
-            if (id != scheduleTypeLookup.TypeId)
+            if (id != scheduleTypeLookupDto.TypeId)
             {
                 return BadRequest();
             }
+
+            var scheduleTypeLookup = await _context.ScheduleTypeLookups.FindAsync(id);
+            if (scheduleTypeLookup == null)
+            {
+                return NotFound();
+            }
+
+            scheduleTypeLookup.TypeName = scheduleTypeLookupDto.TypeName;
 
             _context.Entry(scheduleTypeLookup).State = EntityState.Modified;
 
@@ -93,30 +118,30 @@ namespace LabPortal.Controllers
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<ActionResult<ScheduleTypeLookup>> PostScheduleTypeLookup(ScheduleTypeLookup scheduleTypeLookup)
+        public async Task<ActionResult<ScheduleTypeLookupDto>> PostScheduleTypeLookup(ScheduleTypeLookupDto scheduleTypeLookupDto)
         {
-          if (_context.ScheduleTypeLookups == null)
-          {
-              return Problem("Entity set 'TESTContext.ScheduleTypeLookups'  is null.");
-          }
+            if (_context.ScheduleTypeLookups == null)
+            {
+                return Problem("Entity set 'TESTContext.ScheduleTypeLookups'  is null.");
+            }
+
+            var scheduleTypeLookup = new ScheduleTypeLookup
+            {
+                TypeName = scheduleTypeLookupDto.TypeName
+            };
+
             _context.ScheduleTypeLookups.Add(scheduleTypeLookup);
             try
             {
                 await _context.SaveChangesAsync();
             }
-            catch (DbUpdateException)
+            catch (DbUpdateException ex)
             {
-                if (ScheduleTypeLookupExists(scheduleTypeLookup.TypeId))
-                {
-                    return Conflict();
-                }
-                else
-                {
-                    throw;
-                }
+                // Simplified the error as to not show more info than needed
+                return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while saving the schedule type.");
             }
 
-            return CreatedAtAction("GetScheduleTypeLookup", new { id = scheduleTypeLookup.TypeId }, scheduleTypeLookup);
+            return Ok();
         }
 
         // DELETE: api/ScheduleTypes/5

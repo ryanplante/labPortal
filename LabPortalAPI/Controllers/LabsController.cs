@@ -6,6 +6,9 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LabPortal.Models;
+using System.Text;
+using System.Security.Cryptography;
+using LabPortal.Models.Dto;
 
 namespace LabPortal.Controllers
 {
@@ -25,13 +28,24 @@ namespace LabPortal.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<IEnumerable<Lab>>> GetLabs()
+        public async Task<ActionResult<IEnumerable<LabDto>>> GetLabs()
         {
-          if (_context.Labs == null)
-          {
-              return NotFound();
-          }
-            return await _context.Labs.ToListAsync();
+            if (_context.Labs == null)
+            {
+                return NotFound();
+            }
+
+            var labs = await _context.Labs.ToListAsync();
+            var labDtos = labs.Select(Lab => new LabDto
+            {
+                LabId = Lab.LabId,
+                Name = Lab.Name,
+                RoomNum = Lab.RoomNum,
+                DeptId = Lab.DeptId
+
+            }).ToList();
+
+            return Ok(labDtos);
         }
 
         // GET: api/Labs/5
@@ -39,12 +53,12 @@ namespace LabPortal.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<Lab>> GetLab(int id)
+        public async Task<ActionResult<LabDto>> GetLab(int id)
         {
-          if (_context.Labs == null)
-          {
-              return NotFound();
-          }
+            if (_context.Labs == null)
+            {
+                return NotFound();
+            }
             var lab = await _context.Labs.FindAsync(id);
 
             if (lab == null)
@@ -52,7 +66,15 @@ namespace LabPortal.Controllers
                 return NotFound();
             }
 
-            return lab;
+            var labDto = new LabDto
+            {
+                LabId = lab.LabId,
+                Name = lab.Name,
+                RoomNum = lab.RoomNum,
+                DeptId = lab.DeptId
+            };
+
+            return Ok(labDto);
         }
 
         // PUT: api/Labs/5
@@ -60,12 +82,22 @@ namespace LabPortal.Controllers
         [HttpPut("{id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> PutLab(int id, Lab lab)
+        public async Task<IActionResult> PutLab(int id, LabDto labDto)
         {
-            if (id != lab.LabId)
+            if (id != labDto.LabId)
             {
                 return BadRequest();
             }
+
+            var lab = await _context.Labs.FindAsync(id);
+            if (lab == null)
+            {
+                return NotFound();
+            }
+
+            lab.Name = labDto.Name;
+            lab.RoomNum = labDto.RoomNum;
+            lab.DeptId = labDto.DeptId;
 
             _context.Entry(lab).State = EntityState.Modified;
 
@@ -93,30 +125,32 @@ namespace LabPortal.Controllers
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<ActionResult<Lab>> PostLab(Lab lab)
+        public async Task<ActionResult<LabDto>> PostLab(LabDto labDto)
         {
-          if (_context.Labs == null)
-          {
-              return Problem("Entity set 'TESTContext.Labs'  is null.");
-          }
+            if (_context.Labs == null)
+            {
+                return Problem("Entity set 'TESTContext.Labs'  is null.");
+            }
+
+            var lab = new Lab
+            {
+                Name = labDto.Name,
+                RoomNum = labDto.RoomNum,
+                DeptId = labDto.DeptId
+            };
+
             _context.Labs.Add(lab);
             try
             {
                 await _context.SaveChangesAsync();
             }
-            catch (DbUpdateException)
+            catch (DbUpdateException ex)
             {
-                if (LabExists(lab.LabId))
-                {
-                    return Conflict();
-                }
-                else
-                {
-                    throw;
-                }
+                // Simplified the error as to not show more info than needed
+                return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while saving the lab.");
             }
 
-            return CreatedAtAction("GetLab", new { id = lab.LabId }, lab);
+            return Ok();
         }
 
         // DELETE: api/Labs/5

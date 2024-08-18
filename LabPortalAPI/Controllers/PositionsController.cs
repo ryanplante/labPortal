@@ -6,6 +6,9 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LabPortal.Models;
+using System.Text;
+using System.Security.Cryptography;
+using LabPortal.Models.Dto;
 
 namespace LabPortal.Controllers
 {
@@ -25,13 +28,22 @@ namespace LabPortal.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<IEnumerable<PositionLookup>>> GetPositionLookups()
+        public async Task<ActionResult<IEnumerable<PositionLookupDto>>> GetPositionLookups()
         {
-          if (_context.PositionLookups == null)
-          {
-              return NotFound();
-          }
-            return await _context.PositionLookups.ToListAsync();
+            if (_context.PositionLookups == null)
+            {
+                return NotFound();
+            }
+
+            var positionLookups = await _context.PositionLookups.ToListAsync();
+            var positionLookupDtos = positionLookups.Select(PositionLookup => new PositionLookupDto
+            {
+                PositionId = PositionLookup.PositionId,
+                Details = PositionLookup.Details
+
+            }).ToList();
+
+            return Ok(positionLookupDtos);
         }
 
         // GET: api/Positions/5
@@ -39,12 +51,12 @@ namespace LabPortal.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<PositionLookup>> GetPositionLookup(int id)
+        public async Task<ActionResult<PositionLookupDto>> GetPositionLookup(int id)
         {
-          if (_context.PositionLookups == null)
-          {
-              return NotFound();
-          }
+            if (_context.PositionLookups == null)
+            {
+                return NotFound();
+            }
             var positionLookup = await _context.PositionLookups.FindAsync(id);
 
             if (positionLookup == null)
@@ -52,7 +64,13 @@ namespace LabPortal.Controllers
                 return NotFound();
             }
 
-            return positionLookup;
+            var positionLookupDto = new PositionLookupDto
+            {
+                PositionId = positionLookup.PositionId,
+                Details = positionLookup.Details
+            };
+
+            return Ok(positionLookupDto);
         }
 
         // PUT: api/Positions/5
@@ -60,12 +78,20 @@ namespace LabPortal.Controllers
         [HttpPut("{id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> PutPositionLookup(int id, PositionLookup positionLookup)
+        public async Task<IActionResult> PutPositionLookup(int id, PositionLookupDto positionLookupDto)
         {
-            if (id != positionLookup.PositionId)
+            if (id != positionLookupDto.PositionId)
             {
                 return BadRequest();
             }
+
+            var positionLookup = await _context.PositionLookups.FindAsync(id);
+            if (positionLookup == null)
+            {
+                return NotFound();
+            }
+
+            positionLookup.Details = positionLookupDto.Details;
 
             _context.Entry(positionLookup).State = EntityState.Modified;
 
@@ -93,30 +119,30 @@ namespace LabPortal.Controllers
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<ActionResult<PositionLookup>> PostPositionLookup(PositionLookup positionLookup)
+        public async Task<ActionResult<PositionLookupDto>> PostPositionLookup(PositionLookupDto positionLookupDto)
         {
-          if (_context.PositionLookups == null)
-          {
-              return Problem("Entity set 'TESTContext.PositionLookups'  is null.");
-          }
+            if (_context.PositionLookups == null)
+            {
+                return Problem("Entity set 'TESTContext.PositionLookups'  is null.");
+            }
+
+            var positionLookup = new PositionLookup
+            {
+                Details = positionLookupDto.Details
+            };
+
             _context.PositionLookups.Add(positionLookup);
             try
             {
                 await _context.SaveChangesAsync();
             }
-            catch (DbUpdateException)
+            catch (DbUpdateException ex)
             {
-                if (PositionLookupExists(positionLookup.PositionId))
-                {
-                    return Conflict();
-                }
-                else
-                {
-                    throw;
-                }
+                // Simplified the error as to not show more info than needed
+                return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while saving the position.");
             }
 
-            return CreatedAtAction("GetPositionLookup", new { id = positionLookup.PositionId }, positionLookup);
+            return Ok();
         }
 
         // DELETE: api/Positions/5
