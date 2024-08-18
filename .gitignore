@@ -61,3 +61,4 @@ appsettings.*.json
 # Ignore bin and obj directories in any of the subdirectories
 **/bin/
 **/obj/
+/.vs/labPortalDto/FileContentIndex

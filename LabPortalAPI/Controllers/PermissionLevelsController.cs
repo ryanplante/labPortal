@@ -14,88 +14,84 @@ namespace LabPortal.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class AuditLogsController : ControllerBase
+    public class PermissionLevelsController : ControllerBase
     {
         private readonly TESTContext _context;
 
-        public AuditLogsController(TESTContext context)
+        public PermissionLevelsController(TESTContext context)
         {
             _context = context;
         }
 
-        // GET: api/AuditLogs
+        // GET: api/Permissions
         [HttpGet]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<IEnumerable<AuditLogDto>>> GetAuditLogs()
+        public async Task<ActionResult<IEnumerable<PermissionLookupDto>>> GetPermissionLookups()
         {
-            if (_context.AuditLogs == null)
+            if (_context.PermissionLookups == null)
             {
                 return NotFound();
             }
-
-            var auditLogs = await _context.AuditLogs.ToListAsync();
-            var auditLogDtos = auditLogs.Select(AuditLog => new AuditLogDto
+            var permissionLookups = await _context.PermissionLookups.ToListAsync();
+            var permissionLookupDtos = permissionLookups.Select(permissionLookup => new PermissionLookupDto
             {
-                LogId = AuditLog.LogId,
-                Description = AuditLog.Description,
-                Timestamp = AuditLog.Timestamp
+                UserLevel = permissionLookup.UserLevel,
+                Name = permissionLookup.Name
             }).ToList();
 
-            return Ok(auditLogDtos);
+            return Ok(permissionLookupDtos);
         }
 
-        // GET: api/AuditLogs/5
+        // GET: api/Permissions/5
         [HttpGet("{id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<AuditLogDto>> GetAuditLog(int id)
+        public async Task<ActionResult<PermissionLookupDto>> GetPermissionLookup(int id)
         {
-            if (_context.AuditLogs == null)
+            if (_context.PermissionLookups == null)
             {
                 return NotFound();
             }
-            var auditLog = await _context.AuditLogs.FindAsync(id);
+            var permissionLookup = await _context.PermissionLookups.FindAsync(id);
 
-            if (auditLog == null)
+            if (permissionLookup == null)
             {
                 return NotFound();
             }
 
-            var auditLogDto = new AuditLogDto
+            var permissionLookupDto = new PermissionLookupDto
             {
-                LogId = auditLog.LogId,
-                Description = auditLog.Description,
-                Timestamp = auditLog.Timestamp
+                UserLevel = permissionLookup.UserLevel,
+                Name = permissionLookup.Name
             };
 
-            return Ok(auditLogDto);
+            return Ok(permissionLookupDto);
         }
 
-        /* PUT: api/AuditLogs/5
+        // PUT: api/Permissions/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> PutAuditLog(int id, AuditLogDto auditLogDto)
+        public async Task<IActionResult> PutPermissionLookup(int id, PermissionLookupDto permissionLookupDto)
         {
-            if (id != auditLogDto.LogId)
+            if (id != permissionLookupDto.UserLevel)
             {
                 return BadRequest();
             }
 
-            var auditLog = await _context.AuditLogs.FindAsync(id);
-            if (auditLog == null)
+            var permissionLookup = await _context.PermissionLookups.FindAsync(id);
+            if (permissionLookup == null)
             {
                 return NotFound();
             }
 
-            auditLog.Description = auditLogDto.Description;
-            auditLog.Timestamp = auditLogDto.Timestamp;
+            permissionLookup.Name = permissionLookupDto.Name;
 
-            _context.Entry(auditLog).State = EntityState.Modified;
+            _context.Entry(permissionLookupDto).State = EntityState.Modified;
 
             try
             {
@@ -103,7 +99,7 @@ namespace LabPortal.Controllers
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!AuditLogExists(id))
+                if (!PermissionLookupExists(id))
                 {
                     return NotFound();
                 }
@@ -114,64 +110,65 @@ namespace LabPortal.Controllers
             }
 
             return NoContent();
-        }*/
+        }
 
-        // POST: api/AuditLogs
+        // POST: api/Permissions
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<ActionResult<AuditLogDto>> PostAuditLog(AuditLogDto auditLogDto)
+        public async Task<ActionResult<PermissionLookupDto>> PostPermissionLookup(PermissionLookupDto permissionLookupDto)
         {
-            if (_context.AuditLogs == null)
+            if (_context.PermissionLookups == null)
             {
-                return Problem("Entity set 'TESTContext.AuditLogs'  is null.");
+                return Problem("Entity set 'TESTContext.PermissionLookups'  is null.");
             }
 
-            var auditLog = new AuditLog
+            var permissionLookup = new PermissionLookup
             {
-                Description = auditLogDto.Description,
-                Timestamp = DateTime.UtcNow
+                Name = permissionLookupDto.Name
             };
 
-            _context.AuditLogs.Add(auditLog);
+            _context.PermissionLookups.Add(permissionLookup);
+
             try
             {
                 await _context.SaveChangesAsync();
             }
             catch (DbUpdateException ex)
             {
-                return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while creating audit log.");
+                // Simplified the error as to not show more info than needed
+                return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while saving the permission level.");
             }
 
             return Ok();
         }
 
-        /* DELETE: api/AuditLogs/5
+        // DELETE: api/Permissions/5
         [HttpDelete("{id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> DeleteAuditLog(int id)
+        public async Task<IActionResult> DeletePermissionLookup(int id)
         {
-            if (_context.AuditLogs == null)
+            if (_context.PermissionLookups == null)
             {
                 return NotFound();
             }
-            var auditLog = await _context.AuditLogs.FindAsync(id);
-            if (auditLog == null)
+            var permissionLookup = await _context.PermissionLookups.FindAsync(id);
+            if (permissionLookup == null)
             {
                 return NotFound();
             }
 
-            _context.AuditLogs.Remove(auditLog);
+            _context.PermissionLookups.Remove(permissionLookup);
             await _context.SaveChangesAsync();
 
             return NoContent();
-        }*/
+        }
 
-        private bool AuditLogExists(int id)
+        private bool PermissionLookupExists(int id)
         {
-            return (_context.AuditLogs?.Any(e => e.LogId == id)).GetValueOrDefault();
+            return (_context.PermissionLookups?.Any(e => e.UserLevel == id)).GetValueOrDefault();
         }
     }
 }
