@@ -6,6 +6,9 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LabPortal.Models;
+using System.Text;
+using System.Security.Cryptography;
+using LabPortal.Models.Dto;
 
 namespace LabPortal.Controllers
 {
@@ -25,13 +28,24 @@ namespace LabPortal.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<IEnumerable<Item>>> GetItems()
+        public async Task<ActionResult<IEnumerable<ItemDto>>> GetItems()
         {
-          if (_context.Items == null)
-          {
-              return NotFound();
-          }
-            return await _context.Items.ToListAsync();
+            if (_context.Items == null)
+            {
+                return NotFound();
+            }
+
+            var items = await _context.Items.ToListAsync();
+            var itemDtos = items.Select(Item => new ItemDto
+            {
+                ItemId = Item.ItemId,
+                Description = Item.Description,
+                Quantity = Item.Quantity,
+                SerialNum = Item.SerialNum
+
+            }).ToList();
+
+            return Ok(itemDtos);
         }
 
         // GET: api/Items/5
@@ -39,12 +53,12 @@ namespace LabPortal.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<Item>> GetItem(int id)
+        public async Task<ActionResult<ItemDto>> GetItem(int id)
         {
-          if (_context.Items == null)
-          {
-              return NotFound();
-          }
+            if (_context.Items == null)
+            {
+                return NotFound();
+            }
             var item = await _context.Items.FindAsync(id);
 
             if (item == null)
@@ -52,7 +66,15 @@ namespace LabPortal.Controllers
                 return NotFound();
             }
 
-            return item;
+            var itemDto = new ItemDto
+            {
+                ItemId = item.ItemId,
+                Description = item.Description,
+                Quantity = item.Quantity,
+                SerialNum = item.SerialNum
+            };
+
+            return Ok(itemDto);
         }
 
         // PUT: api/Items/5
@@ -60,12 +82,22 @@ namespace LabPortal.Controllers
         [HttpPut("{id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> PutItem(int id, Item item)
+        public async Task<IActionResult> PutItem(int id, ItemDto itemDto)
         {
-            if (id != item.ItemId)
+            if (id != itemDto.ItemId)
             {
                 return BadRequest();
             }
+
+            var item = await _context.Items.FindAsync(id);
+            if (item == null)
+            {
+                return NotFound();
+            }
+
+            item.Description = itemDto.Description;
+            item.Quantity = itemDto.Quantity;
+            item.SerialNum = itemDto.SerialNum;
 
             _context.Entry(item).State = EntityState.Modified;
 
@@ -93,30 +125,32 @@ namespace LabPortal.Controllers
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<ActionResult<Item>> PostItem(Item item)
+        public async Task<ActionResult<ItemDto>> PostItem(ItemDto itemDto)
         {
-          if (_context.Items == null)
-          {
-              return Problem("Entity set 'TESTContext.Items'  is null.");
-          }
+            if (_context.Items == null)
+            {
+                return Problem("Entity set 'TESTContext.Items'  is null.");
+            }
+
+            var item = new Item
+            {
+                Description = itemDto.Description,
+                Quantity = itemDto.Quantity,
+                SerialNum = itemDto.SerialNum
+            };
+
             _context.Items.Add(item);
             try
             {
                 await _context.SaveChangesAsync();
             }
-            catch (DbUpdateException)
+            catch (DbUpdateException ex)
             {
-                if (ItemExists(item.ItemId))
-                {
-                    return Conflict();
-                }
-                else
-                {
-                    throw;
-                }
+                // Simplified the error as to not show more info than needed
+                return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while saving the item.");
             }
 
-            return CreatedAtAction("GetItem", new { id = item.ItemId }, item);
+            return Ok();
         }
 
         // DELETE: api/Items/5

@@ -6,6 +6,9 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LabPortal.Models;
+using System.Text;
+using System.Security.Cryptography;
+using LabPortal.Models.Dto;
 
 namespace LabPortal.Controllers
 {
@@ -25,13 +28,20 @@ namespace LabPortal.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<IEnumerable<Department>>> GetDepartments()
+        public async Task<ActionResult<IEnumerable<DepartmentDto>>> GetDepartments()
         {
-          if (_context.Departments == null)
-          {
-              return NotFound();
-          }
-            return await _context.Departments.ToListAsync();
+            if (_context.Departments == null)
+            {
+                return NotFound();
+            }
+            var departments = await _context.Departments.ToListAsync();
+            var depertmentDtos = departments.Select(Department => new DepartmentDto
+            {
+                DeptId = Department.DeptId,
+                Name = Department.Name
+            }).ToList();
+
+            return Ok(depertmentDtos);
         }
 
         // GET: api/Departments/5
@@ -39,12 +49,12 @@ namespace LabPortal.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<Department>> GetDepartment(int id)
+        public async Task<ActionResult<DepartmentDto>> GetDepartment(int id)
         {
-          if (_context.Departments == null)
-          {
-              return NotFound();
-          }
+            if (_context.Departments == null)
+            {
+                return NotFound();
+            }
             var department = await _context.Departments.FindAsync(id);
 
             if (department == null)
@@ -52,7 +62,13 @@ namespace LabPortal.Controllers
                 return NotFound();
             }
 
-            return department;
+            var departmentDto = new DepartmentDto
+            {
+                DeptId = department.DeptId,
+                Name = department.Name
+            };
+
+            return Ok(departmentDto);
         }
 
         // PUT: api/Departments/5
@@ -60,12 +76,20 @@ namespace LabPortal.Controllers
         [HttpPut("{id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> PutDepartment(int id, Department department)
+        public async Task<IActionResult> PutDepartment(int id, DepartmentDto departmentDto)
         {
-            if (id != department.DeptId)
+            if (id != departmentDto.DeptId)
             {
                 return BadRequest();
             }
+
+            var department = await _context.Departments.FindAsync(id);
+            if (department == null)
+            {
+                return NotFound();
+            }
+
+            department.Name = departmentDto.Name;
 
             _context.Entry(department).State = EntityState.Modified;
 
@@ -93,30 +117,30 @@ namespace LabPortal.Controllers
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<ActionResult<Department>> PostDepartment(Department department)
+        public async Task<ActionResult<DepartmentDto>> PostDepartment(DepartmentDto departmentDto)
         {
-          if (_context.Departments == null)
-          {
-              return Problem("Entity set 'TESTContext.Departments'  is null.");
-          }
+            if (_context.Departments == null)
+            {
+                return Problem("Entity set 'TESTContext.Departments'  is null.");
+            }
+
+            var department = new Department
+            {
+                Name = departmentDto.Name
+            };
+
             _context.Departments.Add(department);
             try
             {
                 await _context.SaveChangesAsync();
             }
-            catch (DbUpdateException)
+            catch (DbUpdateException ex)
             {
-                if (DepartmentExists(department.DeptId))
-                {
-                    return Conflict();
-                }
-                else
-                {
-                    throw;
-                }
+                // Simplified the error as to not show more info than needed
+                return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while saving the department.");
             }
 
-            return CreatedAtAction("GetDepartment", new { id = department.DeptId }, department);
+            return Ok();
         }
 
         // DELETE: api/Departments/5

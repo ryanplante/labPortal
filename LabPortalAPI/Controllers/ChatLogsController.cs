@@ -6,6 +6,9 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LabPortal.Models;
+using System.Text;
+using System.Security.Cryptography;
+using LabPortal.Models.Dto;
 
 namespace LabPortal.Controllers
 {
@@ -25,13 +28,22 @@ namespace LabPortal.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<IEnumerable<ChatLog>>> GetChatLogs()
+        public async Task<ActionResult<IEnumerable<ChatLogDto>>> GetChatLogs()
         {
-          if (_context.ChatLogs == null)
-          {
-              return NotFound();
-          }
-            return await _context.ChatLogs.ToListAsync();
+            if (_context.ChatLogs == null)
+            {
+                return NotFound();
+            }
+            var chatLogs = await _context.ChatLogs.ToListAsync();
+            var chatLogDtos = chatLogs.Select(ChatLog => new ChatLogDto
+            {
+                LogId = ChatLog.LogId,
+                UserId = ChatLog.UserId,
+                Message = ChatLog.Message,
+                Timestamp = ChatLog.Timestamp
+            }).ToList();
+
+            return Ok(chatLogDtos);
         }
 
         // GET: api/ChatLogs/5
@@ -39,12 +51,12 @@ namespace LabPortal.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<ChatLog>> GetChatLog(int id)
+        public async Task<ActionResult<ChatLogDto>> GetChatLog(int id)
         {
-          if (_context.ChatLogs == null)
-          {
-              return NotFound();
-          }
+            if (_context.ChatLogs == null)
+            {
+                return NotFound();
+            }
             var chatLog = await _context.ChatLogs.FindAsync(id);
 
             if (chatLog == null)
@@ -52,7 +64,15 @@ namespace LabPortal.Controllers
                 return NotFound();
             }
 
-            return chatLog;
+            var chatLogDto = new ChatLogDto
+            {
+                LogId = chatLog.LogId,
+                UserId = chatLog.UserId,
+                Message = chatLog.Message,
+                Timestamp = chatLog.Timestamp
+            };
+
+            return Ok(chatLogDto);
         }
 
         // PUT: api/ChatLogs/5
@@ -60,12 +80,22 @@ namespace LabPortal.Controllers
         [HttpPut("{id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> PutChatLog(int id, ChatLog chatLog)
+        public async Task<IActionResult> PutChatLog(int id, ChatLogDto chatLogDto)
         {
-            if (id != chatLog.LogId)
+            if (id != chatLogDto.LogId)
             {
                 return BadRequest();
             }
+
+            var chatLog = await _context.ChatLogs.FindAsync(id);
+            if (chatLog == null)
+            {
+                return NotFound();
+            }
+
+            chatLog.UserId = chatLogDto.UserId;
+            chatLog.Message = chatLogDto.Message;
+            chatLog.Timestamp = chatLogDto.Timestamp;
 
             _context.Entry(chatLog).State = EntityState.Modified;
 
@@ -93,30 +123,32 @@ namespace LabPortal.Controllers
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<ActionResult<ChatLog>> PostChatLog(ChatLog chatLog)
+        public async Task<ActionResult<ChatLogDto>> PostChatLog(ChatLogDto chatLogDto)
         {
-          if (_context.ChatLogs == null)
-          {
-              return Problem("Entity set 'TESTContext.ChatLogs'  is null.");
-          }
+            if (_context.ChatLogs == null)
+            {
+                return Problem("Entity set 'TESTContext.ChatLogs'  is null.");
+            }
+
+            var chatLog = new ChatLog
+            {
+                UserId = chatLogDto.UserId,
+                Message = chatLogDto.Message,
+                Timestamp = DateTime.UtcNow
+            };
+
             _context.ChatLogs.Add(chatLog);
             try
             {
                 await _context.SaveChangesAsync();
             }
-            catch (DbUpdateException)
+            catch (DbUpdateException ex)
             {
-                if (ChatLogExists(chatLog.LogId))
-                {
-                    return Conflict();
-                }
-                else
-                {
-                    throw;
-                }
+                // Simplified the error as to not show more info than needed
+                return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while saving the chat log.");
             }
 
-            return CreatedAtAction("GetChatLog", new { id = chatLog.LogId }, chatLog);
+            return Ok();
         }
 
         // DELETE: api/ChatLogs/5

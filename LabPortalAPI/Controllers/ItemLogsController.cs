@@ -6,6 +6,9 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LabPortal.Models;
+using System.Text;
+using System.Security.Cryptography;
+using LabPortal.Models.Dto;
 
 namespace LabPortal.Controllers
 {
@@ -25,13 +28,26 @@ namespace LabPortal.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<IEnumerable<ItemLog>>> GetItemLogs()
+        public async Task<ActionResult<IEnumerable<ItemLogDto>>> GetItemLogs()
         {
-          if (_context.ItemLogs == null)
-          {
-              return NotFound();
-          }
-            return await _context.ItemLogs.ToListAsync();
+            if (_context.ItemLogs == null)
+            {
+                return NotFound();
+            }
+
+            var itemLogs = await _context.ItemLogs.ToListAsync();
+            var itemLogDtos = itemLogs.Select(ItemLog => new ItemLogDto
+            {
+                LogId = ItemLog.LogId,
+                ItemId = ItemLog.ItemId,
+                Timestamp = ItemLog.Timestamp,
+                TransactionType = ItemLog.TransactionType,
+                StudentId = ItemLog.StudentId,
+                MonitorId = ItemLog.MonitorId
+
+            }).ToList();
+
+            return Ok(itemLogDtos);
         }
 
         // GET: api/ItemLogs/5
@@ -39,12 +55,12 @@ namespace LabPortal.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<ItemLog>> GetItemLog(int id)
+        public async Task<ActionResult<ItemLogDto>> GetItemLog(int id)
         {
-          if (_context.ItemLogs == null)
-          {
-              return NotFound();
-          }
+            if (_context.ItemLogs == null)
+            {
+                return NotFound();
+            }
             var itemLog = await _context.ItemLogs.FindAsync(id);
 
             if (itemLog == null)
@@ -52,7 +68,17 @@ namespace LabPortal.Controllers
                 return NotFound();
             }
 
-            return itemLog;
+            var itemLogDto = new ItemLogDto
+            {
+                LogId = itemLog.LogId,
+                ItemId = itemLog.ItemId,
+                Timestamp = itemLog.Timestamp,
+                TransactionType = itemLog.TransactionType,
+                StudentId = itemLog.StudentId,
+                MonitorId = itemLog.MonitorId
+            };
+
+            return Ok(itemLogDto);
         }
 
         // PUT: api/ItemLogs/5
@@ -60,12 +86,23 @@ namespace LabPortal.Controllers
         [HttpPut("{id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> PutItemLog(int id, ItemLog itemLog)
+        public async Task<IActionResult> PutItemLog(int id, ItemLogDto itemLogDto)
         {
-            if (id != itemLog.LogId)
+            if (id != itemLogDto.LogId)
             {
                 return BadRequest();
             }
+            var itemLog = await _context.ItemLogs.FindAsync(id);
+            if (itemLog == null)
+            {
+                return NotFound();
+            }
+
+            itemLog.ItemId = itemLogDto.ItemId;
+            itemLog.Timestamp = itemLogDto.Timestamp;
+            itemLog.TransactionType = itemLogDto.TransactionType;
+            itemLog.StudentId = itemLogDto.StudentId;
+            itemLog.MonitorId = itemLogDto.MonitorId;
 
             _context.Entry(itemLog).State = EntityState.Modified;
 
@@ -93,30 +130,34 @@ namespace LabPortal.Controllers
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<ActionResult<ItemLog>> PostItemLog(ItemLog itemLog)
+        public async Task<ActionResult<ItemLogDto>> PostItemLog(ItemLogDto itemLogDto)
         {
-          if (_context.ItemLogs == null)
-          {
-              return Problem("Entity set 'TESTContext.ItemLogs'  is null.");
-          }
+            if (_context.ItemLogs == null)
+            {
+                return Problem("Entity set 'TESTContext.ItemLogs'  is null.");
+            }
+
+            var itemLog = new ItemLog
+            {
+                ItemId = itemLogDto.ItemId,
+                Timestamp = itemLogDto.Timestamp,
+                TransactionType = itemLogDto.TransactionType,
+                StudentId = itemLogDto.StudentId,
+                MonitorId = itemLogDto.MonitorId
+            };
+
             _context.ItemLogs.Add(itemLog);
             try
             {
                 await _context.SaveChangesAsync();
             }
-            catch (DbUpdateException)
+            catch (DbUpdateException ex)
             {
-                if (ItemLogExists(itemLog.LogId))
-                {
-                    return Conflict();
-                }
-                else
-                {
-                    throw;
-                }
+                // Simplified the error as to not show more info than needed
+                return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while saving the item log.");
             }
 
-            return CreatedAtAction("GetItemLog", new { id = itemLog.LogId }, itemLog);
+            return Ok();
         }
 
         // DELETE: api/ItemLogs/5

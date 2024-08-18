@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LabPortal.Models;
+using System.Text;
+using System.Security.Cryptography;
 using LabPortal.Models.Dto;
 
 namespace LabPortal.Controllers
@@ -26,13 +28,22 @@ namespace LabPortal.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<IEnumerable<AuditLog>>> GetAuditLogs()
+        public async Task<ActionResult<IEnumerable<AuditLogDto>>> GetAuditLogs()
         {
-          if (_context.AuditLogs == null)
-          {
-              return NotFound();
-          }
-            return await _context.AuditLogs.ToListAsync();
+            if (_context.AuditLogs == null)
+            {
+                return NotFound();
+            }
+
+            var auditLogs = await _context.AuditLogs.ToListAsync();
+            var auditLogDtos = auditLogs.Select(AuditLog => new AuditLogDto
+            {
+                LogId = AuditLog.LogId,
+                Description = AuditLog.Description,
+                Timestamp = AuditLog.Timestamp
+            }).ToList();
+
+            return Ok(auditLogDtos);
         }
 
         // GET: api/AuditLogs/5
@@ -40,12 +51,12 @@ namespace LabPortal.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<AuditLog>> GetAuditLog(int id)
+        public async Task<ActionResult<AuditLogDto>> GetAuditLog(int id)
         {
-          if (_context.AuditLogs == null)
-          {
-              return NotFound();
-          }
+            if (_context.AuditLogs == null)
+            {
+                return NotFound();
+            }
             var auditLog = await _context.AuditLogs.FindAsync(id);
 
             if (auditLog == null)
@@ -53,41 +64,57 @@ namespace LabPortal.Controllers
                 return NotFound();
             }
 
-            return auditLog;
+            var auditLogDto = new AuditLogDto
+            {
+                LogId = auditLog.LogId,
+                Description = auditLog.Description,
+                Timestamp = auditLog.Timestamp
+            };
+
+            return Ok(auditLogDto);
         }
 
-        // PUT: api/AuditLogs/5
+        /* PUT: api/AuditLogs/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        //[HttpPut("{id}")]
-        //[ProducesResponseType(StatusCodes.Status200OK)]
-        //[ProducesResponseType(StatusCodes.Status400BadRequest)]
-        //public async Task<IActionResult> PutAuditLog(int id, AuditLog auditLog)
-        //{
-        //    if (id != auditLog.LogId)
-        //    {
-        //        return BadRequest();
-        //    }
+        [HttpPut("{id}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> PutAuditLog(int id, AuditLogDto auditLogDto)
+        {
+            if (id != auditLogDto.LogId)
+            {
+                return BadRequest();
+            }
 
-        //    _context.Entry(auditLog).State = EntityState.Modified;
+            var auditLog = await _context.AuditLogs.FindAsync(id);
+            if (auditLog == null)
+            {
+                return NotFound();
+            }
 
-        //    try
-        //    {
-        //        await _context.SaveChangesAsync();
-        //    }
-        //    catch (DbUpdateConcurrencyException)
-        //    {
-        //        if (!AuditLogExists(id))
-        //        {
-        //            return NotFound();
-        //        }
-        //        else
-        //        {
-        //            throw;
-        //        }
-        //    }
+            auditLog.Description = auditLogDto.Description;
+            auditLog.Timestamp = auditLogDto.Timestamp;
 
-        //    return NoContent();
-        //}
+            _context.Entry(auditLog).State = EntityState.Modified;
+
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!AuditLogExists(id))
+                {
+                    return NotFound();
+                }
+                else
+                {
+                    throw;
+                }
+            }
+
+            return NoContent();
+        }*/
 
         // POST: api/AuditLogs
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
@@ -98,52 +125,49 @@ namespace LabPortal.Controllers
         {
             if (_context.AuditLogs == null)
             {
-                return Problem("Entity set 'TESTContext.AuditLogs' is null.");
+                return Problem("Entity set 'TESTContext.AuditLogs'  is null.");
             }
 
             var auditLog = new AuditLog
             {
                 Description = auditLogDto.Description,
-                // Auto generate timestamp so that the time can be universally the api time and in UTC format
                 Timestamp = DateTime.UtcNow
             };
 
             _context.AuditLogs.Add(auditLog);
-
             try
             {
                 await _context.SaveChangesAsync();
             }
             catch (DbUpdateException ex)
             {
-                // Simplified the error as to not show more info than needed
-                return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while saving the audit log.");
+                return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while creating audit log.");
             }
 
             return Ok();
         }
 
-        // DELETE: api/AuditLogs/5
-        //[HttpDelete("{id}")]
-        //[ProducesResponseType(StatusCodes.Status200OK)]
-        //[ProducesResponseType(StatusCodes.Status400BadRequest)]
-        //public async Task<IActionResult> DeleteAuditLog(int id)
-        //{
-        //    if (_context.AuditLogs == null)
-        //    {
-        //        return NotFound();
-        //    }
-        //    var auditLog = await _context.AuditLogs.FindAsync(id);
-        //    if (auditLog == null)
-        //    {
-        //        return NotFound();
-        //    }
+        /* DELETE: api/AuditLogs/5
+        [HttpDelete("{id}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> DeleteAuditLog(int id)
+        {
+            if (_context.AuditLogs == null)
+            {
+                return NotFound();
+            }
+            var auditLog = await _context.AuditLogs.FindAsync(id);
+            if (auditLog == null)
+            {
+                return NotFound();
+            }
 
-        //    _context.AuditLogs.Remove(auditLog);
-        //    await _context.SaveChangesAsync();
+            _context.AuditLogs.Remove(auditLog);
+            await _context.SaveChangesAsync();
 
-        //    return NoContent();
-        //}
+            return NoContent();
+        }*/
 
         private bool AuditLogExists(int id)
         {

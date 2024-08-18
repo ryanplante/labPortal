@@ -6,6 +6,9 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LabPortal.Models;
+using System.Text;
+using System.Security.Cryptography;
+using LabPortal.Models.Dto;
 
 namespace LabPortal.Controllers
 {
@@ -25,13 +28,25 @@ namespace LabPortal.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<IEnumerable<Log>>> GetLogs()
+        public async Task<ActionResult<IEnumerable<LogDto>>> GetLogs()
         {
-          if (_context.Logs == null)
-          {
-              return NotFound();
-          }
-            return await _context.Logs.ToListAsync();
+            if (_context.Logs == null)
+            {
+                return NotFound();
+            }
+
+            var logs = await _context.Logs.ToListAsync();
+            var logDtos = logs.Select(Log => new LogDto
+            {
+                LogId = Log.LogId,
+                StudentId = Log.StudentId,
+                TimeIn = Log.TimeIn,
+                TimeOut = Log.TimeOut,
+                LabId = Log.LabId
+
+            }).ToList();
+
+            return Ok(logDtos);
         }
 
         // GET: api/Logs/5
@@ -39,12 +54,12 @@ namespace LabPortal.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<Log>> GetLog(int id)
+        public async Task<ActionResult<LogDto>> GetLog(int id)
         {
-          if (_context.Logs == null)
-          {
-              return NotFound();
-          }
+            if (_context.Logs == null)
+            {
+                return NotFound();
+            }
             var log = await _context.Logs.FindAsync(id);
 
             if (log == null)
@@ -52,7 +67,16 @@ namespace LabPortal.Controllers
                 return NotFound();
             }
 
-            return log;
+            var logDto = new LogDto
+            {
+                LogId = log.LogId,
+                StudentId = log.StudentId,
+                TimeIn = log.TimeIn,
+                TimeOut = log.TimeOut,
+                LabId = log.LabId
+            };
+
+            return Ok(logDto);
         }
 
         // PUT: api/Logs/5
@@ -60,12 +84,23 @@ namespace LabPortal.Controllers
         [HttpPut("{id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> PutLog(int id, Log log)
+        public async Task<IActionResult> PutLog(int id, LogDto logDto)
         {
-            if (id != log.LogId)
+            if (id != logDto.LogId)
             {
                 return BadRequest();
             }
+
+            var log = await _context.Logs.FindAsync(id);
+            if (log == null)
+            {
+                return NotFound();
+            }
+
+            log.StudentId = logDto.StudentId;
+            log.TimeIn = logDto.TimeIn;
+            log.TimeOut = logDto.TimeOut;
+            log.LabId = logDto.LabId;
 
             _context.Entry(log).State = EntityState.Modified;
 
@@ -93,30 +128,33 @@ namespace LabPortal.Controllers
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<ActionResult<Log>> PostLog(Log log)
+        public async Task<ActionResult<LogDto>> PostLog(LogDto logDto)
         {
-          if (_context.Logs == null)
-          {
-              return Problem("Entity set 'TESTContext.Logs'  is null.");
-          }
+            if (_context.Logs == null)
+            {
+                return Problem("Entity set 'TESTContext.Logs'  is null.");
+            }
+
+            var log = new Log
+            {
+                StudentId = logDto.StudentId,
+                TimeIn = logDto.TimeIn,
+                TimeOut = logDto.TimeOut,
+                LabId = logDto.LabId
+            };
+
             _context.Logs.Add(log);
             try
             {
                 await _context.SaveChangesAsync();
             }
-            catch (DbUpdateException)
+            catch (DbUpdateException ex)
             {
-                if (LogExists(log.LogId))
-                {
-                    return Conflict();
-                }
-                else
-                {
-                    throw;
-                }
+                // Simplified the error as to not show more info than needed
+                return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while saving the log.");
             }
 
-            return CreatedAtAction("GetLog", new { id = log.LogId }, log);
+            return Ok();
         }
 
         // DELETE: api/Logs/5
