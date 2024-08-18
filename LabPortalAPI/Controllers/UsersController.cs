@@ -197,7 +197,7 @@ namespace LabPortal.Controllers
         [HttpPost("ValidateCredentials")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<ActionResult<string>> ValidateCredentials([FromBody] UserCredentials credentials)
+        public async Task<ActionResult<string>> ValidateCredentials([FromBody] UserCredentialsDto credentials)
         {
             if (_context.Users == null)
             {

@@ -5,8 +5,6 @@ namespace LabPortal.Models.Dto
 {
     public class ChatLogDto
     {
-        [Key]
-        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int LogId { get; set; }
         public int? UserId { get; set; }
         public string? Message { get; set; }

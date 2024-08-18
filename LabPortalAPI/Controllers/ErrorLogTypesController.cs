@@ -71,6 +71,21 @@ namespace LabPortal.Controllers
             return Ok(errorLogTypeLookupDto);
         }
 
+<<<<<<< HEAD
+        //// PUT: api/ErrorLogTypes/5
+        //// To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
+        //[HttpPut("{id}")]
+        //[ProducesResponseType(StatusCodes.Status200OK)]
+        //[ProducesResponseType(StatusCodes.Status400BadRequest)]
+        //public async Task<IActionResult> PutErrorLogTypeLookup(int id, ErrorLogTypeLookup errorLogTypeLookup)
+        //{
+        //    if (id != errorLogTypeLookup.TypeId)
+        //    {
+        //        return BadRequest();
+        //    }
+
+        //    _context.Entry(errorLogTypeLookup).State = EntityState.Modified;
+=======
         // PUT: api/ErrorLogTypes/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
@@ -92,26 +107,59 @@ namespace LabPortal.Controllers
             errorLogTypeLookup.TypeName = errorLogTypeLookupDto.TypeName;
 
             _context.Entry(errorLogTypeLookup).State = EntityState.Modified;
+>>>>>>> main
 
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!ErrorLogTypeLookupExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
+        //    try
+        //    {
+        //        await _context.SaveChangesAsync();
+        //    }
+        //    catch (DbUpdateConcurrencyException)
+        //    {
+        //        if (!ErrorLogTypeLookupExists(id))
+        //        {
+        //            return NotFound();
+        //        }
+        //        else
+        //        {
+        //            throw;
+        //        }
+        //    }
 
-            return NoContent();
-        }
+        //    return NoContent();
+        //}
 
+<<<<<<< HEAD
+        //// POST: api/ErrorLogTypes
+        //// To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
+        //[HttpPost]
+        //[ProducesResponseType(StatusCodes.Status200OK)]
+        //[ProducesResponseType(StatusCodes.Status400BadRequest)]
+        //public async Task<ActionResult<ErrorLogTypeLookup>> PostErrorLogTypeLookup(ErrorLogTypeLookup errorLogTypeLookup)
+        //{
+        //  if (_context.ErrorLogTypeLookups == null)
+        //  {
+        //      return Problem("Entity set 'TESTContext.ErrorLogTypeLookups'  is null.");
+        //  }
+        //    _context.ErrorLogTypeLookups.Add(errorLogTypeLookup);
+        //    try
+        //    {
+        //        await _context.SaveChangesAsync();
+        //    }
+        //    catch (DbUpdateException)
+        //    {
+        //        if (ErrorLogTypeLookupExists(errorLogTypeLookup.TypeId))
+        //        {
+        //            return Conflict();
+        //        }
+        //        else
+        //        {
+        //            throw;
+        //        }
+        //    }
+
+        //    return CreatedAtAction("GetErrorLogTypeLookup", new { id = errorLogTypeLookup.TypeId }, errorLogTypeLookup);
+        //}
+=======
         // POST: api/ErrorLogTypes
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
@@ -142,32 +190,33 @@ namespace LabPortal.Controllers
 
             return Ok();
         }
+>>>>>>> main
 
-        // DELETE: api/ErrorLogTypes/5
-        [HttpDelete("{id}")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> DeleteErrorLogTypeLookup(int id)
-        {
-            if (_context.ErrorLogTypeLookups == null)
-            {
-                return NotFound();
-            }
-            var errorLogTypeLookup = await _context.ErrorLogTypeLookups.FindAsync(id);
-            if (errorLogTypeLookup == null)
-            {
-                return NotFound();
-            }
+        //// DELETE: api/ErrorLogTypes/5
+        //[HttpDelete("{id}")]
+        //[ProducesResponseType(StatusCodes.Status200OK)]
+        //[ProducesResponseType(StatusCodes.Status400BadRequest)]
+        //public async Task<IActionResult> DeleteErrorLogTypeLookup(int id)
+        //{
+        //    if (_context.ErrorLogTypeLookups == null)
+        //    {
+        //        return NotFound();
+        //    }
+        //    var errorLogTypeLookup = await _context.ErrorLogTypeLookups.FindAsync(id);
+        //    if (errorLogTypeLookup == null)
+        //    {
+        //        return NotFound();
+        //    }
 
-            _context.ErrorLogTypeLookups.Remove(errorLogTypeLookup);
-            await _context.SaveChangesAsync();
+        //    _context.ErrorLogTypeLookups.Remove(errorLogTypeLookup);
+        //    await _context.SaveChangesAsync();
 
-            return NoContent();
-        }
+        //    return NoContent();
+        //}
 
-        private bool ErrorLogTypeLookupExists(int id)
-        {
-            return (_context.ErrorLogTypeLookups?.Any(e => e.TypeId == id)).GetValueOrDefault();
-        }
+        //private bool ErrorLogTypeLookupExists(int id)
+        //{
+        //    return (_context.ErrorLogTypeLookups?.Any(e => e.TypeId == id)).GetValueOrDefault();
+        //}
     }
 }
