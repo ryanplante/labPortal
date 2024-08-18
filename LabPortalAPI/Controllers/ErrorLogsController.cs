@@ -6,11 +6,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LabPortal.Models;
-<<<<<<< HEAD
-=======
-using System.Text;
-using System.Security.Cryptography;
->>>>>>> main
 using LabPortal.Models.Dto;
 
 namespace LabPortal.Controllers
@@ -61,8 +56,6 @@ namespace LabPortal.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<ErrorLogDto>> GetErrorLog(int id)
-<<<<<<< HEAD
-=======
         {
             if (_context.ErrorLogs == null)
             {
@@ -89,128 +82,6 @@ namespace LabPortal.Controllers
 
             return Ok(errorLogDto);
         }
-
-        /* PUT: api/ErrorLogs/5
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        [HttpPut("{id}")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> PutErrorLog(int id, ErrorLogDto errorLogDto)
-        {
-            if (id != errorLogDto.LogId)
-            {
-                return BadRequest();
-            }
-
-            var errorLog = await _context.ErrorLogs.FindAsync(id);
-            if (errorLog == null)
-            {
-                return NotFound();
-            }
-
-            errorLog.LogType = errorLogDto.LogType;
-            errorLog.Timestamp = errorLogDto.Timestamp;
-            errorLog.Description = errorLogDto.Description;
-            errorLog.Stack = errorLogDto.Stack;
-            errorLog.Source = errorLogDto.Source;
-            errorLog.ExceptionType = errorLogDto.ExceptionType;
-            errorLog.UserId = errorLogDto.UserId;
-
-            _context.Entry(errorLog).State = EntityState.Modified;
-
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!ErrorLogExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
-
-            return NoContent();
-        }*/
-
-        // POST: api/ErrorLogs
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        [HttpPost]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<ActionResult<ErrorLogDto>> PostErrorLog(ErrorLogDto errorLogDto)
-        {
-            if (_context.ErrorLogs == null)
-            {
-                return Problem("Entity set 'TESTContext.ErrorLogs'  is null.");
-            }
-
-            var errorLog = new ErrorLog
-            {
-                LogType = errorLogDto.LogType,
-                Timestamp = DateTime.UtcNow,
-                Description = errorLogDto.Description,
-                Stack = errorLogDto.Stack,
-                Source = errorLogDto.Source,
-                ExceptionType = errorLogDto.ExceptionType,
-                UserId = errorLogDto.UserId
-            };
-
-            _context.ErrorLogs.Add(errorLog);
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateException ex)
-            {
-                // Simplified the error as to not show more info than needed
-                return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while saving the error log.");
-            }
-
-            return Ok();
-        }
-
-        /* DELETE: api/ErrorLogs/5
-        [HttpDelete("{id}")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> DeleteErrorLog(int id)
->>>>>>> main
-        {
-            if (_context.ErrorLogs == null)
-            {
-                return NotFound();
-            }
-            var errorLog = await _context.ErrorLogs.FindAsync(id);
-
-            if (errorLog == null)
-            {
-                return NotFound();
-            }
-
-            var errorLogDto = new ErrorLogDto
-            {
-                LogId = errorLog.LogId,
-                LogType = errorLog.LogType,
-                Timestamp = errorLog.Timestamp,
-                Description = errorLog.Description,
-                Stack = errorLog.Stack,
-                Source = errorLog.Source,
-                ExceptionType = errorLog.ExceptionType,
-                UserId = errorLog.UserId
-            };
-
-<<<<<<< HEAD
-            return Ok(errorLogDto);
-        }
-=======
-            return NoContent();
-        }*/
->>>>>>> main
 
         //// PUT: api/ErrorLogs/5
         //// To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754

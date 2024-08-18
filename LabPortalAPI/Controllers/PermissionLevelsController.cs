@@ -37,8 +37,7 @@ namespace LabPortal.Controllers
             var permissionLookups = await _context.PermissionLookups.ToListAsync();
             var permissionLookupDtos = permissionLookups.Select(permissionLookup => new PermissionLookupDto
             {
-                UserLevel = permissionLookup.UserLevel,
-                Name = permissionLookup.Name
+                Name = permissionLookup.Name,
             }).ToList();
 
             return Ok(permissionLookupDtos);

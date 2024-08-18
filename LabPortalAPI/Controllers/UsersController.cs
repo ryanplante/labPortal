@@ -63,7 +63,6 @@ namespace LabPortal.Controllers
             }
 
             var user = await _context.Users.FindAsync(id);
-
             if (user == null)
             {
                 return NotFound();
@@ -157,12 +156,21 @@ namespace LabPortal.Controllers
             {
                 await _context.SaveChangesAsync();
             }
-            catch (DbUpdateException ex)
+            catch (DbUpdateException)
             {
-                return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while creating user.");
+                if (UserExists(user.UserId))
+                {
+                    return Conflict();
+                }
+                else
+                {
+                    throw;
+                }
             }
 
-            return Ok();
+            userDto.UserId = user.UserId;
+
+            return CreatedAtAction("GetUser", new { id = user.UserId }, userDto);
         }
 
         // DELETE: api/Users/5
@@ -275,5 +283,96 @@ namespace LabPortal.Controllers
 
             return Ok(userDto);
         }
+        // GET: api/Users/LastUpdated/{id}
+        [HttpGet("LastUpdated/{id}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<DateTime>> GetLastUpdated(int id)
+        {
+            if (_context.Users == null)
+            {
+                return NotFound();
+            }
+
+            var user = await _context.Users
+                .Where(u => u.UserId == id)
+                .Select(u => u.LastUpdated)
+                .FirstOrDefaultAsync();
+
+            if (user == null)
+            {
+                return NotFound();
+            }
+
+            return Ok(user);
+        }
+
+        // PUT: api/Users/UpdatePassword/{id}
+        [HttpPut("UpdatePassword/{id}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> UpdatePassword(int id, [FromBody] UpdatePasswordDto updatePasswordDto)
+        {
+            if (_context.Users == null)
+            {
+                return NotFound();
+            }
+
+            var user = await _context.Users.FindAsync(id);
+            if (user == null)
+            {
+                return NotFound();
+            }
+
+            // Update the user's password and lastUpdated fields
+            user.Password = updatePasswordDto.Password;
+            user.LastUpdated = updatePasswordDto.LastUpdated;
+
+            _context.Entry(user).State = EntityState.Modified;
+
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!UserExists(id))
+                {
+                    return NotFound();
+                }
+                else
+                {
+                    throw;
+                }
+            }
+
+            return NoContent();
+        }
+        // DELETE api/Users/DeleteToken/{token}
+        [HttpDelete("DeleteToken/{token}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> DeleteToken(string token)
+        {
+            if (_context.UserTokens == null)
+            {
+                return NotFound("Token storage is not available.");
+            }
+
+            var userToken = await _context.UserTokens.SingleOrDefaultAsync(ut => ut.Token == token);
+            if (userToken == null)
+            {
+                return NotFound("Token not found.");
+            }
+
+            _context.UserTokens.Remove(userToken);
+            await _context.SaveChangesAsync();
+
+            return Ok("Token deleted successfully.");
+        }
+
     }
 }

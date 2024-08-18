@@ -6,9 +6,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LabPortal.Models;
-using System.Text;
-using System.Security.Cryptography;
-using LabPortal.Models.Dto;
 
 namespace LabPortal.Controllers
 {
@@ -28,20 +25,13 @@ namespace LabPortal.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<IEnumerable<ErrorLogTypeLookupDto>>> GetErrorLogTypeLookups()
+        public async Task<ActionResult<IEnumerable<ErrorLogTypeLookup>>> GetErrorLogTypeLookups()
         {
-            if (_context.ErrorLogTypeLookups == null)
-            {
-                return NotFound();
-            }
-            var errorLogTypeLookups = await _context.ErrorLogTypeLookups.ToListAsync();
-            var errorLogTypeLookupDtos = errorLogTypeLookups.Select(ErrorLogTypeLookup => new ErrorLogTypeLookupDto
-            {
-                TypeId = ErrorLogTypeLookup.TypeId,
-                TypeName = ErrorLogTypeLookup.TypeName
-            }).ToList();
-
-            return Ok(errorLogTypeLookupDtos);
+          if (_context.ErrorLogTypeLookups == null)
+          {
+              return NotFound();
+          }
+            return await _context.ErrorLogTypeLookups.ToListAsync();
         }
 
         // GET: api/ErrorLogTypes/5
@@ -49,12 +39,12 @@ namespace LabPortal.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<ErrorLogTypeLookupDto>> GetErrorLogTypeLookup(int id)
+        public async Task<ActionResult<ErrorLogTypeLookup>> GetErrorLogTypeLookup(int id)
         {
-            if (_context.ErrorLogTypeLookups == null)
-            {
-                return NotFound();
-            }
+          if (_context.ErrorLogTypeLookups == null)
+          {
+              return NotFound();
+          }
             var errorLogTypeLookup = await _context.ErrorLogTypeLookups.FindAsync(id);
 
             if (errorLogTypeLookup == null)
@@ -62,16 +52,9 @@ namespace LabPortal.Controllers
                 return NotFound();
             }
 
-            var errorLogTypeLookupDto = new ErrorLogTypeLookupDto
-            {
-                TypeId = errorLogTypeLookup.TypeId,
-                TypeName = errorLogTypeLookup.TypeName
-            };
-
-            return Ok(errorLogTypeLookupDto);
+            return errorLogTypeLookup;
         }
 
-<<<<<<< HEAD
         //// PUT: api/ErrorLogTypes/5
         //// To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         //[HttpPut("{id}")]
@@ -85,29 +68,6 @@ namespace LabPortal.Controllers
         //    }
 
         //    _context.Entry(errorLogTypeLookup).State = EntityState.Modified;
-=======
-        // PUT: api/ErrorLogTypes/5
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        [HttpPut("{id}")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> PutErrorLogTypeLookup(int id, ErrorLogTypeLookupDto errorLogTypeLookupDto)
-        {
-            if (id != errorLogTypeLookupDto.TypeId)
-            {
-                return BadRequest();
-            }
-
-            var errorLogTypeLookup = await _context.ErrorLogTypeLookups.FindAsync(id);
-            if (errorLogTypeLookup == null)
-            {
-                return NotFound();
-            }
-
-            errorLogTypeLookup.TypeName = errorLogTypeLookupDto.TypeName;
-
-            _context.Entry(errorLogTypeLookup).State = EntityState.Modified;
->>>>>>> main
 
         //    try
         //    {
@@ -128,7 +88,6 @@ namespace LabPortal.Controllers
         //    return NoContent();
         //}
 
-<<<<<<< HEAD
         //// POST: api/ErrorLogTypes
         //// To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         //[HttpPost]
@@ -159,38 +118,6 @@ namespace LabPortal.Controllers
 
         //    return CreatedAtAction("GetErrorLogTypeLookup", new { id = errorLogTypeLookup.TypeId }, errorLogTypeLookup);
         //}
-=======
-        // POST: api/ErrorLogTypes
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        [HttpPost]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<ActionResult<ErrorLogTypeLookupDto>> PostErrorLogTypeLookup(ErrorLogTypeLookupDto errorLogTypeLookupDto)
-        {
-            if (_context.ErrorLogTypeLookups == null)
-            {
-                return Problem("Entity set 'TESTContext.ErrorLogTypeLookups'  is null.");
-            }
-
-            var errorLogTypeLookup = new ErrorLogTypeLookup
-            {
-                TypeName = errorLogTypeLookupDto.TypeName
-            };
-
-            _context.ErrorLogTypeLookups.Add(errorLogTypeLookup);
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateException ex)
-            {
-                // Simplified the error as to not show more info than needed
-                return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while saving the error log type.");
-            }
-
-            return Ok();
-        }
->>>>>>> main
 
         //// DELETE: api/ErrorLogTypes/5
         //[HttpDelete("{id}")]
