@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, StyleSheet, Image, Text, TouchableOpacity, Animated, Easing, Alert } from 'react-native';
+import { View, StyleSheet, Image, Text, TouchableOpacity, Animated, Easing, Alert, Platform } from 'react-native';
 import { deleteToken, getUserByToken } from '../../services/loginService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Updates from 'expo-updates';
 
 const ProfileSidebar = ({ visible, onClose }: { visible: boolean; onClose: () => void }) => {
   const slideAnim = useRef(new Animated.Value(-300)).current;
@@ -12,7 +13,7 @@ const ProfileSidebar = ({ visible, onClose }: { visible: boolean; onClose: () =>
       const token = await AsyncStorage.getItem('token');
       if (token) {
         try {
-          const user = await getUserByToken(token);
+          const user = await getUserByToken();
           setUserName(`${user.fName} ${user.lName}`);
         } catch (error) {
           Alert.alert('Error', 'Failed to load user data');
@@ -35,7 +36,13 @@ const ProfileSidebar = ({ visible, onClose }: { visible: boolean; onClose: () =>
 
     onClose(); // Close the profile sidebar
     // Force a reload of the app
-    window.location.reload();
+    if (Platform.OS === 'ios') {
+      console.log('Running on iOS, reloading with Updates.reloadAsync');
+      await Updates.reloadAsync(); // Reload the app using Expo's reload for iOS
+    } else {
+      console.log('Running on Android or another platform, reloading with RNRestart');
+      window.location.reload(); // Restart the app using react-native-restart for other platforms
+    }
   };
 
   return (

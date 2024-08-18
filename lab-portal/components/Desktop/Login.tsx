@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Alert, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { fetchLastUpdated, validateCredentials } from '../../services/loginService';
+import * as Updates from 'expo-updates';
 
 const Login = () => {
   const [username, setUsername] = useState('');
@@ -23,8 +24,14 @@ const Login = () => {
       await AsyncStorage.setItem('token', token);
       console.log('Token stored in AsyncStorage');
       
-      // Force a reload of the app... can't seem to get navigator to work but this is a workaround ¯\_(ツ)_/¯
-      window.location.reload();
+      // Force a reload of the app... can't seem to get navigator to work since it's not in the stack but this is a workaround ¯\_(ツ)_/¯
+      if (Platform.OS === 'ios') {
+        console.log('Running on iOS, reloading with Updates.reloadAsync');
+        await Updates.reloadAsync(); // Reload the app using Expo's reload for iOS
+      } else {
+        console.log('Running on Android or another platform, reloading with RNRestart');
+        window.location.reload(); // Restart the app using react-native-restart for other platforms
+      }
       console.log('Navigating to Main');
     } catch (error) {
       setErrorMessage('Invalid username or password'); // Show the error message
