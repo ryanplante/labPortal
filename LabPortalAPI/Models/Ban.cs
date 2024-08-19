@@ -6,7 +6,7 @@ namespace LabPortal.Models
     public partial class Ban
     {
         public int BanId { get; set; }
-        public int? UserId { get; set; }
+        public int UserId { get; set; }
         public string? Reason { get; set; }
         public DateTime? ExpirationDate { get; set; }
 

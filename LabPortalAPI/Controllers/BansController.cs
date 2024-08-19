@@ -6,8 +6,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LabPortal.Models;
-using System.Text;
-using System.Security.Cryptography;
 using LabPortal.Models.Dto;
 
 namespace LabPortal.Controllers
@@ -23,7 +21,7 @@ namespace LabPortal.Controllers
             _context = context;
         }
 
-        // GET: api/BanControllerActions
+        // GET: api/Bans
         [HttpGet]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -36,18 +34,18 @@ namespace LabPortal.Controllers
             }
 
             var bans = await _context.Bans.ToListAsync();
-            var banDtos = bans.Select(Ban => new BanDto
+            var banDtos = bans.Select(ban => new BanDto
             {
-                BanId = Ban.BanId,
-                UserId = Ban.UserId,
-                Reason = Ban.Reason,
-                ExpirationDate = Ban.ExpirationDate
+                BanId = ban.BanId,
+                UserId = ban.UserId,
+                Reason = ban.Reason,
+                ExpirationDate = ban.ExpirationDate
             }).ToList();
 
             return Ok(banDtos);
         }
 
-        // GET: api/BanControllerActions/5
+        // GET: api/Bans/5
         [HttpGet("{id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -58,6 +56,7 @@ namespace LabPortal.Controllers
             {
                 return NotFound();
             }
+
             var ban = await _context.Bans.FindAsync(id);
 
             if (ban == null)
@@ -76,17 +75,12 @@ namespace LabPortal.Controllers
             return Ok(banDto);
         }
 
-        // PUT: api/BanControllerActions/5
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
+        // PUT: api/Bans/5
         [HttpPut("{id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> PutBan(int id, BanDto banDto)
+        public async Task<IActionResult> PutBan(int id, BanCreateDto banDto)
         {
-            if (id != banDto.BanId)
-            {
-                return BadRequest();
-            }
 
             var ban = await _context.Bans.FindAsync(id);
             if (ban == null)
@@ -119,16 +113,20 @@ namespace LabPortal.Controllers
             return NoContent();
         }
 
-        // POST: api/BanControllerActions
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
+        // POST: api/Bans
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<ActionResult<BanDto>> PostBan(BanDto banDto)
+        public async Task<ActionResult<BanDto>> PostBan(BanCreateDto banDto)
         {
             if (_context.Bans == null)
             {
-                return Problem("Entity set 'TESTContext.Bans'  is null.");
+                return Problem("Entity set 'TESTContext.Bans' is null.");
+            }
+
+            if (BanExists(banDto.UserId))
+            {
+                return BadRequest("A ban already exists for this user that has not yet expired.");
             }
 
             var ban = new Ban
@@ -144,7 +142,7 @@ namespace LabPortal.Controllers
             {
                 await _context.SaveChangesAsync();
             }
-            catch (DbUpdateException ex)
+            catch (DbUpdateException)
             {
                 return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while creating ban.");
             }
@@ -152,7 +150,7 @@ namespace LabPortal.Controllers
             return Ok();
         }
 
-        // DELETE: api/BanControllerActions/5
+        // DELETE: api/Bans/5
         [HttpDelete("{id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -162,6 +160,7 @@ namespace LabPortal.Controllers
             {
                 return NotFound();
             }
+
             var ban = await _context.Bans.FindAsync(id);
             if (ban == null)
             {
@@ -174,9 +173,41 @@ namespace LabPortal.Controllers
             return NoContent();
         }
 
-        private bool BanExists(int id)
+        // Check if a ban exists based on UserId and the ban hasn't expired
+        private bool BanExists(int userId)
         {
-            return (_context.Bans?.Any(e => e.BanId == id)).GetValueOrDefault();
+            return _context.Bans.Any(ban => ban.UserId == userId && ban.ExpirationDate > DateTime.UtcNow);
+        }
+
+        // GET: api/Bans/CheckBan/5
+        [HttpGet("CheckBan/{userId}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<BanDto>> CheckBan(int userId)
+        {
+            if (_context.Bans == null)
+            {
+                return NotFound();
+            }
+
+            var ban = await _context.Bans
+                .Where(b => b.UserId == userId && b.ExpirationDate > DateTime.UtcNow)
+                .FirstOrDefaultAsync();
+
+            if (ban == null)
+            {
+                return NotFound("No active ban found for this user.");
+            }
+
+            var banDto = new BanDto
+            {
+                BanId = ban.BanId,
+                UserId = ban.UserId,
+                Reason = ban.Reason,
+                ExpirationDate = ban.ExpirationDate
+            };
+
+            return Ok(banDto);
         }
     }
 }
