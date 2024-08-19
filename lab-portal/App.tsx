@@ -31,6 +31,8 @@ import MobileSidebar from './components/Mobile/Sidebar';
 import MobileProfileSidebar from './components/Mobile/ProfileSidebar';
 import { isMobile } from 'react-device-detect';
 import { getUserByToken } from './services/loginService';
+import ChangePassword from './components/Desktop/ChangePassword';
+import { crossPlatformAlert } from './services/helpers';
 
 const Stack = createStackNavigator();
 
@@ -46,7 +48,7 @@ const App = () => {
           const user = await getUserByToken();
           setUser(user);
         } catch (error) {
-          Alert.alert('Error', error.message);
+          crossPlatformAlert('Error', error.message);
           await AsyncStorage.removeItem('token');
           setUser(null);
         }
@@ -92,6 +94,7 @@ const App = () => {
               ) : (
                 <>
                   <Stack.Screen name="Main" component={MainPage} />
+                  <Stack.Screen name="ChangePassword" component={ChangePassword} />
                   <Stack.Screen name="Labs" component={Labs} />
                   <Stack.Screen name="Reports" component={Reports} />
                   <Stack.Screen name="Schedule" component={Schedule} />

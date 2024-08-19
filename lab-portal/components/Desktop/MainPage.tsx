@@ -9,6 +9,7 @@ import DepartmentHeadView from './Views/DepartmentHeadView';
 import AdminView from './Views/AdminView';
 import { isMobile } from 'react-device-detect';
 import { getUserByToken } from '../../services/loginService';
+import { crossPlatformAlert } from '../../services/helpers';
 
 const MainPage = () => {
   const [isProfileSidebarVisible, setIsProfileSidebarVisible] = useState(false);
@@ -22,7 +23,7 @@ const MainPage = () => {
         setPrivLvl(user.privLvl);
         setSelectedView(getViewByPrivLvl(user.privLvl));
       } catch (error) {
-        Alert.alert('Error', 'Failed to load user data');
+        crossPlatformAlert('Error', 'Failed to load user data');
       }
     };
 
@@ -33,7 +34,7 @@ const MainPage = () => {
     setIsProfileSidebarVisible(!isProfileSidebarVisible);
   };
 
-  const getViewByPrivLvl = (privLvl) => {
+  const getViewByPrivLvl = (privLvl: number) => {
     switch (privLvl) {
       case 0: // Assuming 0 is for Student
         return 'Student';

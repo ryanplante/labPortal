@@ -1,11 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, StyleSheet, Image, Text, TouchableOpacity, Animated, Easing, Alert, Platform } from 'react-native';
-import { deleteToken, getUserByToken } from '../../services/loginService';
+import { deleteToken, getUserByToken, reload } from '../../services/loginService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Updates from 'expo-updates';
+import { useNavigation } from '@react-navigation/native';
 
 const ProfileSidebar = ({ visible, onClose }: { visible: boolean; onClose: () => void }) => {
   const slideAnim = useRef(new Animated.Value(-300)).current;
+  const navigation = useNavigation();
   const [userName, setUserName] = useState('[Name]'); // Default value before loading user data
 
   useEffect(() => {
@@ -36,22 +37,21 @@ const ProfileSidebar = ({ visible, onClose }: { visible: boolean; onClose: () =>
 
     onClose(); // Close the profile sidebar
     // Force a reload of the app
-    if (Platform.OS === 'ios') {
-      console.log('Running on iOS, reloading with Updates.reloadAsync');
-      await Updates.reloadAsync(); // Reload the app using Expo's reload for iOS
-    } else {
-      console.log('Running on Android or another platform, reloading with RNRestart');
-      window.location.reload(); // Restart the app using react-native-restart for other platforms
-    }
+    await reload();
+  };
+
+  const handleChangePassword = () => {
+    navigation.navigate('ChangePassword');
+    onClose();
   };
 
   return (
     <Animated.View style={[styles.container, { transform: [{ translateX: slideAnim }] }]}>
-      <View style={styles.profileContainer}>
+      <View style={styles.profileContainer} >
         <Image source={require('../../assets/user-icon.png')} style={styles.profileImage} />
         <Text style={styles.profileName}>{userName}</Text>
       </View>
-      <TouchableOpacity style={styles.menuItem}>
+      <TouchableOpacity style={styles.menuItem} onPress={handleChangePassword}>
         <Text style={styles.menuText}>Change Password</Text>
       </TouchableOpacity>
       <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
