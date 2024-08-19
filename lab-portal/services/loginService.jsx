@@ -2,24 +2,29 @@ import { SHA256 } from 'crypto-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform, Alert } from 'react-native';
 import * as Updates from 'expo-updates';
+import axios from 'axios';
 
 const API_URL = 'https://localhost:7282/api/Users';
 
 export const getUserByToken = async () => {
   const token = await AsyncStorage.getItem('token');
-  const response = await fetch(`${API_URL}/GetUserByToken/${token}`);
-  if (!response.ok) {
+  const response = await axios.get(`${API_URL}/GetUserByToken/${token}`);
+  
+  if (response.status !== 200) {
     throw new Error('Invalid or expired token.');
   }
-  return response.json(); // Returns the user object
+
+  return response.data; // Returns the user object
 };
 
 export const fetchLastUpdated = async (username) => {
-  const response = await fetch(`${API_URL}/LastUpdated/${username}`);
-  if (!response.ok) {
+  const response = await axios.get(`${API_URL}/LastUpdated/${username}`);
+  
+  if (response.status !== 200) {
     throw new Error('Failed to fetch lastUpdated value');
   }
-  return response.json();
+
+  return response.data;
 };
 
 export const reload = async () => {
@@ -33,7 +38,6 @@ export const reload = async () => {
 };
 
 export const validateCredentials = async (username, password, lastUpdated) => {
-  // Ensure lastUpdated includes 'Z' if it's missing
   const formattedLastUpdated = lastUpdated.includes('Z')
     ? lastUpdated
     : `${lastUpdated}Z`;
@@ -45,80 +49,61 @@ export const validateCredentials = async (username, password, lastUpdated) => {
 
   console.log('Hashed Password:', hashedPassword);
 
-  const response = await fetch(`${API_URL}/ValidateCredentials`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
+  try {
+    const response = await axios.post(`${API_URL}/ValidateCredentials`, {
       userId: username,
       password: hashedPassword,
-    }),
-  });
+    });
 
-  if (!response.ok) {
-    const responseText = await response.text();
-    throw new Error(responseText);
+    return response.data; // Returns the token
+  } catch (error) {
+    console.error('Error:', error.response ? error.response.data : error.message);
+    throw new Error(error.response ? error.response.data : 'Error validating credentials');
   }
-  
-  return response.text(); // Returns the token
 };
-
 
 export const updatePassword = async (userId, newPassword) => {
   try {
-      // Get the current date as a rounded timestamp (milliseconds since epoch)
-      const currentTimestamp = Math.round(new Date().getTime());
-      
-      // Create a Date object from the rounded timestamp
-      const currentDate = new Date(currentTimestamp);
+    const currentTimestamp = Math.round(new Date().getTime());
+    const currentDate = new Date(currentTimestamp);
+    const currentDateISO = currentDate.toISOString();
 
-      // Convert the Date object to an ISO string (UTC format)
-      const currentDateISO = currentDate.toISOString();
+    console.log('Current Date ISO:', currentDateISO);
 
-      console.log('Current Date ISO:', currentDateISO);
+    const concatenatedString = newPassword + currentDateISO;
+    const hashedPassword = SHA256(concatenatedString).toString();
 
-      const concatenatedString = newPassword + currentDateISO;
+    console.log('Hashed Password:', hashedPassword);
 
-      // Encrypt the new password with the current date in ISO string format
-      const hashedPassword = SHA256(concatenatedString).toString();
+    const response = await axios.put(`${API_URL}/UpdatePassword/${userId}`, {
+      password: hashedPassword,
+      lastUpdated: currentDateISO,
+    });
 
-      console.log('Hashed Password:', hashedPassword);
-
-      // Send the encrypted password and current date in ISO format to the API
-      const response = await fetch(`${API_URL}/UpdatePassword/${userId}`, {
-          method: 'PUT',
-          headers: {
-              'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-              password: hashedPassword,
-              lastUpdated: currentDateISO,
-          }),
-      });
-
-      if (response.ok) {
-          Alert.alert('Success', 'Password updated successfully.');
-      } else {
-          Alert.alert('Update Failed', 'There was a problem updating the password.');
-      }
+    if (response.status === 200) {
+      Alert.alert('Success', 'Password updated successfully.');
+    } else {
+      Alert.alert('Update Failed', 'There was a problem updating the password.');
+    }
   } catch (error) {
-      Alert.alert('Error', error.message);
+    console.error('Error:', error.response ? error.response.data : error.message);
+    Alert.alert('Error', error.response ? error.response.data : error.message);
   }
 };
-
 
 export const deleteToken = async () => {
   const token = await AsyncStorage.getItem('token');
   if (token) {
-      await AsyncStorage.clear();
-      const response = await fetch(`${API_URL}/DeleteToken/${token}`, {
-        method: 'DELETE',
-      });
-      if (!response.ok) {
-        const responseText = await response.text();
-        throw new Error(responseText);
+    await AsyncStorage.clear();
+    try {
+      const response = await axios.delete(`${API_URL}/DeleteToken/${token}`);
+      if (response.status !== 200) {
+        throw new Error(response.data);
       }
+    } catch (error) {
+      console.error('Error:', error.response ? error.response.data : error.message);
+      throw new Error(error.response ? error.response.data : 'Error deleting token');
+    }
   }
   return true;
 };
