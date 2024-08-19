@@ -26,13 +26,23 @@ namespace LabPortal.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<IEnumerable<AuditLog>>> GetAuditLogs()
+        public async Task<ActionResult<IEnumerable<AuditLogDto>>> GetAuditLogs()
         {
-          if (_context.AuditLogs == null)
-          {
-              return NotFound();
-          }
-            return await _context.AuditLogs.ToListAsync();
+            if (_context.AuditLogs == null)
+            {
+                return NotFound();
+            }
+
+            var auditLogs = await _context.AuditLogs
+                                .Select(a => new AuditLogDto
+                                {
+                                    Description = a.Description,
+                                    Timestamp = a.Timestamp,
+                                    AuditLogTypeId = a.AuditLogTypeId
+                                })
+                                .ToListAsync();
+
+            return Ok(auditLogs);
         }
 
         // GET: api/AuditLogs/5
@@ -40,20 +50,29 @@ namespace LabPortal.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<AuditLog>> GetAuditLog(int id)
+        public async Task<ActionResult<AuditLogDto>> GetAuditLog(int id)
         {
-          if (_context.AuditLogs == null)
-          {
-              return NotFound();
-          }
-            var auditLog = await _context.AuditLogs.FindAsync(id);
+            if (_context.AuditLogs == null)
+            {
+                return NotFound();
+            }
+
+            var auditLog = await _context.AuditLogs
+                                .Where(a => a.LogId == id)
+                                .Select(a => new AuditLogDto
+                                {
+                                    Description = a.Description,
+                                    Timestamp = a.Timestamp,
+                                    AuditLogTypeId = a.AuditLogTypeId
+                                })
+                                .FirstOrDefaultAsync();
 
             if (auditLog == null)
             {
                 return NotFound();
             }
 
-            return auditLog;
+            return Ok(auditLog);
         }
 
         // PUT: api/AuditLogs/5
@@ -104,6 +123,7 @@ namespace LabPortal.Controllers
             var auditLog = new AuditLog
             {
                 Description = auditLogDto.Description,
+                AuditLogTypeId = auditLogDto.AuditLogTypeId,
                 // Auto generate timestamp so that the time can be universally the api time and in UTC format
                 Timestamp = DateTime.UtcNow
             };

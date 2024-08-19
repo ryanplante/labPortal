@@ -3,6 +3,7 @@
     public class AuditLogDto
     {
         public string? Description { get; set; }
-        //public DateTime? Timestamp { get; set; }
+        public int ? AuditLogTypeId { get; set; }
+        public DateTime? Timestamp { get; set; }
     }
 }

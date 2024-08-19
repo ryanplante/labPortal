@@ -17,6 +17,7 @@ namespace LabPortal.Models
         }
 
         public virtual DbSet<AuditLog> AuditLogs { get; set; } = null!;
+        public virtual DbSet<AuditLogType> AuditLogTypes { get; set; } = null!;
         public virtual DbSet<Ban> Bans { get; set; } = null!;
         public virtual DbSet<ChatLog> ChatLogs { get; set; } = null!;
         public virtual DbSet<Department> Departments { get; set; } = null!;
@@ -40,9 +41,7 @@ namespace LabPortal.Models
                 entity.HasKey(e => e.LogId)
                     .HasName("PK__AuditLog__7839F62D49B4C980");
 
-                entity.Property(e => e.LogId)
-                    .ValueGeneratedOnAdd()  // Use this to specify that logID is auto-generated
-                    .HasColumnName("logID");
+                entity.Property(e => e.LogId).HasColumnName("logID");
 
                 entity.Property(e => e.Description)
                     .HasMaxLength(255)
@@ -51,6 +50,18 @@ namespace LabPortal.Models
                 entity.Property(e => e.Timestamp)
                     .HasColumnType("datetime")
                     .HasColumnName("timestamp");
+
+                entity.HasOne(d => d.AuditLogType)
+                    .WithMany(p => p.AuditLogs)
+                    .HasForeignKey(d => d.AuditLogTypeId)
+                    .HasConstraintName("FK_AuditLogs_AuditLogType");
+            });
+
+            modelBuilder.Entity<AuditLogType>(entity =>
+            {
+                entity.ToTable("AuditLogType");
+
+                entity.Property(e => e.Name).HasMaxLength(50);
             });
 
             modelBuilder.Entity<Ban>(entity =>
