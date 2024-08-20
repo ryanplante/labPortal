@@ -34,6 +34,7 @@ namespace LabPortal.Models
         public virtual DbSet<User> Users { get; set; } = null!;
         public virtual DbSet<UserToken> UserTokens { get; set; } = null!;
 
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<AuditLog>(entity =>
@@ -51,10 +52,17 @@ namespace LabPortal.Models
                     .HasColumnType("datetime")
                     .HasColumnName("timestamp");
 
+                entity.Property(e => e.UserId).HasColumnName("userID");
+
                 entity.HasOne(d => d.AuditLogType)
                     .WithMany(p => p.AuditLogs)
                     .HasForeignKey(d => d.AuditLogTypeId)
                     .HasConstraintName("FK_AuditLogs_AuditLogType");
+
+                entity.HasOne(d => d.User)
+                    .WithMany(p => p.AuditLogs)
+                    .HasForeignKey(d => d.UserId)
+                    .HasConstraintName("FK_AuditLogs_Users");
             });
 
             modelBuilder.Entity<AuditLogType>(entity =>
@@ -81,6 +89,7 @@ namespace LabPortal.Models
                 entity.HasOne(d => d.User)
                     .WithMany(p => p.Bans)
                     .HasForeignKey(d => d.UserId)
+                    .OnDelete(DeleteBehavior.ClientSetNull)
                     .HasConstraintName("FK__Bans__userID__5812160E");
             });
 

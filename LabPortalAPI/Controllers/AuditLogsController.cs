@@ -38,6 +38,7 @@ namespace LabPortal.Controllers
                                 {
                                     Description = a.Description,
                                     Timestamp = a.Timestamp,
+                                    userID = a.UserId,
                                     AuditLogTypeId = a.AuditLogTypeId
                                 })
                                 .ToListAsync();
@@ -63,6 +64,7 @@ namespace LabPortal.Controllers
                                 {
                                     Description = a.Description,
                                     Timestamp = a.Timestamp,
+                                    userID = a.UserId,
                                     AuditLogTypeId = a.AuditLogTypeId
                                 })
                                 .FirstOrDefaultAsync();
@@ -124,6 +126,7 @@ namespace LabPortal.Controllers
             {
                 Description = auditLogDto.Description,
                 AuditLogTypeId = auditLogDto.AuditLogTypeId,
+                UserId = auditLogDto.userID,
                 // Auto generate timestamp so that the time can be universally the api time and in UTC format
                 Timestamp = DateTime.UtcNow
             };

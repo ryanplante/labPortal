@@ -7,6 +7,7 @@ namespace LabPortal.Models
     {
         public User()
         {
+            AuditLogs = new HashSet<AuditLog>();
             Bans = new HashSet<Ban>();
             ChatLogs = new HashSet<ChatLog>();
             ErrorLogs = new HashSet<ErrorLog>();
@@ -30,6 +31,7 @@ namespace LabPortal.Models
         public virtual PositionLookup? PositionNavigation { get; set; }
         public virtual PermissionLookup? PrivLvlNavigation { get; set; }
         public virtual Department? UserDeptNavigation { get; set; }
+        public virtual ICollection<AuditLog> AuditLogs { get; set; }
         public virtual ICollection<Ban> Bans { get; set; }
         public virtual ICollection<ChatLog> ChatLogs { get; set; }
         public virtual ICollection<ErrorLog> ErrorLogs { get; set; }

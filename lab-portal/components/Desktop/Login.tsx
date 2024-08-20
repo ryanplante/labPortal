@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Alert, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
-import { fetchLastUpdated, validateCredentials } from '../../services/loginService';
-import * as Updates from 'expo-updates';
+import { fetchLastUpdated, reload, validateCredentials } from '../../services/loginService';
+import { CreateAuditLog } from '../../services/auditService';
 
 const Login = () => {
   const [username, setUsername] = useState('');
@@ -13,28 +13,20 @@ const Login = () => {
 
   const handleLogin = async () => {
     try {
-      console.log('Starting login process');
   
       const lastUpdated = await fetchLastUpdated(username);
-      console.log('Fetched lastUpdated:', lastUpdated);
+      await CreateAuditLog('Starting login process', Number(username), 'login');
 
       const token = await validateCredentials(username, password, lastUpdated);
-      console.log('Received token:', token);
       
       await AsyncStorage.setItem('token', token);
-      console.log('Token stored in AsyncStorage');
       
       // Force a reload of the app... can't seem to get navigator to work since it's not in the stack but this is a workaround ¯\_(ツ)_/¯
-      if (Platform.OS === 'ios') {
-        console.log('Running on iOS, reloading with Updates.reloadAsync');
-        await Updates.reloadAsync(); // Reload the app using Expo's reload for iOS
-      } else {
-        console.log('Running on Android or another platform, reloading with RNRestart');
-        window.location.reload(); // Restart the app using react-native-restart for other platforms
-      }
+      await reload()
       console.log('Navigating to Main');
     } catch (error) {
       setErrorMessage('Invalid username or password'); // Show the error message
+      await CreateAuditLog('Login attempt failed!', Number(username), 'login');
       console.error('Login error:', error);
     }
   };

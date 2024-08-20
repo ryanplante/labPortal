@@ -33,6 +33,7 @@ import { isMobile } from 'react-device-detect';
 import { getUserByToken } from './services/loginService';
 import ChangePassword from './components/Desktop/ChangePassword';
 import { crossPlatformAlert } from './services/helpers';
+import { CreateAuditLog } from './services/auditService';
 
 const Stack = createStackNavigator();
 
@@ -46,6 +47,8 @@ const App = () => {
       if (token) {
         try {
           const user = await getUserByToken();
+          console.log(user)
+          await CreateAuditLog('Starting login process', Number(user.userId), 'login');
           setUser(user);
         } catch (error) {
           crossPlatformAlert('Error', error.message);
