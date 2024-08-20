@@ -48,7 +48,7 @@ const App = () => {
         try {
           const user = await getUserByToken();
           console.log(user)
-          await CreateAuditLog('Starting login process', Number(user.userId), 'login');
+          await CreateAuditLog('Starting login process with token', Number(user.userId), 'login');
           setUser(user);
         } catch (error) {
           crossPlatformAlert('Error', error.message);

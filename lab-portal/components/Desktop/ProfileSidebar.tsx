@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, StyleSheet, Image, Text, TouchableOpacity, Animated, Easing, Alert, Platform } from 'react-native';
-import { deleteToken, getUserByToken, reload } from '../../services/loginService';
+import { deleteToken, getUserByToken, logout, reload } from '../../services/loginService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 
@@ -33,11 +33,10 @@ const ProfileSidebar = ({ visible, onClose }: { visible: boolean; onClose: () =>
   }, [visible]);
 
   const handleLogout = async () => {
-    await deleteToken();
 
     onClose(); // Close the profile sidebar
     // Force a reload of the app
-    await reload();
+    await logout();
   };
 
   const handleChangePassword = () => {

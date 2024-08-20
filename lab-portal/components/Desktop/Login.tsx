@@ -14,20 +14,17 @@ const Login = () => {
   const handleLogin = async () => {
     try {
   
-      const lastUpdated = await fetchLastUpdated(username);
-      await CreateAuditLog('Starting login process', Number(username), 'login');
+      const lastUpdated = await fetchLastUpdated(Number(username));
+      
 
       const token = await validateCredentials(username, password, lastUpdated);
       
       await AsyncStorage.setItem('token', token);
-      
+      await CreateAuditLog('Navigating to Main', Number(username), 'information');
       // Force a reload of the app... can't seem to get navigator to work since it's not in the stack but this is a workaround ¯\_(ツ)_/¯
       await reload()
-      console.log('Navigating to Main');
     } catch (error) {
       setErrorMessage('Invalid username or password'); // Show the error message
-      await CreateAuditLog('Login attempt failed!', Number(username), 'login');
-      console.error('Login error:', error);
     }
   };
 
