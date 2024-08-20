@@ -47,7 +47,8 @@ export const logout = async () => {
   await reload();
 }
 
-export const validateCredentials = async (username: string, password: string, lastUpdated: string): Promise<any> => {
+export const validateCredentials = async (username: string, password: string): Promise<any> => {
+  const lastUpdated = await fetchLastUpdated(Number(username))
   const formattedLastUpdated = lastUpdated.includes('Z')
     ? lastUpdated
     : `${lastUpdated}Z`;

@@ -13,11 +13,7 @@ const Login = () => {
 
   const handleLogin = async () => {
     try {
-  
-      const lastUpdated = await fetchLastUpdated(Number(username));
-      
-
-      const token = await validateCredentials(username, password, lastUpdated);
+      const token = await validateCredentials(username, password);
       
       await AsyncStorage.setItem('token', token);
       await CreateAuditLog('Navigating to Main', Number(username), 'information');
