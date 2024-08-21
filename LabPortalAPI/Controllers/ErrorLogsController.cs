@@ -121,7 +121,7 @@ namespace LabPortal.Controllers
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<ActionResult<ErrorLogDto>> PostErrorLog(ErrorLogDto errorLogDto)
+        public async Task<ActionResult> PostErrorLog(ErrorLogCreateDto errorLogDto)
         {
             if (_context.ErrorLogs == null)
             {

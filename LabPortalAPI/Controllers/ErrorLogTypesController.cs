@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LabPortal.Models;
+using LabPortal.Models.Dto;
 
 namespace LabPortal.Controllers
 {
@@ -25,13 +26,20 @@ namespace LabPortal.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<IEnumerable<ErrorLogTypeLookup>>> GetErrorLogTypeLookups()
+        public async Task<ActionResult<IEnumerable<ErrorLogTypeDto>>> GetErrorLogTypeLookups()
         {
           if (_context.ErrorLogTypeLookups == null)
           {
               return NotFound();
           }
-            return await _context.ErrorLogTypeLookups.ToListAsync();
+            var errorLogsTypes = await _context.ErrorLogTypeLookups.ToListAsync();
+            var errorTypeDto = errorLogsTypes.Select(ErrorLogType => new ErrorLogTypeDto
+            {
+                Id = ErrorLogType.TypeId,
+                Name = ErrorLogType.TypeName
+
+            }).ToList();
+            return errorTypeDto;
         }
 
         // GET: api/ErrorLogTypes/5
@@ -39,7 +47,7 @@ namespace LabPortal.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<ErrorLogTypeLookup>> GetErrorLogTypeLookup(int id)
+        public async Task<ActionResult<ErrorLogTypeDto>> GetErrorLogTypeLookup(int id)
         {
           if (_context.ErrorLogTypeLookups == null)
           {
@@ -51,8 +59,14 @@ namespace LabPortal.Controllers
             {
                 return NotFound();
             }
+            var errorTypeDto = new ErrorLogTypeDto
+            {
+                Id = errorLogTypeLookup.TypeId,
+                Name = errorLogTypeLookup.TypeName
 
-            return errorLogTypeLookup;
+            };
+
+            return errorTypeDto;
         }
 
         //// PUT: api/ErrorLogTypes/5
