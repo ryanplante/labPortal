@@ -7,7 +7,8 @@
         public string? Description { get; set; }
         public string? Stack { get; set; }
         public string? Source { get; set; }
-        public string? ExceptionType { get; set; }
         public int? UserId { get; set; }
+        public string? Platform { get; set; }
+        public string? Version { get; set; }
     }
 }

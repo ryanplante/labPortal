@@ -42,8 +42,10 @@ namespace LabPortal.Controllers
                 Description = ErrorLog.Description,
                 Stack = ErrorLog.Stack,
                 Source = ErrorLog.Source,
-                ExceptionType = ErrorLog.ExceptionType,
-                UserId = ErrorLog.UserId
+                UserId = ErrorLog.UserId,
+                Version = ErrorLog.Version,
+                Platform = ErrorLog.Platform,
+                
 
             }).ToList();
 
@@ -76,8 +78,9 @@ namespace LabPortal.Controllers
                 Description = errorLog.Description,
                 Stack = errorLog.Stack,
                 Source = errorLog.Source,
-                ExceptionType = errorLog.ExceptionType,
-                UserId = errorLog.UserId
+                UserId = errorLog.UserId,
+                Version = errorLog.Version,
+                Platform = errorLog.Platform,
             };
 
             return Ok(errorLogDto);
@@ -131,12 +134,13 @@ namespace LabPortal.Controllers
             var errorLog = new ErrorLog
             {
                 LogType = errorLogDto.LogType,
-                Timestamp = DateTime.UtcNow,
+                Timestamp = errorLogDto.Timestamp,
                 Description = errorLogDto.Description,
                 Stack = errorLogDto.Stack,
                 Source = errorLogDto.Source,
-                ExceptionType = errorLogDto.ExceptionType,
-                UserId = errorLogDto.UserId
+                UserId = errorLogDto.UserId,
+                Platform = errorLogDto.Platform,
+                Version = errorLogDto.Version,
             };
 
             _context.ErrorLogs.Add(errorLog);

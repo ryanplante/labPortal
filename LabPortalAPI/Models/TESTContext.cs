@@ -34,7 +34,6 @@ namespace LabPortal.Models
         public virtual DbSet<User> Users { get; set; } = null!;
         public virtual DbSet<UserToken> UserTokens { get; set; } = null!;
 
-
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<AuditLog>(entity =>
@@ -57,11 +56,13 @@ namespace LabPortal.Models
                 entity.HasOne(d => d.AuditLogType)
                     .WithMany(p => p.AuditLogs)
                     .HasForeignKey(d => d.AuditLogTypeId)
+                    .OnDelete(DeleteBehavior.ClientSetNull)
                     .HasConstraintName("FK_AuditLogs_AuditLogType");
 
                 entity.HasOne(d => d.User)
                     .WithMany(p => p.AuditLogs)
                     .HasForeignKey(d => d.UserId)
+                    .OnDelete(DeleteBehavior.ClientSetNull)
                     .HasConstraintName("FK_AuditLogs_Users");
             });
 
@@ -137,9 +138,11 @@ namespace LabPortal.Models
 
                 entity.Property(e => e.Description).HasColumnName("description");
 
-                entity.Property(e => e.ExceptionType).HasColumnName("exceptionType");
-
                 entity.Property(e => e.LogType).HasColumnName("logType");
+
+                entity.Property(e => e.Platform)
+                    .HasMaxLength(50)
+                    .HasColumnName("platform");
 
                 entity.Property(e => e.Source).HasColumnName("source");
 
@@ -150,6 +153,10 @@ namespace LabPortal.Models
                     .HasColumnName("timestamp");
 
                 entity.Property(e => e.UserId).HasColumnName("userID");
+
+                entity.Property(e => e.Version)
+                    .HasMaxLength(20)
+                    .HasColumnName("version");
 
                 entity.HasOne(d => d.LogTypeNavigation)
                     .WithMany(p => p.ErrorLogs)
