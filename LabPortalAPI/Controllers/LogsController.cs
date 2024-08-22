@@ -9,6 +9,7 @@ using LabPortal.Models;
 using System.Text;
 using System.Security.Cryptography;
 using LabPortal.Models.Dto;
+using LabPortal.Models.CreateDtos;
 
 namespace LabPortal.Controllers
 {
@@ -128,7 +129,7 @@ namespace LabPortal.Controllers
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<ActionResult<LogDto>> PostLog(LogDto logDto)
+        public async Task<ActionResult<LogDto>> PostLog(LogCreateDto logDto)
         {
             if (_context.Logs == null)
             {

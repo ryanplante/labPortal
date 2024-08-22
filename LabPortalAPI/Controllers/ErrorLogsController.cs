@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LabPortal.Models;
 using LabPortal.Models.Dto;
+using LabPortal.Models.CreateDtos;
 
 namespace LabPortal.Controllers
 {

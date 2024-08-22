@@ -9,6 +9,7 @@ using LabPortal.Models;
 using System.Text;
 using System.Security.Cryptography;
 using LabPortal.Models.Dto;
+using LabPortal.Models.CreateDtos;
 
 namespace LabPortal.Controllers
 {
@@ -77,6 +78,29 @@ namespace LabPortal.Controllers
             return Ok(labDto);
         }
 
+        // GET: api/Labs/Department/1
+        [HttpGet("Department")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<int>> GetLabByDept(int id)
+        {
+            if (_context.Labs == null)
+            {
+                return NotFound();
+            }
+            var lab = await _context.Labs
+                .Include(l => l.Dept)
+                .FirstOrDefaultAsync(l => l.DeptId == id);
+
+            if (lab == null)
+            {
+                return NotFound();
+            }
+
+            return Ok(lab.LabId);
+        }
+
         // PUT: api/Labs/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
@@ -125,7 +149,7 @@ namespace LabPortal.Controllers
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<ActionResult<LabDto>> PostLab(LabDto labDto)
+        public async Task<ActionResult<LabDto>> PostLab(LabCreateDtos labDto)
         {
             if (_context.Labs == null)
             {

@@ -1,4 +1,4 @@
-﻿namespace LabPortal.Models.Dto
+﻿namespace LabPortal.Models.CreateDtos
 {
     public class BanCreateDto
     {

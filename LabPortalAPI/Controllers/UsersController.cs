@@ -230,6 +230,98 @@ namespace LabPortal.Controllers
             }
         }
 
+        // GET: api/Users/FuzzySearchById/{query}
+        [HttpGet("FuzzySearchById/{query}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<IEnumerable<UserDto>>> FuzzySearchById(string query)
+        {
+            if (_context.Users == null)
+            {
+                return NotFound();
+            }
+
+            if (string.IsNullOrEmpty(query))
+            {
+                return BadRequest("Query cannot be null or empty.");
+            }
+
+            var matchingUsers = await _context.Users
+                .Where(u => u.UserId.ToString().Contains(query)) // Treat UserId as a string for matching purposes
+                .ToListAsync();
+
+            if (!matchingUsers.Any())
+            {
+                return NotFound("No users found matching the query.");
+            }
+
+            var userDtos = matchingUsers.Select(user => new UserDto
+            {
+                UserId = user.UserId,
+                FName = user.FName,
+                LName = user.LName,
+                UserDept = user.UserDept,
+                PrivLvl = user.PrivLvl,
+                Position = user.Position,
+                IsTeacher = user.IsTeacher
+            }).ToList();
+
+            return Ok(userDtos);
+        }
+
+        // GET: api/Users/FuzzySearchByName?fname={fname}&lname={lname}
+        [HttpGet("FuzzySearchByName")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<IEnumerable<UserDto>>> FuzzySearchByName(string? fname, string? lname)
+        {
+            if (_context.Users == null)
+            {
+                return NotFound();
+            }
+
+            if (string.IsNullOrEmpty(fname) && string.IsNullOrEmpty(lname))
+            {
+                return BadRequest("At least one of fname or lname must be provided.");
+            }
+
+            var query = _context.Users.AsQueryable();
+
+            if (!string.IsNullOrEmpty(fname))
+            {
+                query = query.Where(u => EF.Functions.Like(u.FName, $"%{fname}%")); // Fuzzy search on First Name
+            }
+
+            if (!string.IsNullOrEmpty(lname))
+            {
+                query = query.Where(u => EF.Functions.Like(u.LName, $"%{lname}%")); // Fuzzy search on Last Name
+            }
+
+            var matchingUsers = await query.ToListAsync();
+
+            if (!matchingUsers.Any())
+            {
+                return NotFound("No users found matching the query.");
+            }
+
+            var userDtos = matchingUsers.Select(user => new UserDto
+            {
+                UserId = user.UserId,
+                FName = user.FName,
+                LName = user.LName,
+                UserDept = user.UserDept,
+                PrivLvl = user.PrivLvl,
+                Position = user.Position,
+                IsTeacher = user.IsTeacher
+            }).ToList();
+
+            return Ok(userDtos);
+        }
+
+
+
         private async Task<string> GenerateToken(User user)
         {
             var tokenData = Encoding.UTF8.GetBytes($"{user.UserId}:{DateTime.UtcNow}");
