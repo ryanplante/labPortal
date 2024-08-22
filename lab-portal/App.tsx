@@ -15,7 +15,7 @@ import ScanItem from './components/Desktop/ScanItem';
 import LogHistory from './components/Desktop/LogHistory';
 import Admin from './components/Desktop/Admin';
 import Sidebar from './components/Desktop/Sidebar';
-import ProfileSidebar from './components/Desktop/ProfileSidebar';
+import ProfileSidebar from './components/Modals/ProfileSidebar';
 
 import MobileMainPage from './components/Mobile/MainPage';
 import MobileLabs from './components/Mobile/Labs';
@@ -34,6 +34,8 @@ import { getUserByToken } from './services/loginService';
 import ChangePassword from './components/Desktop/ChangePassword';
 import { crossPlatformAlert } from './services/helpers';
 import { CreateAuditLog } from './services/auditService';
+import HelpScreen from './components/Desktop/HelpScreen';
+import SampleScreen from './components/Desktop/Sample';
 
 const Stack = createStackNavigator();
 
@@ -104,13 +106,19 @@ const App = () => {
                   <Stack.Screen name="ManageLabs" component={ManageLabs} />
                   <Stack.Screen name="LabSchedules" component={LabSchedules} />
                   <Stack.Screen name="Chat" component={Chat} />
+                  <Stack.Screen name="Help" component={HelpScreen} />
                   <Stack.Screen name="ScanItem" component={ScanItem} />
                   <Stack.Screen name="LogHistory" component={LogHistory} />
                   <Stack.Screen name="Admin" component={Admin} />
+                  <Stack.Screen name="Sample" component={SampleScreen} />
                 </>
               )
             ) : (
-              <Stack.Screen name="Login" component={Login} />
+              <>
+                <Stack.Screen name="Login" component={Login} />
+                <Stack.Screen name="Help" component={HelpScreen} />
+              </>
+
             )}
           </Stack.Navigator>
         </View>

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, StyleSheet, Image, Text, TouchableOpacity, Animated, Easing, Alert, Platform } from 'react-native';
-import { deleteToken, getUserByToken, logout, reload } from '../../services/loginService';
+import { deleteToken, getUserByToken, logout } from '../../services/loginService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 

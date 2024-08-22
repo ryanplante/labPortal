@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Image, Alert, ActivityIndicator } from 'react-native';
-import ProfileSidebar from './ProfileSidebar';
+import ProfileSidebar from '../Modals/ProfileSidebar';
 import StudentView from './Views/StudentView';
 import MonitorView from './Views/MonitorView';
 import TutorView from './Views/TutorView';

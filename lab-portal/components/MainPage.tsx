@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, Image } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
-import ProfileSidebar from './Desktop/ProfileSidebar';
+import ProfileSidebar from './Modals/ProfileSidebar';
 import StudentView from './Desktop/Views/StudentView';
 import MonitorView from './Desktop/Views/MonitorView';
 import TutorView from './Desktop/Views/TutorView';

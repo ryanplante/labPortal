@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Alert, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
-import { fetchLastUpdated, reload, validateCredentials } from '../../services/loginService';
+import { validateCredentials } from '../../services/loginService';
 import { CreateAuditLog } from '../../services/auditService';
+import { reload } from '../../services/helpers';
 
 const Login = () => {
   const [username, setUsername] = useState('');
@@ -22,6 +23,10 @@ const Login = () => {
     } catch (error) {
       setErrorMessage('Invalid username or password'); // Show the error message
     }
+  };
+
+  const handleHelpPress = () => {
+    navigation.navigate('Help'); // Navigate to HelpScreen
   };
 
   return (
@@ -47,7 +52,10 @@ const Login = () => {
         <Text style={styles.errorText}>{errorMessage}</Text>
       ) : null}
       <TouchableOpacity>
-        <Text style={styles.forgotPassword}>Forgot password?</Text>
+        <Text style={styles.link}>Forgot password?</Text>
+      </TouchableOpacity>
+      <TouchableOpacity onPress={handleHelpPress}>
+        <Text style={styles.link}>Need help? Click here!</Text>
       </TouchableOpacity>
     </View>
   );
@@ -89,7 +97,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontSize: 14,
   },
-  forgotPassword: {
+  link: {
     color: '#007bff',
     marginTop: 20,
   },

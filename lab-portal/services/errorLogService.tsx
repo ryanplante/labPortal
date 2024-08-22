@@ -1,14 +1,16 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
+import { getUserByToken } from './loginService';
+
+// Use require to import the package.json file
+const { version: appVersion } = require('../package.json');
 
 const API_BASE_URL = 'https://localhost:7282/api';
 
-// Define a type for the possible error log types
 type ErrorLogType = 'informative' | 'error' | 'warning' | 'critical';
 
-// Define the structure of the error log object
-interface ErrorLog {
+export interface ErrorLog {
   logType: number;
   timestamp: string;
   description: string;
@@ -16,12 +18,11 @@ interface ErrorLog {
   source: string;
   errorType: string;
   userId: number;
-  platform: string;  // New field for platform
-  version: string;   // New field for app version
+  platform: string;
+  version: string;
 }
 
-// Function to create the error log by sending it to the API
-export const createErrorLog = async (errorLog: ErrorLog): Promise<any> => {
+const createErrorLog = async (errorLog: ErrorLog): Promise<any> => {
   try {
     const response = await axios.post(`${API_BASE_URL}/ErrorLogs`, errorLog);
     return response.data;
@@ -31,7 +32,6 @@ export const createErrorLog = async (errorLog: ErrorLog): Promise<any> => {
   }
 };
 
-// Function to map string type to numeric ID
 const mapErrorLogTypeToId = (type: ErrorLogType): number => {
   switch (type.toLowerCase()) {
     case 'informative':
@@ -47,55 +47,97 @@ const mapErrorLogTypeToId = (type: ErrorLogType): number => {
   }
 };
 
-// Function to save error log to AsyncStorage
 const saveErrorLogToAsyncStorage = async (errorLog: ErrorLog): Promise<void> => {
   try {
     const logs = await AsyncStorage.getItem('errorLogs');
     const parsedLogs: ErrorLog[] = logs ? JSON.parse(logs) : [];
     parsedLogs.push(errorLog);
     await AsyncStorage.setItem('errorLogs', JSON.stringify(parsedLogs));
-    console.log('Error log saved to AsyncStorage');
   } catch (error) {
     console.error('Failed to save error log to AsyncStorage:', error);
   }
 };
 
-// Function to build and send the error log
+export const getErrorLogsFromAsyncStorage = async (): Promise<ErrorLog[]> => {
+  try {
+    const logs = await AsyncStorage.getItem('errorLogs');
+    return logs ? JSON.parse(logs) : [];
+  } catch (error) {
+    console.error('Failed to retrieve error logs from AsyncStorage:', error);
+    return [];
+  }
+};
+
+export const getLatestErrorLog = async (): Promise<ErrorLog | null> => {
+  try {
+    const logs = await getErrorLogsFromAsyncStorage();
+    return logs.length ? logs[logs.length - 1] : null;
+  } catch (error) {
+    console.error('Failed to retrieve latest error log:', error);
+    return null;
+  }
+};
+
+export const clearErrorLogs = async (): Promise<void> => {
+  try {
+    await AsyncStorage.removeItem('errorLogs');
+    console.log('Error logs cleared from AsyncStorage');
+  } catch (error) {
+    console.error('Failed to clear error logs:', error);
+  }
+};
+
+export const getErrorLogsFromApi = async (): Promise<ErrorLog[]> => {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/ErrorLogs`);
+    return response.data;
+  } catch (error) {
+    console.error('Error retrieving error logs from API:', error);
+    throw error;
+  }
+};
+
 export const CreateErrorLog = async (
   error: Error,
   source: string,
-  userId: number,
+  userId: number | null, // Accept null to indicate that the user ID is not known yet
   errorLogType: ErrorLogType
 ): Promise<void> => {
-  // Map string type to numeric ID
+  let resolvedUserId = userId;
+
+  if (!userId) {
+    try {
+      const user = await getUserByToken();
+      resolvedUserId = user?.userId || 99999999; // Use user.userId if available, otherwise fallback to 99999999
+    } catch (userError) {
+      console.error('Failed to retrieve user by token, using generic ID:', userError);
+      resolvedUserId = 99999999;
+    }
+  }
+
   const logType = mapErrorLogTypeToId(errorLogType);
-
-  // Capture platform info and app version
   const platform = `${Platform.OS} ${Platform.Version}`;
-  const appVersion = "1.0.0"; // Replace with actual version or import dynamically
 
-  // Create the error log object
   const errorLog: ErrorLog = {
     logType: logType,
-    timestamp: new Date().toISOString(), // Generate current timestamp in ISO format
+    timestamp: new Date().toISOString(),
     description: error.message,
     stack: error.stack || 'No stack available',
     source: source,
     errorType: error.name || 'Informative',
-    userId: userId,
-    platform: platform,  // Include platform info
-    version: appVersion,  // Include app version
+    userId: resolvedUserId,
+    platform: platform,
+    version: appVersion,  // Use version from package.json
   };
 
-  // Send the error log to the API and save it to AsyncStorage
   try {
     await createErrorLog(errorLog);
-    console.log('Error log created successfully');
+    console.log('Error log sent to server successfully');
   } catch (serverError) {
     console.error('Error sending log to server, saving locally:', serverError);
+  } finally {
     await saveErrorLogToAsyncStorage(errorLog);
   }
 
-  // Throw a custom error message for the user
   throw new Error('An error has occurred. Please contact the administrator.');
 };

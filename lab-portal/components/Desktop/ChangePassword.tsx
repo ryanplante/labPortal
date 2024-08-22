@@ -1,25 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useNavigation } from '@react-navigation/native';
-import { updatePassword, fetchLastUpdated, getUserByToken, reload, deleteToken, validateCredentials } from '../../services/loginService';
-import { crossPlatformAlert } from '../../services/helpers';
+import { useNavigation, NavigationProp } from '@react-navigation/native';
+import { updatePassword, getUserByToken, deleteToken, validateCredentials } from '../../services/loginService';
+import { CreateErrorLog } from '../../services/errorLogService';
+import ConfirmationModal from '../Modals/ConfirmationModal';
+import { reload } from '../../services/helpers';
 
 const ChangePassword = () => {
-  const [oldPassword, setOldPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
-  const [user, setUser] = useState(null); // Store the user object
-  const navigation = useNavigation();
+  const [oldPassword, setOldPassword] = useState<string>('');
+  const [newPassword, setNewPassword] = useState<string>('');
+  const [confirmPassword, setConfirmPassword] = useState<string>('');
+  const [errorMessage, setErrorMessage] = useState<string>('');
+  const [user, setUser] = useState<any>(null);
+  const [isAlertVisible, setIsAlertVisible] = useState<boolean>(false);
+  const [alertMessage, setAlertMessage] = useState<string>('');
+  const navigation = useNavigation<NavigationProp<any>>();
 
   useEffect(() => {
     const fetchUserData = async () => {
       try {
         const user = await getUserByToken();
-        setUser(user); // Store the user in state
+        setUser(user);
       } catch (error) {
-        await reload(); // Reload the app if getting the user fails
+        if (error instanceof Error) {
+          await CreateErrorLog(error, 'fetchUserData', null, 'error');
+        }
+        await reload();
       }
     };
 
@@ -32,7 +38,6 @@ const ChangePassword = () => {
       return;
     }
 
-    // Validate old password
     try {
       const token = await validateCredentials(user.userId, oldPassword);
       if (!token) {
@@ -44,7 +49,6 @@ const ChangePassword = () => {
       return;
     }
 
-    // Apply password requirements
     const passwordRequirements = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).{8,}$/;
     if (!passwordRequirements.test(newPassword)) {
       setErrorMessage('Password must be at least 8 characters long, contain a capital letter, a number, and a special character.');
@@ -58,13 +62,19 @@ const ChangePassword = () => {
 
     try {
       await updatePassword(user.userId, newPassword);
-      crossPlatformAlert('Success', 'Password updated successfully. Please re-login to finish changing credentials.');
-      await deleteToken();
-      await reload();
+      setAlertMessage('Password updated successfully. Please re-login to finish changing credentials.');
+      setIsAlertVisible(true);
     } catch (error) {
-      crossPlatformAlert('Error', 'Failed to change password');
+      if (error instanceof Error) {
+        await CreateErrorLog(error, 'handleChangePassword', user.userId, 'error');
+      }
       setErrorMessage('Failed to change password.');
     }
+  };
+
+  const handleAlertDismiss = async () => {
+    await deleteToken();
+    await reload();
   };
 
   return (
@@ -95,6 +105,15 @@ const ChangePassword = () => {
       <TouchableOpacity style={styles.button} onPress={handleChangePassword}>
         <Text style={styles.buttonText}>Change</Text>
       </TouchableOpacity>
+
+      <ConfirmationModal
+        visible={isAlertVisible}
+        onConfirm={handleAlertDismiss}
+        onCancel={handleAlertDismiss}
+        type="ok" 
+        title={<Text style={{ fontSize: 18, fontWeight: 'bold' }}>Notice</Text>}
+        description={<Text style={{ fontSize: 14 }}>{alertMessage}</Text>}
+      />
     </View>
   );
 };
