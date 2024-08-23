@@ -1,15 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LabPortal.Models;
-using System.Text;
-using System.Security.Cryptography;
 using LabPortal.Models.Dto;
 using LabPortal.Models.CreateDtos;
+using Microsoft.Data.SqlClient;
+using System.Data;
 
 namespace LabPortal.Controllers
 {
@@ -25,161 +20,283 @@ namespace LabPortal.Controllers
         }
 
         // GET: api/Logs
+        // Retrieves all logs from the database
         [HttpGet]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<IEnumerable<LogDto>>> GetLogs()
+        public async Task<ActionResult<IEnumerable<FilteredLogDto>>> GetLogs()
         {
             if (_context.Logs == null)
             {
-                return NotFound();
+                return NotFound("Log context is not available.");
             }
 
-            var logs = await _context.Logs.ToListAsync();
-            var logDtos = logs.Select(Log => new LogDto
+            var filteredLogs = new List<FilteredLogDto>();
+
+            using (var connection = _context.Database.GetDbConnection())
             {
-                LogId = Log.LogId,
-                StudentId = Log.StudentId,
-                TimeIn = Log.TimeIn,
-                TimeOut = Log.TimeOut,
-                LabId = Log.LabId
+                await connection.OpenAsync();
+                using (var command = connection.CreateCommand())
+                {
+                    command.CommandText = "EXEC [dbo].[usp_GetFilteredLogs] NULL, NULL";
+                    using (var reader = await command.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            var log = new FilteredLogDto
+                            {
+                                Id = reader.GetInt32(0),
+                                StudentId = reader.GetInt32(1),
+                                StudentName = reader.GetString(2) + " " + reader.GetString(3),
+                                TimeIn = reader.GetDateTime(4),
+                                TimeOut = reader.IsDBNull(5) ? (DateTime?)null : reader.GetDateTime(5),
+                                MonitorID = reader.IsDBNull(6) ? 99999999 : reader.GetInt32(6)
+                            };
+                            filteredLogs.Add(log);
+                        }
+                    }
+                }
+            }
 
-            }).ToList();
+            if (!filteredLogs.Any())
+            {
+                return NotFound("No logs found");
+            }
 
-            return Ok(logDtos);
+            return Ok(filteredLogs);
         }
 
-        // GET: api/Logs/5
-        [HttpGet("{id}")]
+        // GET: api/Logs/FilteredByDate
+        // Retrieves logs filtered by a specified date range
+        [HttpGet("FilteredByDate")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<LogDto>> GetLog(int id)
+        public async Task<ActionResult<IEnumerable<FilteredLogDto>>> GetLogsFilteredByDate([FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate)
         {
             if (_context.Logs == null)
             {
-                return NotFound();
-            }
-            var log = await _context.Logs.FindAsync(id);
-
-            if (log == null)
-            {
-                return NotFound();
+                return NotFound("Log context is not available.");
             }
 
-            var logDto = new LogDto
+            if (startDate == null && endDate == null)
             {
-                LogId = log.LogId,
-                StudentId = log.StudentId,
-                TimeIn = log.TimeIn,
-                TimeOut = log.TimeOut,
-                LabId = log.LabId
-            };
+                return BadRequest("Please provide at least a start date or an end date.");
+            }
 
-            return Ok(logDto);
+            var filteredLogs = new List<FilteredLogDto>();
+
+            using (var connection = _context.Database.GetDbConnection())
+            {
+                await connection.OpenAsync();
+                using (var command = connection.CreateCommand())
+                {
+                    command.CommandText = "EXEC [dbo].[usp_GetFilteredLogs] @StartDate, @EndDate";
+                    command.Parameters.Add(new SqlParameter("@StartDate", startDate ?? (object)DBNull.Value));
+                    command.Parameters.Add(new SqlParameter("@EndDate", endDate ?? (object)DBNull.Value));
+
+                    using (var reader = await command.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            var log = new FilteredLogDto
+                            {
+                                Id = reader.GetInt32(0),
+                                StudentId = reader.GetInt32(1),
+                                StudentName = reader.GetString(2) + " " + reader.GetString(3),
+                                TimeIn = reader.GetDateTime(4),
+                                TimeOut = reader.IsDBNull(5) ? (DateTime?)null : reader.GetDateTime(5),
+                                MonitorID = reader.IsDBNull(6) ? 99999999 : reader.GetInt32(6)
+                            };
+                            filteredLogs.Add(log);
+                        }
+                    }
+                }
+            }
+
+            if (!filteredLogs.Any())
+            {
+                return NotFound("No logs found within the specified date range.");
+            }
+
+            return Ok(filteredLogs);
         }
 
         // PUT: api/Logs/5
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
+        // Updates a log by creating a new transaction and updating the old one
         [HttpPut("{id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> PutLog(int id, LogDto logDto)
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> PutLog(int id, LogCreateDto logDto)
         {
-            if (id != logDto.LogId)
-            {
-                return BadRequest();
-            }
-
-            var log = await _context.Logs.FindAsync(id);
-            if (log == null)
-            {
-                return NotFound();
-            }
-
-            log.StudentId = logDto.StudentId;
-            log.TimeIn = logDto.TimeIn;
-            log.TimeOut = logDto.TimeOut;
-            log.LabId = logDto.LabId;
-
-            _context.Entry(log).State = EntityState.Modified;
+            var transactionTypeId = 1; // 1 = Update
 
             try
             {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!LogExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
+                var commandText = @"
+                    EXEC [dbo].[usp_UpdateLogTransaction] 
+                    @StudentId = @StudentId, 
+                    @Timein = @Timein, 
+                    @Timeout = @Timeout, 
+                    @TransactionType = @TransactionType, 
+                    @LabId = @LabId, 
+                    @MonitorId = @MonitorId, 
+                    @FkLog = @FkLog";
 
-            return NoContent();
+                var parameters = new[]
+                {
+                    new SqlParameter("@StudentId", logDto.StudentId),
+                    new SqlParameter("@Timein", logDto.Timein),
+                    new SqlParameter("@Timeout", logDto.Timein),
+                    new SqlParameter("@TransactionType", transactionTypeId),
+                    new SqlParameter("@LabId", logDto.LabId),
+                    new SqlParameter("@MonitorId", logDto.MonitorId),
+                    new SqlParameter("@FkLog", id)
+                };
+
+                await _context.Database.ExecuteSqlRawAsync(commandText, parameters);
+                return NoContent();
+            }
+            catch (SqlException ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new { error = ex.Message });
+            }
         }
 
         // POST: api/Logs
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
+        // Creates a new log entry (Check In)
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult<LogDto>> PostLog(LogCreateDto logDto)
         {
-            if (_context.Logs == null)
-            {
-                return Problem("Entity set 'TESTContext.Logs'  is null.");
-            }
-
-            var log = new Log
-            {
-                StudentId = logDto.StudentId,
-                TimeIn = logDto.TimeIn,
-                TimeOut = logDto.TimeOut,
-                LabId = logDto.LabId
-            };
-
-            _context.Logs.Add(log);
             try
             {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateException ex)
-            {
-                // Simplified the error as to not show more info than needed
-                return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while saving the log.");
-            }
+                var commandText = @"
+                    EXEC [dbo].[usp_InsertLog] 
+                    @StudentId = @StudentId, 
+                    @LabId = @LabId, 
+                    @MonitorId = @MonitorId, 
+                    @Timein = @Timein";
 
-            return Ok();
+                var parameters = new[]
+                {
+                    new SqlParameter("@StudentId", logDto.StudentId),
+                    new SqlParameter("@Timein", logDto.Timein),
+                    new SqlParameter("@LabId", logDto.LabId),
+                    new SqlParameter("@MonitorId", logDto.MonitorId),
+                };
+
+                await _context.Database.ExecuteSqlRawAsync(commandText, parameters);
+
+                return CreatedAtAction(nameof(GetLogs), new { id = logDto.StudentId }, logDto);
+            }
+            catch (SqlException ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new { error = ex.Message });
+            }
+        }
+
+        // PUT: api/Logs/TimeOut/5
+        // Creates a timeout transaction for a log
+        [HttpPut("TimeOut/{id}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> TimeOutLog(int id, LogCreateDto logDto)
+        {
+            try
+            {
+                var log = await _context.LogSummaries.FindAsync(id);
+                if (log == null)
+                {
+                    return NotFound();
+                }
+
+                var transactionTypeId = 2; // 2 = Time Out
+
+                var commandText = @"
+                    EXEC [dbo].[usp_UpdateLogTransaction] 
+                    @StudentId = @StudentId, 
+                    @Timein = @Timein, 
+                    @Timeout = @Timeout, 
+                    @TransactionType = @TransactionType, 
+                    @LabId = @LabId, 
+                    @MonitorId = @MonitorId, 
+                    @FkLog = @FkLog";
+
+                var parameters = new[]
+                {
+                    new SqlParameter("@StudentId", log.StudentId),
+                    new SqlParameter("@Timein", log.CheckInTime),
+                    new SqlParameter("@Timeout", DateTime.UtcNow),
+                    new SqlParameter("@TransactionType", transactionTypeId),
+                    new SqlParameter("@LabId", log.LabId),
+                    new SqlParameter("@MonitorId", logDto.MonitorId),
+                    new SqlParameter("@FkLog", id)
+                };
+
+                await _context.Database.ExecuteSqlRawAsync(commandText, parameters);
+
+                return NoContent();
+            }
+            catch (SqlException ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new { error = ex.Message });
+            }
         }
 
         // DELETE: api/Logs/5
+        // Creates a delete transaction for a log
         [HttpDelete("{id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> DeleteLog(int id)
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> DeleteLog(int id, LogCreateDto logDto)
         {
-            if (_context.Logs == null)
+            try
             {
-                return NotFound();
+                var log = await _context.LogSummaries.FindAsync(id);
+                if (log == null)
+                {
+                    return NotFound();
+                }
+
+                var transactionTypeId = 3; // 3 = Delete
+
+                var commandText = @"
+                    EXEC [dbo].[usp_UpdateLogTransaction] 
+                    @StudentId = @StudentId, 
+                    @Timein = @Timein, 
+                    @Timeout = @Timeout, 
+                    @TransactionType = @TransactionType, 
+                    @LabId = @LabId, 
+                    @MonitorId = @MonitorId, 
+                    @FkLog = @FkLog";
+
+                var parameters = new[]
+                {
+                    new SqlParameter("@StudentId", logDto.StudentId),
+                    new SqlParameter("@Timein", logDto.Timein),
+                    new SqlParameter("@Timeout", logDto.Timein),
+                    new SqlParameter("@TransactionType", transactionTypeId),
+                    new SqlParameter("@LabId", logDto.LabId),
+                    new SqlParameter("@MonitorId", logDto.MonitorId),
+                    new SqlParameter("@FkLog", id)
+                };
+
+                await _context.Database.ExecuteSqlRawAsync(commandText, parameters);
+
+                return Ok();
             }
-            var log = await _context.Logs.FindAsync(id);
-            if (log == null)
+            catch (SqlException ex)
             {
-                return NotFound();
+                return StatusCode(StatusCodes.Status500InternalServerError, new { error = ex.Message });
             }
-
-            _context.Logs.Remove(log);
-            await _context.SaveChangesAsync();
-
-            return NoContent();
         }
 
+        // Checks if a log exists by its ID
         private bool LogExists(int id)
         {
             return (_context.Logs?.Any(e => e.LogId == id)).GetValueOrDefault();

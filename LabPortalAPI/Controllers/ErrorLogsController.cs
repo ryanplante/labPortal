@@ -87,39 +87,6 @@ namespace LabPortal.Controllers
             return Ok(errorLogDto);
         }
 
-        //// PUT: api/ErrorLogs/5
-        //// To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        //[HttpPut("{id}")]
-        //[ProducesResponseType(StatusCodes.Status200OK)]
-        //[ProducesResponseType(StatusCodes.Status400BadRequest)]
-        //public async Task<IActionResult> PutErrorLog(int id, ErrorLog errorLog)
-        //{
-        //    if (id != errorLog.LogId)
-        //    {
-        //        return BadRequest();
-        //    }
-
-        //    _context.Entry(errorLog).State = EntityState.Modified;
-
-        //    try
-        //    {
-        //        await _context.SaveChangesAsync();
-        //    }
-        //    catch (DbUpdateConcurrencyException)
-        //    {
-        //        if (!ErrorLogExists(id))
-        //        {
-        //            return NotFound();
-        //        }
-        //        else
-        //        {
-        //            throw;
-        //        }
-        //    }
-
-        //    return NoContent();
-        //}
-
         // POST: api/ErrorLogs
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]

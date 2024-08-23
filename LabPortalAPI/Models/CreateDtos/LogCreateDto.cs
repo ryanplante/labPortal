@@ -3,12 +3,9 @@
     public class LogCreateDto
     {
         public int? StudentId { get; set; }
-        public DateTime? TimeIn { get; set; }
-        public DateTime? TimeOut { get; set; }
-        public int? LabId { get; set; }
+        public DateTime Timein { get; set; }
+        public DateTime? Timeout { get; set; }
+        public int LabId { get; set; }
+        public int MonitorId { get; set; } // Foreign key reference to Users table
     }
 }
-
-
-
-

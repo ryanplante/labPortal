@@ -27,12 +27,15 @@ namespace LabPortal.Models
         public virtual DbSet<ItemLog> ItemLogs { get; set; } = null!;
         public virtual DbSet<Lab> Labs { get; set; } = null!;
         public virtual DbSet<Log> Logs { get; set; } = null!;
+        public virtual DbSet<LogSummary> LogSummaries { get; set; } = null!;
         public virtual DbSet<PermissionLookup> PermissionLookups { get; set; } = null!;
         public virtual DbSet<PositionLookup> PositionLookups { get; set; } = null!;
         public virtual DbSet<Schedule> Schedules { get; set; } = null!;
         public virtual DbSet<ScheduleTypeLookup> ScheduleTypeLookups { get; set; } = null!;
+        public virtual DbSet<TransactionTypeLookup> TransactionTypeLookups { get; set; } = null!;
         public virtual DbSet<User> Users { get; set; } = null!;
         public virtual DbSet<UserToken> UserTokens { get; set; } = null!;
+
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -195,7 +198,9 @@ namespace LabPortal.Models
 
                 entity.Property(e => e.Quantity).HasColumnName("quantity");
 
-                entity.Property(e => e.SerialNum).HasColumnName("serialNum");
+                entity.Property(e => e.SerialNum)
+                    .HasMaxLength(30)
+                    .HasColumnName("serialNum");
             });
 
             modelBuilder.Entity<ItemLog>(entity =>
@@ -204,6 +209,8 @@ namespace LabPortal.Models
                     .HasName("PK__ItemLogs__7839F62D9DBE3424");
 
                 entity.Property(e => e.LogId).HasColumnName("logID");
+
+                entity.Property(e => e.FkParentTransaction).HasColumnName("fk_ParentTransaction");
 
                 entity.Property(e => e.ItemId).HasColumnName("itemID");
 
@@ -215,11 +222,12 @@ namespace LabPortal.Models
                     .HasColumnType("datetime")
                     .HasColumnName("timestamp");
 
-                entity.Property(e => e.TransactionType)
-                    .HasMaxLength(1)
-                    .IsUnicode(false)
-                    .HasColumnName("transactionType")
-                    .IsFixedLength();
+                entity.Property(e => e.TransactionType).HasColumnName("transactionType");
+
+                entity.HasOne(d => d.FkParentTransactionNavigation)
+                    .WithMany(p => p.InverseFkParentTransactionNavigation)
+                    .HasForeignKey(d => d.FkParentTransaction)
+                    .HasConstraintName("FK_ItemLogs_CompletedTransaction");
 
                 entity.HasOne(d => d.Item)
                     .WithMany(p => p.ItemLogs)
@@ -235,6 +243,11 @@ namespace LabPortal.Models
                     .WithMany(p => p.ItemLogStudents)
                     .HasForeignKey(d => d.StudentId)
                     .HasConstraintName("FK__ItemLogs__studen__66603565");
+
+                entity.HasOne(d => d.TransactionTypeNavigation)
+                    .WithMany(p => p.ItemLogs)
+                    .HasForeignKey(d => d.TransactionType)
+                    .HasConstraintName("FK_ItemLogs_TransactionType");
             });
 
             modelBuilder.Entity<Lab>(entity =>
@@ -261,27 +274,55 @@ namespace LabPortal.Models
             {
                 entity.Property(e => e.LogId).HasColumnName("logID");
 
+                entity.Property(e => e.FkLog).HasColumnName("fk_log");
+
                 entity.Property(e => e.LabId).HasColumnName("labID");
+
+                entity.Property(e => e.MonitorId).HasColumnName("monitorID");
 
                 entity.Property(e => e.StudentId).HasColumnName("studentID");
 
-                entity.Property(e => e.TimeIn)
+                entity.Property(e => e.Timestamp)
                     .HasColumnType("datetime")
-                    .HasColumnName("timeIn");
+                    .HasColumnName("timestamp");
 
-                entity.Property(e => e.TimeOut)
-                    .HasColumnType("datetime")
-                    .HasColumnName("timeOut");
+                entity.Property(e => e.TransactionType).HasColumnName("transactionType");
 
                 entity.HasOne(d => d.Lab)
                     .WithMany(p => p.Logs)
                     .HasForeignKey(d => d.LabId)
                     .HasConstraintName("FK__Logs__labID__6E01572D");
 
+                entity.HasOne(d => d.Monitor)
+                    .WithMany(p => p.LogMonitors)
+                    .HasForeignKey(d => d.MonitorId)
+                    .HasConstraintName("FK_Logs_MonitorID");
+
                 entity.HasOne(d => d.Student)
-                    .WithMany(p => p.Logs)
+                    .WithMany(p => p.LogStudents)
                     .HasForeignKey(d => d.StudentId)
                     .HasConstraintName("FK__Logs__studentID__6D0D32F4");
+
+                entity.HasOne(d => d.TransactionTypeNavigation)
+                    .WithMany(p => p.Logs)
+                    .HasForeignKey(d => d.TransactionType)
+                    .OnDelete(DeleteBehavior.ClientSetNull)
+                    .HasConstraintName("FK_Logs_TransactionType");
+            });
+
+            modelBuilder.Entity<LogSummary>(entity =>
+            {
+                entity.HasKey(e => e.SummaryId);
+
+                entity.ToTable("LogSummary");
+
+                entity.Property(e => e.SummaryId).HasColumnName("SummaryID");
+
+                entity.Property(e => e.CheckInTime).HasColumnType("datetime");
+
+                entity.Property(e => e.CheckOutTime).HasColumnType("datetime");
+
+                entity.Property(e => e.LastUpdateTime).HasColumnType("datetime");
             });
 
             modelBuilder.Entity<PermissionLookup>(entity =>
@@ -359,6 +400,22 @@ namespace LabPortal.Models
 
                 entity.Property(e => e.TypeName)
                     .HasMaxLength(10)
+                    .HasColumnName("typeName");
+            });
+
+            modelBuilder.Entity<TransactionTypeLookup>(entity =>
+            {
+                entity.HasKey(e => e.TypeId)
+                    .HasName("PK__Transact__F04DF11A024F2E24");
+
+                entity.ToTable("TransactionTypeLookup");
+
+                entity.Property(e => e.TypeId)
+                    .ValueGeneratedNever()
+                    .HasColumnName("typeID");
+
+                entity.Property(e => e.TypeName)
+                    .HasMaxLength(20)
                     .HasColumnName("typeName");
             });
 
