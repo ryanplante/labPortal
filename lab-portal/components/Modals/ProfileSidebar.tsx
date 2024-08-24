@@ -3,6 +3,8 @@ import { View, StyleSheet, Image, Text, TouchableOpacity, Animated, Easing, Aler
 import { deleteToken, getUserByToken, logout } from '../../services/loginService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
+import { crossPlatformAlert, reload } from '../../services/helpers';
+import { CreateAuditLog } from '../../services/auditService';
 
 const ProfileSidebar = ({ visible, onClose }: { visible: boolean; onClose: () => void }) => {
   const slideAnim = useRef(new Animated.Value(-300)).current;
@@ -17,7 +19,10 @@ const ProfileSidebar = ({ visible, onClose }: { visible: boolean; onClose: () =>
           const user = await getUserByToken();
           setUserName(`${user.fName} ${user.lName}`);
         } catch (error) {
-          Alert.alert('Error', 'Failed to load user data');
+          await CreateAuditLog(`Token: ${token} has expired.`, 99999999, 'delete');
+          crossPlatformAlert('Token has expired.', 'Please refresh app and re-login to continue.');
+          await deleteToken()
+          await reload();
         }
       }
     };

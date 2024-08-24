@@ -1,32 +1,44 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Alert, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Alert, ActivityIndicator } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
-import { validateCredentials } from '../../services/loginService';
+import { validateCredentials, checkHeartbeat } from '../../services/loginService';
 import { CreateAuditLog } from '../../services/auditService';
 import { reload } from '../../services/helpers';
 
 const Login = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [errorMessage, setErrorMessage] = useState(''); // State for the error message
+  const [errorMessage, setErrorMessage] = useState(''); 
+  const [loading, setLoading] = useState(false);  
   const navigation = useNavigation();
 
   const handleLogin = async () => {
+    setLoading(true);  
     try {
-      const token = await validateCredentials(username, password);
-      
-      await AsyncStorage.setItem('token', token);
-      await CreateAuditLog('Navigating to Main', Number(username), 'information');
-      // Force a reload of the app... can't seem to get navigator to work since it's not in the stack but this is a workaround ¯\_(ツ)_/¯
-      await reload()
-    } catch (error) {
-      setErrorMessage('Invalid username or password'); // Show the error message
+      const isApiHealthy = await checkHeartbeat();
+      if (!isApiHealthy) {
+        throw new Error('The server is currently unavailable.');
+      }
+
+      const success = await validateCredentials(username, password);
+      if (success) {
+        await reload();
+      }
+    } catch (error: any) {
+      const errorMessage = error.message.includes('unavailable')
+        ? 'Server is currently down. Please try again later.'
+        : error.message === 'Invalid username or password'
+        ? 'Invalid username or password'
+        : 'An unexpected error occurred. Please try again later.';
+      setErrorMessage(errorMessage);
+    } finally {
+      setLoading(false);  
     }
   };
 
   const handleHelpPress = () => {
-    navigation.navigate('Help'); // Navigate to HelpScreen
+    navigation.navigate('Help');
   };
 
   return (
@@ -46,7 +58,11 @@ const Login = () => {
         secureTextEntry
       />
       <TouchableOpacity style={styles.button} onPress={handleLogin}>
-        <Text style={styles.buttonText}>Login</Text>
+        {loading ? (
+          <ActivityIndicator size="small" color="#fff" />
+        ) : (
+          <Text style={styles.buttonText}>Login</Text>
+        )}
       </TouchableOpacity>
       {errorMessage ? (
         <Text style={styles.errorText}>{errorMessage}</Text>

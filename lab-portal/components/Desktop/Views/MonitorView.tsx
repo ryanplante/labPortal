@@ -4,11 +4,13 @@ import moment from 'moment-timezone';
 import StudentSearcher from '../../Modals/StudentSearcher';
 import DynamicForm from '../../Modals/DynamicForm';
 import PlatformSpecificTimePicker from '../../Modals/PlatformSpecificTimePicker';
-import { getUserByToken } from '../../../services/loginService';
+import { checkHeartbeat, deleteToken, getUserByToken } from '../../../services/loginService';
 import LogService from '../../../services/logService';
 import LabService from '../../../services/labsService';
 import { User } from '../../../services/userService';
-import ConfirmationModal from "../../Modals/ConfirmationModal"; // Import ConfirmationModal
+import ConfirmationModal from "../../Modals/ConfirmationModal";
+import { crossPlatformAlert, reload } from '../../../services/helpers';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const MonitorView = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -23,8 +25,8 @@ const MonitorView = () => {
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [labId, setLabId] = useState<number | null>(null);
-  const [isDeleteModalVisible, setDeleteModalVisible] = useState(false); // State for modal visibility
-  const [entryToDelete, setEntryToDelete] = useState<Entry | null>(null); // State for tracking entry to delete
+  const [isDeleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [entryToDelete, setEntryToDelete] = useState<Entry | null>(null);
 
   type Entry = {
     id: string;
@@ -35,26 +37,38 @@ const MonitorView = () => {
   };
 
   useEffect(() => {
-    const fetchUserAndLabId = async () => {
-      try {
-        const fetchedUser = await getUserByToken();
-        if (fetchedUser.privLvl === 0) {
-          Alert.alert('Error', 'You do not have the privilege to view this page.');
-          return;
-        }
-        setUser(fetchedUser);
-
-        const fetchedLabId = await LabService.getLabByDept(fetchedUser.userDept);
-        setLabId(fetchedLabId);
-
-        await fetchLogsForToday(fetchedLabId);
-      } catch (error) {
-        console.error('Failed to fetch user or lab information:', error);
-      }
-    };
-
     fetchUserAndLabId();
   }, []);
+
+  const fetchUserAndLabId = async () => {
+    const isApiHealthy = await checkHeartbeat();
+    try {
+      if (!isApiHealthy) {
+        throw new Error('The server is currently unavailable.');
+      }
+      const token = await AsyncStorage.getItem('token');
+      if (token && isApiHealthy) {
+        const user = await getUserByToken();
+        if (user.privLvl === 0) {
+          crossPlatformAlert('Error', 'You do not have the privilege to view this page.');
+          return false;
+        }
+        setUser(user);
+        const labId = await LabService.getLabByDept(user.userDept);
+        setLabId(labId);
+        await fetchLogsForToday(labId);
+        return true;
+      }
+    } catch (error) {
+      const errorMessage = error.message.includes('unavailable')
+        ? 'Server is currently down. Please try again later.'
+        : 'Token has expired please refresh the app and re-login to continue.';
+      crossPlatformAlert('Error', errorMessage);
+      await deleteToken();
+      await reload();
+      return false;
+    }
+  };
 
   const fetchLogsForToday = async (labId: number) => {
     try {
@@ -66,7 +80,7 @@ const MonitorView = () => {
         id: log.id.toString(),
         studentId: log.studentId.toString(),
         studentName: log.studentName,
-        timeIn: moment(log.timeIn).format('MMMM Do YYYY, h:mm:ss a'), // Convert time to local format
+        timeIn: moment(log.timeIn).format('MMMM Do YYYY, h:mm:ss a'),
         timeOut: log.timeOut ? moment(log.timeOut).format('MMMM Do YYYY, h:mm:ss a') : null,
       }));
 
@@ -76,7 +90,10 @@ const MonitorView = () => {
     }
   };
 
-  const handleStudentSelect = (student: { userId: string, fName: string, lName: string }) => {
+  const handleStudentSelect = async (student: { userId: string, fName: string, lName: string }) => {
+    const userAndLabLoaded = await fetchUserAndLabId();
+    if (!userAndLabLoaded) return;
+
     setSelectedStudent({
       id: student.userId,
       firstName: student.fName,
@@ -107,6 +124,9 @@ const MonitorView = () => {
   };
 
   const handleCheckIn = async () => {
+    const userAndLabLoaded = await fetchUserAndLabId();
+    if (!userAndLabLoaded) return;
+
     if (!selectedStudent.id) {
       setError('Please select a student.');
       return;
@@ -123,7 +143,7 @@ const MonitorView = () => {
         id: newEntryId || Date.now().toString(),
         studentId: selectedStudent.id,
         studentName: `${selectedStudent.firstName} ${selectedStudent.lastName}`,
-        timeIn: moment(checkInTime).format('MMMM Do YYYY, h:mm:ss a'), // Human-readable format in local time
+        timeIn: moment(checkInTime).format('MMMM Do YYYY, h:mm:ss a'),
         timeOut: checkOutTime ? moment(checkOutTime).format('MMMM Do YYYY, h:mm:ss a') : null,
       };
 
@@ -153,7 +173,7 @@ const MonitorView = () => {
           : [...prevEntries, newEntry]
       );
 
-      setEditingEntryId(newEntryId); // Set the correct ID for future updates
+      setEditingEntryId(newEntryId);
       resetForm();
       setFormOpen(false);
     } catch (error) {
@@ -162,7 +182,10 @@ const MonitorView = () => {
     }
   };
 
-  const handleEdit = (entry: Entry) => {
+  const handleEdit = async (entry: Entry) => {
+    const userAndLabLoaded = await fetchUserAndLabId();
+    if (!userAndLabLoaded) return;
+
     setSelectedStudent({
       id: entry.studentId,
       firstName: entry.studentName.split(' ')[0],
@@ -176,12 +199,18 @@ const MonitorView = () => {
     setError(null);
   };
 
-  const handleDelete = (entry: Entry) => {
-    setEntryToDelete(entry); // Set the entry to be deleted
-    setDeleteModalVisible(true); // Show the confirmation modal
+  const handleDelete = async (entry: Entry) => {
+    const userAndLabLoaded = await fetchUserAndLabId();
+    if (!userAndLabLoaded) return;
+
+    setEntryToDelete(entry);
+    setDeleteModalVisible(true);
   };
 
   const confirmDelete = async () => {
+    const userAndLabLoaded = await fetchUserAndLabId();
+    if (!userAndLabLoaded) return;
+
     if (entryToDelete) {
       try {
         await LogService.deleteLog(Number(entryToDelete.id), user?.userId ?? 0);
@@ -189,13 +218,16 @@ const MonitorView = () => {
       } catch (error) {
         console.error('Failed to delete log:', error);
       } finally {
-        setDeleteModalVisible(false); // Hide the confirmation modal
-        setEntryToDelete(null); // Reset the entry to delete
+        setDeleteModalVisible(false);
+        setEntryToDelete(null);
       }
     }
   };
 
   const handleClockOut = async (id: string) => {
+    const userAndLabLoaded = await fetchUserAndLabId();
+    if (!userAndLabLoaded) return;
+
     try {
       await LogService.timeOutLog(Number(id), user?.userId ?? 0);
       await fetchLogsForToday(labId ?? 1);

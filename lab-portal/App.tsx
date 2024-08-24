@@ -16,23 +16,10 @@ import LogHistory from './components/Desktop/LogHistory';
 import Admin from './components/Desktop/Admin';
 import Sidebar from './components/Desktop/Sidebar';
 import ProfileSidebar from './components/Modals/ProfileSidebar';
-
-import MobileMainPage from './components/Mobile/MainPage';
-import MobileLabs from './components/Mobile/Labs';
-import MobileReports from './components/Mobile/Reports';
-import MobileSchedule from './components/Mobile/Schedule';
-import MobileManageLabs from './components/Mobile/ManageLabs';
-import MobileLabSchedules from './components/Mobile/LabSchedules';
-import MobileChat from './components/Mobile/Chat';
-import MobileScanItem from './components/Mobile/ScanItem';
-import MobileLogHistory from './components/Mobile/LogHistory';
-import MobileAdmin from './components/Mobile/Admin';
-import MobileSidebar from './components/Mobile/Sidebar';
-import MobileProfileSidebar from './components/Mobile/ProfileSidebar';
 import { isMobile } from 'react-device-detect';
-import { getUserByToken } from './services/loginService';
+import { checkHeartbeat, deleteToken, getUserByToken } from './services/loginService';
 import ChangePassword from './components/Desktop/ChangePassword';
-import { crossPlatformAlert } from './services/helpers';
+import { crossPlatformAlert, reload } from './services/helpers';
 import { CreateAuditLog } from './services/auditService';
 import HelpScreen from './components/Desktop/HelpScreen';
 import SampleScreen from './components/Desktop/Sample';
@@ -42,12 +29,17 @@ const Stack = createStackNavigator();
 
 const App = () => {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);  // New loading state
+  const [loading, setLoading] = useState(true);  
   const [isProfileSidebarVisible, setIsProfileSidebarVisible] = useState(false);
 
   useEffect(() => {
     const validateToken = async () => {
       try {
+        const isApiHealthy = await checkHeartbeat();
+        if (!isApiHealthy) {
+          throw new Error('The server is currently unavailable.');
+        }
+
         const token = await AsyncStorage.getItem('token');
         if (token) {
           const user = await getUserByToken();
@@ -57,13 +49,18 @@ const App = () => {
           setUser(null);
         }
       } catch (error) {
+        const errorMessage = error.message.includes('unavailable')
+          ? 'Server is currently down. Please try again later.'
+          : 'Token has expired. Please refresh the app and re-login to continue.';
         crossPlatformAlert('Error', error.message);
-        await AsyncStorage.removeItem('token');
+
+        await deleteToken();
         setUser(null);
       } finally {
-        setLoading(false);  // Stop loading once validation is complete
+        setLoading(false);  
       }
     };
+
     validateToken();
   }, []);
 
@@ -71,7 +68,7 @@ const App = () => {
     setIsProfileSidebarVisible(!isProfileSidebarVisible);
   };
 
-  if (loading) {  // Show loading indicator while loading
+  if (loading) {  
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#ffc107" />
@@ -145,7 +142,7 @@ const styles = StyleSheet.create({
   mainContent: {
     flex: 1,
   },
-  loadingContainer: {  // New style for the loading screen
+  loadingContainer: {  
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',

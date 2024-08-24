@@ -23,7 +23,8 @@ const MainPage = () => {
         setPrivLvl(user.privLvl);
         setSelectedView(getViewByPrivLvl(user.privLvl));
       } catch (error) {
-        crossPlatformAlert('Error', 'Failed to load user data');
+        await deleteToken();
+        crossPlatformAlert('Error', error);
       }
     };
 
@@ -110,3 +111,7 @@ const styles = StyleSheet.create({
 });
 
 export default MainPage;
+function deleteToken() {
+  throw new Error('Function not implemented.');
+}
+

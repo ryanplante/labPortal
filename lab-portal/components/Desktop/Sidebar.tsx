@@ -1,31 +1,60 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Image, Text, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { getUserByToken } from '../../services/loginService';
+import { checkHeartbeat, deleteToken, getUserByToken } from '../../services/loginService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { CreateAuditLog } from '../../services/auditService';
+import { crossPlatformAlert, reload } from '../../services/helpers';
 
 const Sidebar = ({ onProfilePress }: { onProfilePress: () => void }) => {
   const navigation = useNavigation();
   const [privLvl, setPrivLvl] = useState<number>(0);
 
-  useEffect(() => {
-    const fetchUserData = async () => {
-      try {
+  const fetchUserData = async () => {
+    const isApiHealthy = await checkHeartbeat();
+    const token = await AsyncStorage.getItem('token');
+    try {
+      if (!isApiHealthy) {
+        throw new Error('The server is currently unavailable.');
+      }
+      if (token) {
         const user = await getUserByToken();
         setPrivLvl(user.privLvl);
-      } catch (error) {
-        console.error('Failed to load user data:', error);
+      } else {
+        crossPlatformAlert('Error', 'Token has expired. Please refresh the app and re-login to continue.');
+        await reload();
       }
-    };
+    } catch (error) {
+      const errorMessage = error.message.includes('unavailable')
+        ? 'Server is currently down. Please try again later.'
+        : 'Token has expired. Please refresh the app and re-login to continue.';
+      crossPlatformAlert('Error', errorMessage);
+      const token = await AsyncStorage.getItem('token');
+      if (token) {
+        const user = await getUserByToken();
+        setPrivLvl(user.privLvl);
+      }
+    }
+  };
 
+  useEffect(() => {
     fetchUserData();
   }, []);
 
-  // Stupid hack to get the text centered >:(
-  const labMonitors = "   Add/Edit\nLab Monitors" 
+  const handlePress = async (screenName: string, permittedLevels: number[]) => {
+    await fetchUserData();
+    if (permittedLevels.includes(privLvl)) {
+      navigation.navigate(screenName);
+    } else {
+      crossPlatformAlert('Access Denied', 'You do not have permission to access this screen.');
+    }
+  };
+
+  const labMonitors = "   Add/Edit\nLab Monitors";
 
   return (
     <View style={styles.sidebar}>
-      <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Main')}>
+      <TouchableOpacity style={styles.menuItem} onPress={() => handlePress('Main', [0, 1, 2, 3, 4, 5])}>
         <Image source={require('../../assets/logo.png')} style={styles.icon} />
       </TouchableOpacity>
       <TouchableOpacity style={styles.menuItem} onPress={onProfilePress}>
@@ -33,59 +62,59 @@ const Sidebar = ({ onProfilePress }: { onProfilePress: () => void }) => {
         <Text style={styles.menuText}>Profile</Text>
       </TouchableOpacity>
       {(privLvl > 4) && (
-        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Labs')}>
+        <TouchableOpacity style={styles.menuItem} onPress={() => handlePress('Labs', [5])}>
           <Image source={require('../../assets/labs-icon.png')} style={styles.icon} />
           <Text style={styles.menuText}>{labMonitors}</Text>
         </TouchableOpacity>
       )}
-      {( privLvl >= 1 && privLvl <= 3) && (
-        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('LabSchedules')}>
+      {(privLvl >= 1 && privLvl <= 3) && (
+        <TouchableOpacity style={styles.menuItem} onPress={() => handlePress('LabSchedules', [1, 2, 3])}>
           <Image source={require('../../assets/schedule-icon.png')} style={styles.icon} />
           <Text style={styles.menuText}>Schedule</Text>
         </TouchableOpacity>
       )}
-      {(privLvl <= 3 ) && (
-        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Chat')}>
+      {(privLvl <= 3) && (
+        <TouchableOpacity style={styles.menuItem} onPress={() => handlePress('Chat', [0, 1, 2, 3])}>
           <Image source={require('../../assets/chat-icon.png')} style={styles.icon} />
           <Text style={styles.menuText}>Chat</Text>
         </TouchableOpacity>
       )}
       {(privLvl >= 1 && privLvl <= 3) && (
-        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('ScanItem')}>
+        <TouchableOpacity style={styles.menuItem} onPress={() => handlePress('ScanItem', [1, 2, 3])}>
           <Image source={require('../../assets/scan-icon.png')} style={styles.icon} />
           <Text style={styles.menuText}>Scanner</Text>
         </TouchableOpacity>
       )}
       {(privLvl >= 1) && (
-        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('LogHistory')}>
+        <TouchableOpacity style={styles.menuItem} onPress={() => handlePress('LogHistory', [1, 2, 3, 4, 5])}>
           <Image source={require('../../assets/logs-icon.png')} style={styles.icon} />
           <Text style={styles.menuText}>View Logs</Text>
         </TouchableOpacity>
       )}
       {(privLvl >= 4) && (
-        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Reports')}>
+        <TouchableOpacity style={styles.menuItem} onPress={() => handlePress('Reports', [4, 5])}>
           <Image source={require('../../assets/reports-icon.png')} style={styles.icon} />
           <Text style={styles.menuText}>Reports</Text>
         </TouchableOpacity>
       )}
       {(privLvl === 5) && (
-        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Admin')}>
+        <TouchableOpacity style={styles.menuItem} onPress={() => handlePress('Admin', [5])}>
           <Image source={require('../../assets/admin-icon.png')} style={styles.icon} />
           <Text style={styles.menuText}>Admin</Text>
         </TouchableOpacity>
       )}
-        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Help')}>
-          <Image source={require('../../assets/help-icon.png')} style={styles.icon} />
-          <Text style={styles.menuText}>Help</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Sample')}>
-          <Image source={require('../../assets/favicon.png')} style={styles.icon} />
-          <Text style={styles.menuText}>Sample</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Example')}>
-          <Image source={require('../../assets/favicon.png')} style={styles.icon} />
-          <Text style={styles.menuText}>Example</Text>
-        </TouchableOpacity>
+      <TouchableOpacity style={styles.menuItem} onPress={() => handlePress('Help', [0, 1, 2, 3, 4, 5])}>
+        <Image source={require('../../assets/help-icon.png')} style={styles.icon} />
+        <Text style={styles.menuText}>Help</Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={styles.menuItem} onPress={() => handlePress('Sample', [0, 1, 2, 3, 4, 5])}>
+        <Image source={require('../../assets/favicon.png')} style={styles.icon} />
+        <Text style={styles.menuText}>Sample</Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={styles.menuItem} onPress={() => handlePress('Example', [0, 1, 2, 3, 4, 5])}>
+        <Image source={require('../../assets/favicon.png')} style={styles.icon} />
+        <Text style={styles.menuText}>Example</Text>
+      </TouchableOpacity>
     </View>
   );
 };
@@ -93,11 +122,11 @@ const Sidebar = ({ onProfilePress }: { onProfilePress: () => void }) => {
 const styles = StyleSheet.create({
   sidebar: {
     width: 80,
-    backgroundColor: '#002147', // Initial color before gradient
+    backgroundColor: '#002147',
     alignItems: 'center',
     paddingVertical: 20,
-    height: '100%', // Ensure the sidebar covers the full height
-    backgroundImage: 'linear-gradient(to bottom, #002147, #000000)', // Blue to black gradient
+    height: '100%',
+    backgroundImage: 'linear-gradient(to bottom, #002147, #000000)',
   },
   logo: {
     width: 50,
