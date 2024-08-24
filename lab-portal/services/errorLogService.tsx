@@ -139,5 +139,5 @@ export const CreateErrorLog = async (
     await saveErrorLogToAsyncStorage(errorLog);
   }
 
-  throw new Error('An error has occurred. Please contact the administrator.');
+  //throw new Error('An error has occurred. Please contact the administrator.');
 };

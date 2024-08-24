@@ -6,10 +6,10 @@ const MobileProfileSidebar = ({ visible, onClose }: { visible: boolean; onClose:
   const slideAnim = useRef(new Animated.Value(-300)).current;
 
   const handleLogout = async () => {
-    await AsyncStorage.clear();
+    await AsyncStorage.removeItem("token");
     onClose(); // Close the profile sidebar
     // Force a reload of the app
-    window.location.reload();
+    await reload();
   };
 
   useEffect(() => {

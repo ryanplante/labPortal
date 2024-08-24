@@ -26,9 +26,10 @@ const Login = () => {
         await reload();
       }
     } catch (error: any) {
-      const errorMessage = error.message.includes('unavailable')
+      console.log(error)
+      const errorMessage = error.message.includes('server')
         ? 'Server is currently down. Please try again later.'
-        : error.message === 'Invalid username or password'
+        : error.message.includes('Invalid')
         ? 'Invalid username or password'
         : 'An unexpected error occurred. Please try again later.';
       setErrorMessage(errorMessage);

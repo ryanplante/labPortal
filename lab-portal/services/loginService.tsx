@@ -94,7 +94,7 @@ export const validateCredentials = async (username: string, password: string): P
   } catch (error) {
     await CreateAuditLog('Login attempt failed!', Number(username), 'login');
     await CreateErrorLog(error, 'validateCredentials', Number(username), 'error');
-    throw new Error('An error occurred. Please contact the administrator.');
+    throw new Error('Invalid credentials.');
   }
 };
 

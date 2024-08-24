@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, StyleSheet, Image, Text, TouchableOpacity, Animated, Easing, Alert, Platform } from 'react-native';
-import { deleteToken, getUserByToken, logout } from '../../services/loginService';
+import { checkHeartbeat, deleteToken, getUserByToken, logout } from '../../services/loginService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { crossPlatformAlert, reload } from '../../services/helpers';
@@ -13,14 +13,21 @@ const ProfileSidebar = ({ visible, onClose }: { visible: boolean; onClose: () =>
 
   useEffect(() => {
     const fetchUserData = async () => {
+
       const token = await AsyncStorage.getItem('token');
       if (token) {
         try {
+          const isApiHealthy = await checkHeartbeat();
+          if (!isApiHealthy) {
+            throw new Error('The server is currently unavailable.');
+          }
           const user = await getUserByToken();
           setUserName(`${user.fName} ${user.lName}`);
         } catch (error) {
-          await CreateAuditLog(`Token: ${token} has expired.`, 99999999, 'delete');
-          crossPlatformAlert('Token has expired.', 'Please refresh app and re-login to continue.');
+          const errorMessage = error.message.includes('server')
+              ? 'Server is currently down. Please try again later.'
+              : 'Token has expired. Please refresh the app and re-login to continue.';
+            crossPlatformAlert('Error', errorMessage);
           await deleteToken()
           await reload();
         }

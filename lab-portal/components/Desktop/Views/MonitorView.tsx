@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, FlatList, TextInput, Image, Button } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, TextInput, Image, Button, Picker } from 'react-native';
 import moment from 'moment-timezone';
 import StudentSearcher from '../../Modals/StudentSearcher';
 import DynamicForm from '../../Modals/DynamicForm';
@@ -41,11 +41,13 @@ const MonitorView = () => {
   }, []);
 
   const fetchUserAndLabId = async () => {
-    const isApiHealthy = await checkHeartbeat();
     try {
+      console.log('hii');
+      const isApiHealthy = await checkHeartbeat();
       if (!isApiHealthy) {
         throw new Error('The server is currently unavailable.');
       }
+      console.log(isApiHealthy)
       const token = await AsyncStorage.getItem('token');
       if (token && isApiHealthy) {
         const user = await getUserByToken();
@@ -60,7 +62,7 @@ const MonitorView = () => {
         return true;
       }
     } catch (error) {
-      const errorMessage = error.message.includes('unavailable')
+      const errorMessage = error.message.includes('server')
         ? 'Server is currently down. Please try again later.'
         : 'Token has expired please refresh the app and re-login to continue.';
       crossPlatformAlert('Error', errorMessage);
@@ -78,10 +80,10 @@ const MonitorView = () => {
 
       const formattedLogs = logs.map(log => ({
         id: log.id.toString(),
-        studentId: log.studentId.toString(),
+        studentId: log.studentId.toString().padStart(8, '0'), // Zero padding student ID
         studentName: log.studentName,
-        timeIn: moment(log.timeIn).format('MMMM Do YYYY, h:mm:ss a'),
-        timeOut: log.timeOut ? moment(log.timeOut).format('MMMM Do YYYY, h:mm:ss a') : null,
+        timeIn: moment(log.timeIn).format('h:mm:ss a'), // Show only time
+        timeOut: log.timeOut ? moment(log.timeOut).format('h:mm:ss a') : null, // Show only time
       }));
 
       setEntries(formattedLogs);
@@ -141,10 +143,10 @@ const MonitorView = () => {
 
       const newEntry: Entry = {
         id: newEntryId || Date.now().toString(),
-        studentId: selectedStudent.id,
+        studentId: selectedStudent.id.toString().padStart(8, '0'), // Zero padding student ID
         studentName: `${selectedStudent.firstName} ${selectedStudent.lastName}`,
-        timeIn: moment(checkInTime).format('MMMM Do YYYY, h:mm:ss a'),
-        timeOut: checkOutTime ? moment(checkOutTime).format('MMMM Do YYYY, h:mm:ss a') : null,
+        timeIn: moment(checkInTime).format('h:mm:ss a'),
+        timeOut: checkOutTime ? moment(checkOutTime).format('h:mm:ss a') : null,
       };
 
       if (editingEntryId) {
@@ -192,8 +194,8 @@ const MonitorView = () => {
       lastName: entry.studentName.split(' ')[1],
     });
 
-    setCheckInTime(new Date(moment(entry.timeIn, 'MMMM Do YYYY, h:mm:ss a').toISOString()));
-    setCheckOutTime(!entry.timeOut ? undefined : new Date(moment(entry.timeOut, 'MMMM Do YYYY, h:mm:ss a').toISOString()));
+    setCheckInTime(new Date(moment(entry.timeIn, 'h:mm:ss a').toISOString()));
+    setCheckOutTime(!entry.timeOut ? undefined : new Date(moment(entry.timeOut, 'h:mm:ss a').toISOString()));
     setEditingEntryId(entry.id);
     setFormOpen(true);
     setError(null);
@@ -242,6 +244,15 @@ const MonitorView = () => {
     setCheckOutTime(undefined);
     setEditingEntryId(null);
     setError(null);
+  };
+
+  const filterEntries = (entries: Entry[]) => {
+    if (selectedFilter === 'Not Checked Out') {
+      return entries.filter(entry => !entry.timeOut);
+    } else if (selectedFilter === 'Checked Out') {
+      return entries.filter(entry => entry.timeOut);
+    }
+    return entries; // Default to 'All'
   };
 
   if (!user) return null;
@@ -302,16 +313,30 @@ const MonitorView = () => {
       key="updateAdd"
       title={editingEntryId ? "Update" : "Add"}
       onPress={handleCheckIn}
+      color="#FFC107"
     />,
   ];
 
   return (
     <View style={styles.container}>
       <Text style={styles.header}>Welcome, {user.fName}</Text>
-      <Text style={styles.subHeader}>Logs for today</Text>
-      <TouchableOpacity style={styles.addButton} onPress={() => setFormOpen(true)}>
-        <Text style={styles.addButtonText}>Log new student</Text>
-      </TouchableOpacity>
+      <View style={styles.headerRow}>
+        <TouchableOpacity style={styles.addButton} onPress={() => setFormOpen(true)}>
+          <Text style={styles.addButtonText}>Log new student</Text>
+        </TouchableOpacity>
+        <View style={styles.filterContainer}>
+          <Text style={styles.filterLabel}>Filter by Status:</Text> {/* Added label */}
+          <Picker
+            selectedValue={selectedFilter}
+            style={styles.filterPicker}
+            onValueChange={(itemValue) => setSelectedFilter(itemValue)}
+          >
+            <Picker.Item label="All" value="All" />
+            <Picker.Item label="Not Checked Out" value="Not Checked Out" />
+            <Picker.Item label="Checked Out" value="Checked Out" />
+          </Picker>
+        </View>
+      </View>
 
       <View style={styles.tableHeader}>
         <Text style={styles.tableHeaderText}>Student ID</Text>
@@ -324,7 +349,7 @@ const MonitorView = () => {
         <Text style={styles.noLogsText}>No logs for today!</Text>
       ) : (
         <FlatList
-          data={entries}
+          data={filterEntries(entries)}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
             <View style={styles.entryRow}>
@@ -403,16 +428,33 @@ const styles = StyleSheet.create({
     fontSize: 18,
     marginBottom: 20,
   },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
   addButton: {
     backgroundColor: '#ffc107',
     padding: 10,
     borderRadius: 5,
-    alignSelf: 'flex-start',
-    marginBottom: 20,
   },
   addButtonText: {
     color: '#fff',
     fontSize: 16,
+  },
+  filterContainer: {   /* Added container for filter */
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  filterLabel: {        /* Added label styling */
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginRight: 10,
+  },
+  filterPicker: {
+    width: 200,
+    height: 40,
   },
   filtersContainer: {
     flexDirection: 'row',

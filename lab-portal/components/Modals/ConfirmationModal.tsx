@@ -75,7 +75,7 @@ const ConfirmationModal = ({
       <View style={styles.modalBackground}>
         <View style={styles.modalContainer}>
           <View style={styles.textContainer}>
-            {title}
+            <Text style={styles.title}>{title}</Text>
           </View>
           <View style={styles.textContainer}>
             {description}
@@ -104,6 +104,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   textContainer: {
+    marginBottom: 20,
+    alignItems: 'center',
+  },
+
+  title: {
+    fontSize: 30,
     marginBottom: 20,
     alignItems: 'center',
   },

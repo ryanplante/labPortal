@@ -11,9 +11,10 @@ const Sidebar = ({ onProfilePress }: { onProfilePress: () => void }) => {
   const [privLvl, setPrivLvl] = useState<number>(0);
 
   const fetchUserData = async () => {
-    const isApiHealthy = await checkHeartbeat();
+    
     const token = await AsyncStorage.getItem('token');
     try {
+      const isApiHealthy = await checkHeartbeat();
       if (!isApiHealthy) {
         throw new Error('The server is currently unavailable.');
       }
@@ -25,15 +26,10 @@ const Sidebar = ({ onProfilePress }: { onProfilePress: () => void }) => {
         await reload();
       }
     } catch (error) {
-      const errorMessage = error.message.includes('unavailable')
+      const errorMessage = error.message.includes('server')
         ? 'Server is currently down. Please try again later.'
         : 'Token has expired. Please refresh the app and re-login to continue.';
       crossPlatformAlert('Error', errorMessage);
-      const token = await AsyncStorage.getItem('token');
-      if (token) {
-        const user = await getUserByToken();
-        setPrivLvl(user.privLvl);
-      }
     }
   };
 
