@@ -104,6 +104,8 @@ const styles = StyleSheet.create({
     opacity: 0.1,
     width: 300,
     height: 300,
+    zIndex: -1, // Ensure the logo is beneath all other content
+    pointerEvents: 'none', // Make sure the image is not clickable or interactable
   },
 });
 

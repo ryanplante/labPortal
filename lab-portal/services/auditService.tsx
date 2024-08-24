@@ -3,7 +3,7 @@ import axios from 'axios';
 const API_BASE_URL = 'https://localhost:7282/api';
 
 // Define a type for the possible audit log types
-type AuditLogType =
+export type AuditLogType =
   | 'insert'
   | 'update'
   | 'delete'

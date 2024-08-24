@@ -8,7 +8,7 @@ const { version: appVersion } = require('../package.json');
 
 const API_BASE_URL = 'https://localhost:7282/api';
 
-type ErrorLogType = 'informative' | 'error' | 'warning' | 'critical';
+export type ErrorLogType = 'informative' | 'error' | 'warning' | 'critical';
 
 export interface ErrorLog {
   logType: number;

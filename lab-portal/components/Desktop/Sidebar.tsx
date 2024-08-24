@@ -82,6 +82,10 @@ const Sidebar = ({ onProfilePress }: { onProfilePress: () => void }) => {
           <Image source={require('../../assets/favicon.png')} style={styles.icon} />
           <Text style={styles.menuText}>Sample</Text>
         </TouchableOpacity>
+        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Example')}>
+          <Image source={require('../../assets/favicon.png')} style={styles.icon} />
+          <Text style={styles.menuText}>Example</Text>
+        </TouchableOpacity>
     </View>
   );
 };

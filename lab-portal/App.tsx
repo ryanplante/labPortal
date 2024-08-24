@@ -36,29 +36,32 @@ import { crossPlatformAlert } from './services/helpers';
 import { CreateAuditLog } from './services/auditService';
 import HelpScreen from './components/Desktop/HelpScreen';
 import SampleScreen from './components/Desktop/Sample';
+import ExamplePage from './components/Desktop/Example';
 
 const Stack = createStackNavigator();
 
 const App = () => {
   const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);  // New loading state
   const [isProfileSidebarVisible, setIsProfileSidebarVisible] = useState(false);
 
   useEffect(() => {
     const validateToken = async () => {
-      const token = await AsyncStorage.getItem('token');
-      if (token) {
-        try {
+      try {
+        const token = await AsyncStorage.getItem('token');
+        if (token) {
           const user = await getUserByToken();
-          console.log(user)
           await CreateAuditLog('Starting login process with token', Number(user.userId), 'login');
           setUser(user);
-        } catch (error) {
-          crossPlatformAlert('Error', error.message);
-          await AsyncStorage.removeItem('token');
+        } else {
           setUser(null);
         }
-      } else {
+      } catch (error) {
+        crossPlatformAlert('Error', error.message);
+        await AsyncStorage.removeItem('token');
         setUser(null);
+      } finally {
+        setLoading(false);  // Stop loading once validation is complete
       }
     };
     validateToken();
@@ -68,6 +71,13 @@ const App = () => {
     setIsProfileSidebarVisible(!isProfileSidebarVisible);
   };
 
+  if (loading) {  // Show loading indicator while loading
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#ffc107" />
+      </View>
+    );
+  }
 
   return (
     <NavigationContainer>
@@ -111,6 +121,7 @@ const App = () => {
                   <Stack.Screen name="LogHistory" component={LogHistory} />
                   <Stack.Screen name="Admin" component={Admin} />
                   <Stack.Screen name="Sample" component={SampleScreen} />
+                  <Stack.Screen name="Example" component={ExamplePage} />
                 </>
               )
             ) : (
@@ -118,7 +129,6 @@ const App = () => {
                 <Stack.Screen name="Login" component={Login} />
                 <Stack.Screen name="Help" component={HelpScreen} />
               </>
-
             )}
           </Stack.Navigator>
         </View>
@@ -134,6 +144,11 @@ const styles = StyleSheet.create({
   },
   mainContent: {
     flex: 1,
+  },
+  loadingContainer: {  // New style for the loading screen
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 

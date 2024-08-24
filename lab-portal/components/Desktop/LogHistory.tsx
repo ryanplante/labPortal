@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Image } from 'react-native';
 import ConfirmationModal from '../Modals/ConfirmationModal'; // Assuming this is your modal component
-import LogService from '../../services/LogService'; // Assuming LogService handles the API calls
+import LogService from '../../services/logService'; // Assuming LogService handles the API calls
 
 const LogHistory = () => {
     const [activeTab, setActiveTab] = useState<'students' | 'items'>('students');
