@@ -5,7 +5,7 @@ import { useNavigation } from '@react-navigation/native';
 const MobileSidebar = ({ onProfilePress }: { onProfilePress: () => void }) => {
   const navigation = useNavigation();
   // Stupid hack to get the text centered >:(
-  const labMonitors = "   Add/Edit\nLab Monitors" 
+  const labMonitors = "Manage Mons." 
   return (
     <View style={styles.sidebar}>
       <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Main')}>
@@ -32,7 +32,8 @@ const MobileSidebar = ({ onProfilePress }: { onProfilePress: () => void }) => {
         <Text style={styles.menuText}>Scan Item</Text>
       </TouchableOpacity>
       <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('LogHistory')}>
-        <Image source={require('../../assets/history-icon.png')} style={styles.icon} />
+        {// <Image source={require('../../assets/history-icon.png')} style={styles.icon} />
+        }
         <Text style={styles.menuText}>Log History</Text>
       </TouchableOpacity>
       <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Reports')}>
@@ -53,26 +54,24 @@ const MobileSidebar = ({ onProfilePress }: { onProfilePress: () => void }) => {
 
 const styles = StyleSheet.create({
   sidebar: {
-    width: 80,
+    width: "100%",
     backgroundColor: '#002147', // Initial color before gradient
-    alignItems: 'center',
-    paddingVertical: 20,
-    height: '100%', // Ensure the sidebar covers the full height
+    
+    height: 100,
     backgroundImage: 'linear-gradient(to bottom, #002147, #000000)', // Blue to black gradient
+    flexDirection: "row",
+    alignItems: 'center'
   },
   logo: {
     width: 50,
     height: 50,
-    marginBottom: 20,
   },
   menuItem: {
     alignItems: 'center',
-    marginBottom: 30,
   },
   icon: {
     width: 30,
     height: 30,
-    marginBottom: 5,
   },
   menuText: {
     color: '#fff',

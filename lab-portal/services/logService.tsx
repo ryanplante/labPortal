@@ -43,7 +43,7 @@ class LogService {
     private baseUrl: string;
 
     constructor() {
-        this.baseUrl = 'https://localhost:7282/api/Logs';
+        this.baseUrl = `${process.env.EXPO_PUBLIC_API_URL}:7282/api/Logs`;
     }
 
     // Utility function to convert UTC to local time with timezone consideration

@@ -5,6 +5,7 @@ import { useNavigation } from '@react-navigation/native';
 import { validateCredentials, checkHeartbeat } from '../../services/loginService';
 import { CreateAuditLog } from '../../services/auditService';
 import { reload } from '../../services/helpers';
+import {isMobile} from 'react-device-detect'
 
 const Login = () => {
   const [username, setUsername] = useState('');
@@ -12,6 +13,10 @@ const Login = () => {
   const [errorMessage, setErrorMessage] = useState(''); 
   const [loading, setLoading] = useState(false);  
   const navigation = useNavigation();
+
+  const adaptiveWidth = {
+    width: isMobile ? "90%" : "30%"
+  }
 
   const handleLogin = async () => {
     setLoading(true);  
@@ -44,15 +49,15 @@ const Login = () => {
 
   return (
     <View style={styles.container}>
-      <Image source={require('../../assets/neit-logo.png')} style={styles.logo} />
+      <Image source={require('../../assets/neit-logo.png')} style={[styles.logo, adaptiveWidth]} />
       <TextInput
-        style={styles.input}
+        style={[styles.input, adaptiveWidth]}
         placeholder="Username"
         value={username}
         onChangeText={setUsername}
       />
       <TextInput
-        style={styles.input}
+        style={[styles.input, adaptiveWidth]}
         placeholder="Password"
         value={password}
         onChangeText={setPassword}
@@ -66,7 +71,7 @@ const Login = () => {
         )}
       </TouchableOpacity>
       {errorMessage ? (
-        <Text style={styles.errorText}>{errorMessage}</Text>
+        <Text style={[styles.errorText, adaptiveWidth]}>{errorMessage}</Text>
       ) : null}
       <TouchableOpacity>
         <Text style={styles.link}>Forgot password?</Text>
@@ -86,11 +91,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
   },
   logo: {
-    width: '30%',
+    //width: '30%',
     resizeMode: 'contain',
   },
   input: {
-    width: '30%',
+    //width: '30%',
     padding: 10,
     marginVertical: 10,
     borderWidth: 1,

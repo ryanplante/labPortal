@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'https://localhost:7282/api';
+const API_BASE_URL = `${process.env.EXPO_PUBLIC_API_URL}:7282/api`;
 
 // Define a type for the possible audit log types
 export type AuditLogType =
@@ -14,7 +14,6 @@ export type AuditLogType =
   | 'permission change'
   | 'data export'
   | 'information';
-
 // Define the structure of the audit log object
 interface AuditLog {
   description: string;

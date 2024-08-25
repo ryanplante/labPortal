@@ -6,14 +6,15 @@ import { CreateAuditLog } from './auditService';
 import { CreateErrorLog } from './errorLogService';
 import { reload } from './helpers';
 
-const API_URL = 'https://localhost:7282/api/Users';
-const HEARTBEAT_URL = 'https://localhost:7282/api/Heartbeat';
+const API_URL = `${process.env.EXPO_PUBLIC_API_URL}:7282/api/Users`;
+const HEARTBEAT_URL = `${process.env.EXPO_PUBLIC_API_URL}:7282/api/Heartbeat`;
 
 export const checkHeartbeat = async (): Promise<boolean> => {
   try {
       const response = await axios.get(HEARTBEAT_URL);
       return response.status === 200;
   } catch (error: any) {
+    console.log(error.code)
       if (error.code === 'ECONNREFUSED') {
           console.error('Connection refused - the server is down.');
           await CreateErrorLog(new Error('Connection refused - the server is down.'), 'checkHeartbeat', 99999999, 'error');

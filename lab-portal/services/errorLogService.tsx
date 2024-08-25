@@ -6,7 +6,7 @@ import { getUserByToken } from './loginService';
 // Use require to import the package.json file
 const { version: appVersion } = require('../package.json');
 
-const API_BASE_URL = 'https://localhost:7282/api';
+const API_BASE_URL = `${process.env.EXPO_PUBLIC_API_URL}:7282/api`;
 
 export type ErrorLogType = 'informative' | 'error' | 'warning' | 'critical';
 
@@ -24,9 +24,12 @@ export interface ErrorLog {
 
 const createErrorLog = async (errorLog: ErrorLog): Promise<any> => {
   try {
+    console.log("before error log creation")
     const response = await axios.post(`${API_BASE_URL}/ErrorLogs`, errorLog);
+    console.log("after error log creation")
     return response.data;
   } catch (error) {
+    console.log(error)
     console.error('Error creating error log:', error);
     throw error;
   }

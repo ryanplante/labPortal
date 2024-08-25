@@ -2,6 +2,7 @@ import axios, { AxiosResponse } from 'axios';
 import { CreateErrorLog } from './errorLogService';
 import { CreateAuditLog, AuditLogType } from './auditService';
 import { getUserByToken } from './loginService';
+import Config from 'react-native-config';
 
 interface Lab {
     labId: number;
@@ -20,7 +21,7 @@ class LabService {
     private baseUrl: string;
 
     constructor() {
-        this.baseUrl = 'https://localhost:7282/api/Labs';
+        this.baseUrl = `${Config.API_URL}:7282/api/Labs`;
     }
 
     // GET: /api/Labs
