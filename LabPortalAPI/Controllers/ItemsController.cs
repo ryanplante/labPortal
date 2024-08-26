@@ -41,6 +41,7 @@ namespace LabPortal.Controllers
             {
                 ItemId = Item.ItemId,
                 Description = Item.Description,
+                Lab = Item.FkLab,
                 Quantity = Item.Quantity,
                 SerialNum = Item.SerialNum,
                 Picture = Item.Picture,
@@ -72,6 +73,7 @@ namespace LabPortal.Controllers
             {
                 ItemId = item.ItemId,
                 Description = item.Description,
+                Lab = item.FkLab,
                 Quantity = item.Quantity,
                 SerialNum = item.SerialNum,
                 Picture = item.Picture
@@ -87,17 +89,13 @@ namespace LabPortal.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> PutItem(int id, ItemDto itemDto)
         {
-            if (id != itemDto.ItemId)
-            {
-                return BadRequest();
-            }
 
             var item = await _context.Items.FindAsync(id);
             if (item == null)
             {
                 return NotFound();
             }
-
+            item.FkLab = itemDto.Lab;
             item.Description = itemDto.Description;
             item.Quantity = itemDto.Quantity;
             item.SerialNum = itemDto.SerialNum;
@@ -142,6 +140,7 @@ namespace LabPortal.Controllers
                 Quantity = itemDto.Quantity,
                 SerialNum = itemDto.SerialNum,
                 Picture = itemDto.Picture,
+                FkLab = itemDto.Lab
             };
 
             _context.Items.Add(item);

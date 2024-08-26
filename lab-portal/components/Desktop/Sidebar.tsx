@@ -99,6 +99,12 @@ const Sidebar = ({ onProfilePress }: { onProfilePress: () => void }) => {
           <Text style={styles.menuText}>Admin</Text>
         </TouchableOpacity>
       )}
+      {(privLvl === 5) && (
+        <TouchableOpacity style={styles.menuItem} onPress={() => handlePress('Item', [5])}>
+          <Image source={require('../../assets/admin-icon.png')} style={styles.icon} />
+          <Text style={styles.menuText}>Item Manager</Text>
+        </TouchableOpacity>
+      )}
       <TouchableOpacity style={styles.menuItem} onPress={() => handlePress('Help', [0, 1, 2, 3, 4, 5])}>
         <Image source={require('../../assets/help-icon.png')} style={styles.icon} />
         <Text style={styles.menuText}>Help</Text>

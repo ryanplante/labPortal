@@ -187,7 +187,9 @@ namespace LabPortal.Models
 
             modelBuilder.Entity<Item>(entity =>
             {
-                entity.Property(e => e.ItemId).HasColumnName("itemID");
+                entity.Property(e => e.ItemId)
+                    .ValueGeneratedOnAdd()
+                    .HasColumnName("itemID");
 
                 entity.Property(e => e.Description)
                     .HasMaxLength(30)

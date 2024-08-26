@@ -22,6 +22,7 @@
     "crypto-js": "^4.2.0",
     "datetimepicker": "^0.1.39",
     "expo": "~51.0.22",
+    "expo-image-picker": "^15.0.7",
     "expo-linear-gradient": "~13.0.2",
     "expo-sharing": "^12.0.1",
     "expo-status-bar": "~1.12.1",
