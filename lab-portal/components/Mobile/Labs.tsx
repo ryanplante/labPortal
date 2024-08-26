@@ -1,9 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, StatusBar } from 'react-native';
 
 const MobileLabs = () => {
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <Text style={styles.header}>Mobile [Department] Lab Monitors</Text>
       <Text style={styles.subHeader}>Current Monitors</Text>
       <TouchableOpacity style={styles.addButton}>
@@ -43,7 +43,7 @@ const MobileLabs = () => {
           </View>
         </View>
       </View>
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -51,6 +51,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
+    marginTop:StatusBar.currentHeight,
   },
   header: {
     fontSize: 24,

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, StatusBar } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { BarChart } from 'react-native-chart-kit';
 import { Dimensions } from 'react-native';
@@ -46,7 +46,7 @@ const MobileReports = () => {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <Text style={styles.header}>Mobile Reports</Text>
       <View style={styles.filterContainer}>
         <Picker
@@ -99,7 +99,7 @@ const MobileReports = () => {
         }}
         verticalLabelRotation={30}
       />
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -107,6 +107,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
+    marginTop:StatusBar.currentHeight
   },
   header: {
     fontSize: 24,

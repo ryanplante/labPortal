@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Image } from 'react-native';
+import { View, StyleSheet, Image, SafeAreaView, StatusBar } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import MobileMonitorView from './Views/MonitorView';
 import MobileStudentView from './Views/StudentView';
@@ -8,15 +8,9 @@ import MobileTutorMonitorView from './Views/HybridView';
 import MobileDepartmentHeadView from './Views/DepartmentHeadView';
 import MobileAdminView from './Views/AdminView';
 import { isMobile } from 'react-device-detect';
-import ProfileSidebar from './ProfileSidebar';
 
 const MobileMainPage = () => {
-  const [isProfileSidebarVisible, setIsProfileSidebarVisible] = useState(false);
   const [selectedView, setSelectedView] = useState('Admin');
-
-  const toggleProfileSidebar = () => {
-    setIsProfileSidebarVisible(!isProfileSidebarVisible);
-  };
 
   const renderView = () => {
     console.log(isMobile)
@@ -40,10 +34,7 @@ const MobileMainPage = () => {
   };
 
   return (
-    <View style={styles.container}>
-      {isProfileSidebarVisible && !isMobile && (
-        <ProfileSidebar visible={isProfileSidebarVisible} onClose={toggleProfileSidebar} />
-      )}
+    <SafeAreaView style={styles.container}>
       <View style={styles.mainContent}>
         <Picker
           selectedValue={selectedView}
@@ -60,7 +51,7 @@ const MobileMainPage = () => {
         {renderView()}
         <Image source={require('../../assets/tiger-logo.png')} style={styles.tigerLogo} />
       </View>
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -68,6 +59,7 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     flex: 1,
+    marginTop: StatusBar.currentHeight
   },
   mainContent: {
     flex: 1,
@@ -78,6 +70,7 @@ const styles = StyleSheet.create({
     height: 50,
     width: 200,
     marginBottom: 20,
+    backgroundColor:"lightblue"
   },
   tigerLogo: {
     position: 'absolute',

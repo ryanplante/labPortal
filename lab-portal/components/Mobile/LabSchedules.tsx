@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, StatusBar } from 'react-native';
 
 const scheduleData = [
   {
@@ -46,7 +46,7 @@ const MobileLabSchedules = () => {
   const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <Text style={styles.header}>Mobile Calendar</Text>
       <View style={styles.table}>
         <View style={styles.tableRow}>
@@ -100,7 +100,7 @@ const MobileLabSchedules = () => {
           <View style={[styles.legendColor, styles.off]}></View> Off
         </Text>
       </View>
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -108,6 +108,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
+    marginTop:StatusBar.currentHeight,
   },
   header: {
     fontSize: 24,
