@@ -8,6 +8,8 @@ interface FilteredLog {
     id: number;
     studentId: number;
     studentName: string;
+    itemId?: number;
+    itemDescription?: string;
     timeIn: string;
     timeOut?: string;
     monitorID: number;
@@ -19,6 +21,7 @@ interface LogCreate {
     timeout: string;
     labId: number;
     monitorId: number;
+    itemId?: number;
 }
 
 interface Checkin {
@@ -28,11 +31,13 @@ interface Checkin {
     timeout?: string;
     labId: number;
     monitorId: number;
+    itemId?: number;
     isDeleted: boolean;
 }
 
 interface LogHistory {
     studentId: number;
+    itemId?: number;
     timestamp: string;
     transactionType: string;
     labId: number;
@@ -43,42 +48,40 @@ class LogService {
     private baseUrl: string;
 
     constructor() {
-        this.baseUrl = `${process.env.EXPO_PUBLIC_API}/Logs`
+        this.baseUrl = `${process.env.EXPO_PUBLIC_API}/Logs`;
     }
 
-    // Utility function to convert UTC to local time with timezone consideration
     private convertToLocalTime(utcTime: string, timeZone: string = moment.tz.guess()): string {
         return moment.utc(utcTime).tz(timeZone).format('YYYY-MM-DD HH:mm:ss');
     }
 
-    // Utility function to convert local time to UTC
     private convertToUTCTime(localTime: string, timeZone: string = moment.tz.guess()): string {
         return moment.tz(localTime, timeZone).utc().format('YYYY-MM-DDTHH:mm:ss[Z]');
     }
 
-    // GET: /api/Logs/FilteredLogs/Lab
     async getLogsByLab(labId: number, startDate?: string, endDate?: string): Promise<FilteredLog[]> {
         try {
             const params = { labId, startDate, endDate };
             const response: AxiosResponse<any> = await axios.get(`${this.baseUrl}/FilteredLogs/Lab`, { params });
-    
+
             const logs = response.data.$values;
-    
+
             return logs.map((log: any) => ({
                 id: log.id,
                 studentId: log.studentId,
                 studentName: log.studentName,
+                itemId: log.itemId,
+                itemDescription: log.itemDescription,
                 timeIn: this.convertToLocalTime(log.timeIn),
                 timeOut: log.timeOut ? this.convertToLocalTime(log.timeOut) : undefined,
-                monitorID: log.monitorID
+                monitorID: log.monitorID,
             }));
         } catch (error) {
             await this.handleError(error, 'getLogsByLab');
             throw error;
         }
-    }    
+    }
 
-    // GET: /api/Logs/FilteredLogs
     async getLogsFilteredByDate(startDate?: string, endDate?: string): Promise<FilteredLog[]> {
         try {
             const params = { startDate, endDate };
@@ -95,7 +98,6 @@ class LogService {
         }
     }
 
-    // PUT: /api/Logs/{id}
     async updateLog(id: number, log: LogCreate): Promise<void> {
         try {
             const updatedLog = {
@@ -103,7 +105,6 @@ class LogService {
                 timein: this.convertToUTCTime(log.timein),
                 timeout: log.timeout ? this.convertToUTCTime(log.timeout) : null,
             };
-            console.log(id);
             await axios.put(`${this.baseUrl}/${id}`, updatedLog);
             await this.audit('update', `Updated log with ID: ${id}`, log.monitorId);
         } catch (error) {
@@ -112,7 +113,6 @@ class LogService {
         }
     }
 
-    // POST: /api/Logs
     async createLog(log: LogCreate): Promise<Checkin> {
         try {
             const newLog = {
@@ -129,7 +129,6 @@ class LogService {
         }
     }
 
-    // PUT: /api/Logs/TimeOut/{id}
     async timeOutLog(id: number, monitorId: number): Promise<void> {
         try {
             const params = { monitor: monitorId };
@@ -141,7 +140,6 @@ class LogService {
         }
     }
 
-    // DELETE: /api/Logs/{id}
     async deleteLog(id: number, monitorId: number): Promise<void> {
         try {
             const params = { monitor: monitorId };
@@ -153,7 +151,6 @@ class LogService {
         }
     }
 
-    // GET: /api/Logs/History/{summaryId}
     async getLogHistory(summaryId: number): Promise<LogHistory[]> {
         try {
             const response: AxiosResponse<LogHistory[]> = await axios.get(`${this.baseUrl}/History/${summaryId}`);
@@ -168,7 +165,6 @@ class LogService {
         }
     }
 
-    // GET: /api/Logs/{summaryId}
     async getLogById(summaryId: number): Promise<Checkin> {
         try {
             const response: AxiosResponse<Checkin> = await axios.get(`${this.baseUrl}/${summaryId}`);
@@ -185,7 +181,6 @@ class LogService {
         }
     }
 
-    // GET: /api/Logs
     async getAllSummaries(): Promise<Checkin[]> {
         try {
             const response: AxiosResponse<Checkin[]> = await axios.get(this.baseUrl);
@@ -201,16 +196,14 @@ class LogService {
         }
     }
 
-    // Helper method for error handling
     private async handleError(error: any, source: string): Promise<void> {
         await CreateErrorLog(error as Error, source, null, 'error');
     }
 
-    // Helper method for auditing
     private async audit(auditType: AuditLogType, description: string, userID?: number): Promise<void> {
         try {
-            const user = await getUserByToken(); // Get user by token from loginService
-            const userId = userID || Number(user.userId); // Use the resolved user ID or default to provided userID
+            const user = await getUserByToken(); 
+            const userId = userID || Number(user.userId); 
             await CreateAuditLog(description, userId, auditType);
         } catch (error) {
             console.error('Failed to create audit log:', error);

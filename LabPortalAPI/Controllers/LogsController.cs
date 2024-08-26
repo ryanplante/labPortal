@@ -50,8 +50,8 @@ namespace LabPortal.Controllers
                             {
                                 Id = reader.GetInt32(0),
                                 StudentId = reader.GetInt32(1),
-                                ItemId = reader.GetInt32(2),
-                                ItemDescription = reader.GetString(3),
+                                ItemId = reader.IsDBNull(2) ? (int?)null :  reader.GetInt32(2),
+                                ItemDescription = reader.IsDBNull(3) ? (String?)null : reader.GetString(3),
                                 StudentName = reader.GetString(4) + " " + reader.GetString(5),
                                 TimeIn = reader.GetDateTime(6),
                                 TimeOut = reader.IsDBNull(7) ? (DateTime?)null : reader.GetDateTime(7),
@@ -101,8 +101,8 @@ namespace LabPortal.Controllers
                             {
                                 Id = reader.GetInt32(0),
                                 StudentId = reader.GetInt32(1),
-                                ItemId = reader.GetInt32(2),
-                                ItemDescription = reader.GetString(3),
+                                ItemId = reader.IsDBNull(2) ? (int?)null : reader.GetInt32(2),
+                                ItemDescription = reader.IsDBNull(3) ? (String?)null : reader.GetString(3),
                                 ItemPicture = reader.IsDBNull(4) ? null : reader.GetString(4),
                                 StudentName = reader.GetString(5) + " " + reader.GetString(6),
                                 TimeIn = reader.GetDateTime(7),
