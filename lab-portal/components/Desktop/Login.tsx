@@ -75,8 +75,8 @@ const Login = () => {
   };
 
   return (
-    <View style={[styles.container, adaptiveWidth]}>
-      <Image source={require('../../assets/neit-logo.png')} style={styles.logo} />
+    <View style={[styles.container]}>
+      <Image source={require('../../assets/neit-logo.png')} style={[styles.logo, adaptiveWidth]} />
       <View style={[styles.formheader, adaptiveWidth]}><Text style={styles.headertext}>Username</Text></View>
       <TextInput
         style={[styles.input, adaptiveWidth]}
@@ -115,6 +115,7 @@ const Login = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    width:"100%",
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#f5f5f5',

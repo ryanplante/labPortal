@@ -19,8 +19,8 @@ const MobileScanItem = () => {
     );
   }
 
-  const barcodescanned = ({value}) =>{
-    alert(`Scanned ${value}`)
+  const barcodescanned = ({data}) =>{
+    alert(`Scanned ${data}`)
   }
 
   return (
@@ -48,3 +48,5 @@ const styles = StyleSheet.create({
     width:"50%"
   }
 })
+
+export default MobileScanItem
