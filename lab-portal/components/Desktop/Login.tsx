@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Alert, ActivityIndicator } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Alert, ActivityIndicator, Dimensions } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { validateCredentials, checkHeartbeat } from '../../services/loginService';
 import { CreateAuditLog } from '../../services/auditService';
 import { reload } from '../../services/helpers';
+import * as Device from 'expo-device'
+import * as ScreenOrientation from 'expo-screen-orientation'
 
 const Login = () => {
   const [username, setUsername] = useState('');
@@ -12,6 +14,36 @@ const Login = () => {
   const [errorMessage, setErrorMessage] = useState(''); 
   const [loading, setLoading] = useState(false);  
   const navigation = useNavigation();
+
+  const [orientation, setOrientation] = useState('LANDSCAPE');
+
+  const determineAndSetOrientation = () => {
+    let width = Dimensions.get('window').width;
+    let height = Dimensions.get('window').height;
+
+    if (width < height) {
+        setOrientation('PORTRAIT');
+      } else {
+        setOrientation('LANDSCAPE');
+      }
+  }
+
+  useEffect(() => {
+
+    determineAndSetOrientation();
+    const test = Dimensions.addEventListener('change', determineAndSetOrientation);
+
+    return () => {
+      test.remove()
+    }
+  }, []);
+
+  //if a phone(1) or a tablet(2) in portrait, then the device is mobile
+  const isMobile = ((Device.deviceType == 1) || (Device.deviceType == 2 && orientation == "PORTRAIT"))
+
+  const adaptiveWidth = {
+    width: isMobile ? "90%" : "30%"
+  }
 
   const handleLogin = async () => {
     setLoading(true);  
@@ -43,16 +75,18 @@ const Login = () => {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, adaptiveWidth]}>
       <Image source={require('../../assets/neit-logo.png')} style={styles.logo} />
+      <View style={[styles.formheader, adaptiveWidth]}><Text style={styles.headertext}>Username</Text></View>
       <TextInput
-        style={styles.input}
+        style={[styles.input, adaptiveWidth]}
         placeholder="Username"
         value={username}
         onChangeText={setUsername}
       />
+      <View style={[styles.formheader, adaptiveWidth]}><Text style={styles.headertext}>Username</Text></View>
       <TextInput
-        style={styles.input}
+        style={[styles.input, adaptiveWidth]}
         placeholder="Password"
         value={password}
         onChangeText={setPassword}
@@ -66,7 +100,7 @@ const Login = () => {
         )}
       </TouchableOpacity>
       {errorMessage ? (
-        <Text style={styles.errorText}>{errorMessage}</Text>
+        <Text style={[styles.errorText, adaptiveWidth]}>{errorMessage}</Text>
       ) : null}
       <TouchableOpacity>
         <Text style={styles.link}>Forgot password?</Text>
@@ -86,11 +120,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
   },
   logo: {
-    width: '30%',
+    // width: '30%',
     resizeMode: 'contain',
   },
   input: {
-    width: '30%',
+    // width: '30%',
     padding: 10,
     marginVertical: 10,
     borderWidth: 1,
@@ -118,6 +152,13 @@ const styles = StyleSheet.create({
     color: '#007bff',
     marginTop: 20,
   },
+  formheader:{
+    textAlign:"left",
+    marginLeft:15
+  },
+  headertext:{
+    fontSize:20
+  }
 });
 
 export default Login;

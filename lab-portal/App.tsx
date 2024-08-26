@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ActivityIndicator, View, StyleSheet, Alert } from 'react-native';
+import { ActivityIndicator, View, StyleSheet, Alert, Dimensions } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
@@ -24,6 +24,20 @@ import { CreateAuditLog } from './services/auditService';
 import HelpScreen from './components/Desktop/HelpScreen';
 import SampleScreen from './components/Desktop/Sample';
 import ExamplePage from './components/Desktop/Example';
+import MobileSidebar from './components/Mobile/Sidebar';
+import * as Device from 'expo-device'
+import * as ScreenOrientation from 'expo-screen-orientation'
+import MobileMainPage from './components/Mobile/MainPage';
+import MobileLabs from './components/Mobile/Labs';
+import MobileReports from './components/Mobile/Reports';
+import MobileSchedule from './components/Mobile/Schedule';
+import MobileManageLabs from './components/Mobile/ManageLabs';
+import MobileLabSchedules from './components/Mobile/LabSchedules';
+import MobileChat from './components/Mobile/Chat';
+import MobileScanItem from './components/Mobile/ScanItem';
+import MobileLogHistory from './components/Mobile/LogHistory';
+import MobileAdmin from './components/Mobile/Admin';
+import MobileProfile from './components/Mobile/Profile';
 
 const Stack = createStackNavigator();
 
@@ -31,6 +45,35 @@ const App = () => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);  
   const [isProfileSidebarVisible, setIsProfileSidebarVisible] = useState(false);
+  const [orientation, setOrientation] = useState('LANDSCAPE');
+
+  const determineAndSetOrientation = () => {
+    let width = Dimensions.get('window').width;
+    let height = Dimensions.get('window').height;
+
+    if (width < height) {
+        setOrientation('PORTRAIT');
+      } else {
+        setOrientation('LANDSCAPE');
+      }
+  }
+
+  useEffect(() => {
+
+    determineAndSetOrientation();
+    const test = Dimensions.addEventListener('change', determineAndSetOrientation);
+
+    return () => {
+      test.remove()
+    }
+  }, []);
+
+  //if a phone(1) or a tablet(2) in portrait, then the device is mobile
+  const isMobile = ((Device.deviceType == 1) || (Device.deviceType == 2 && orientation == "PORTRAIT"))
+
+  const adaptiveFlexDirection = {
+    flexDirection: isMobile ? "column" : "row"
+  }
 
   useEffect(() => {
     const validateToken = async () => {
@@ -78,8 +121,8 @@ const App = () => {
 
   return (
     <NavigationContainer>
-      <View style={styles.container}>
-        {user && (
+      <View style={[styles.container, adaptiveFlexDirection]}>
+        {user && !isMobile && (
           <>
             <Sidebar onProfilePress={toggleProfileSidebar} />
             {isProfileSidebarVisible && (
@@ -102,6 +145,7 @@ const App = () => {
                   <Stack.Screen name="ScanItem" component={MobileScanItem} />
                   <Stack.Screen name="LogHistory" component={MobileLogHistory} />
                   <Stack.Screen name="Admin" component={MobileAdmin} />
+                  <Stack.Screen name="Profile" component={MobileProfile} />
                 </>
               ) : (
                 <>
@@ -129,6 +173,7 @@ const App = () => {
             )}
           </Stack.Navigator>
         </View>
+        {user && isMobile && <MobileSidebar onProfilePress={toggleProfileSidebar} />}
       </View>
     </NavigationContainer>
   );
@@ -136,7 +181,7 @@ const App = () => {
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
+    // flexDirection: 'row',
     flex: 1,
   },
   mainContent: {

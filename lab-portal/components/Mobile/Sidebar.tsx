@@ -11,7 +11,7 @@ const MobileSidebar = ({ onProfilePress }: { onProfilePress: () => void }) => {
       <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Main')}>
         <Image source={require('../../assets/logo.png')} style={styles.icon} />
       </TouchableOpacity>
-      <TouchableOpacity style={styles.menuItem} onPress={onProfilePress}>
+      <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate("Profile")}>
         <Image source={require('../../assets/user-icon.png')} style={styles.icon} />
         <Text style={styles.menuText}>Profile</Text>
       </TouchableOpacity>
@@ -53,26 +53,24 @@ const MobileSidebar = ({ onProfilePress }: { onProfilePress: () => void }) => {
 
 const styles = StyleSheet.create({
   sidebar: {
-    width: 80,
+    width: "100%",
     backgroundColor: '#002147', // Initial color before gradient
-    alignItems: 'center',
-    paddingVertical: 20,
-    height: '100%', // Ensure the sidebar covers the full height
+
+    height: 100,
     backgroundImage: 'linear-gradient(to bottom, #002147, #000000)', // Blue to black gradient
+    flexDirection: "row",
+    alignItems: 'center'
   },
   logo: {
     width: 50,
     height: 50,
-    marginBottom: 20,
   },
   menuItem: {
     alignItems: 'center',
-    marginBottom: 30,
   },
   icon: {
     width: 30,
     height: 30,
-    marginBottom: 5,
   },
   menuText: {
     color: '#fff',

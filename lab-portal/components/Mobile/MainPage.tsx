@@ -66,13 +66,12 @@ const MobileMainPage = () => {
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     flex: 1,
   },
   mainContent: {
     flex: 1,
     padding: 20,
-    marginLeft: 10, // Default margin when sidebar is not visible
   },
   picker: {
     height: 50,
