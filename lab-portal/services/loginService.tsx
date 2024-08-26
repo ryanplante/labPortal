@@ -6,11 +6,12 @@ import { CreateAuditLog } from './auditService';
 import { CreateErrorLog } from './errorLogService';
 import { reload } from './helpers';
 
-const API_URL = 'https://localhost:7282/api/Users';
-const HEARTBEAT_URL = 'https://localhost:7282/api/Heartbeat';
+const API_URL = `${process.env.EXPO_PUBLIC_API}/Users`
+const HEARTBEAT_URL = `${process.env.EXPO_PUBLIC_API}/Heartbeat`;
 
 export const checkHeartbeat = async (): Promise<boolean> => {
   try {
+      console.log(HEARTBEAT_URL)
       const response = await axios.get(HEARTBEAT_URL);
       return response.status === 200;
   } catch (error: any) {

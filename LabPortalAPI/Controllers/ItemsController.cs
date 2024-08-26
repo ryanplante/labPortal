@@ -9,6 +9,7 @@ using LabPortal.Models;
 using System.Text;
 using System.Security.Cryptography;
 using LabPortal.Models.Dto;
+using LabPortal.Models.CreateDtos;
 
 namespace LabPortal.Controllers
 {
@@ -41,7 +42,8 @@ namespace LabPortal.Controllers
                 ItemId = Item.ItemId,
                 Description = Item.Description,
                 Quantity = Item.Quantity,
-                SerialNum = Item.SerialNum
+                SerialNum = Item.SerialNum,
+                Picture = Item.Picture,
 
             }).ToList();
 
@@ -71,7 +73,8 @@ namespace LabPortal.Controllers
                 ItemId = item.ItemId,
                 Description = item.Description,
                 Quantity = item.Quantity,
-                SerialNum = item.SerialNum
+                SerialNum = item.SerialNum,
+                Picture = item.Picture
             };
 
             return Ok(itemDto);
@@ -98,6 +101,7 @@ namespace LabPortal.Controllers
             item.Description = itemDto.Description;
             item.Quantity = itemDto.Quantity;
             item.SerialNum = itemDto.SerialNum;
+            item.Picture = itemDto.Picture;
 
             _context.Entry(item).State = EntityState.Modified;
 
@@ -125,7 +129,7 @@ namespace LabPortal.Controllers
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<ActionResult<ItemDto>> PostItem(ItemDto itemDto)
+        public async Task<ActionResult<ItemDto>> PostItem(ItemCreateDto itemDto)
         {
             if (_context.Items == null)
             {
@@ -136,7 +140,8 @@ namespace LabPortal.Controllers
             {
                 Description = itemDto.Description,
                 Quantity = itemDto.Quantity,
-                SerialNum = itemDto.SerialNum
+                SerialNum = itemDto.SerialNum,
+                Picture = itemDto.Picture,
             };
 
             _context.Items.Add(item);

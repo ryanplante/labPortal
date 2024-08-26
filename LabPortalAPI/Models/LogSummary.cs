@@ -13,5 +13,8 @@ namespace LabPortal.Models
         public DateTime? CheckOutTime { get; set; }
         public DateTime? LastUpdateTime { get; set; }
         public bool? IsDeleted { get; set; }
+        public int? ItemId { get; set; }
+
+        public virtual Item? Item { get; set; }
     }
 }

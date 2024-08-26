@@ -17,7 +17,7 @@ class UserService {
     private baseUrl: string;
 
     constructor() {
-        this.baseUrl = 'https://localhost:7282/api/Users'; 
+        this.baseUrl = `${process.env.EXPO_PUBLIC_API}/Users`;
     }
 
     // GET: /api/Users

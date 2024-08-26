@@ -12,7 +12,9 @@ namespace LabPortal.Models
         public int? LabId { get; set; }
         public int? MonitorId { get; set; }
         public int? FkLog { get; set; }
+        public int? ItemId { get; set; }
 
+        public virtual Item? Item { get; set; }
         public virtual Lab? Lab { get; set; }
         public virtual User? Monitor { get; set; }
         public virtual User? Student { get; set; }

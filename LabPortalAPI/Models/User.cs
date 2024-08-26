@@ -11,8 +11,6 @@ namespace LabPortal.Models
             Bans = new HashSet<Ban>();
             ChatLogs = new HashSet<ChatLog>();
             ErrorLogs = new HashSet<ErrorLog>();
-            ItemLogMonitors = new HashSet<ItemLog>();
-            ItemLogStudents = new HashSet<ItemLog>();
             LogMonitors = new HashSet<Log>();
             LogStudents = new HashSet<Log>();
             Schedules = new HashSet<Schedule>();
@@ -36,8 +34,6 @@ namespace LabPortal.Models
         public virtual ICollection<Ban> Bans { get; set; }
         public virtual ICollection<ChatLog> ChatLogs { get; set; }
         public virtual ICollection<ErrorLog> ErrorLogs { get; set; }
-        public virtual ICollection<ItemLog> ItemLogMonitors { get; set; }
-        public virtual ICollection<ItemLog> ItemLogStudents { get; set; }
         public virtual ICollection<Log> LogMonitors { get; set; }
         public virtual ICollection<Log> LogStudents { get; set; }
         public virtual ICollection<Schedule> Schedules { get; set; }

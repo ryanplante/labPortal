@@ -1,10 +1,7 @@
-﻿using Humanizer.Localisation.TimeToClockNotation;
-
-namespace LabPortal.Models.Dto
+﻿namespace LabPortal.Models.CreateDtos
 {
-    public class ItemDto
+    public class ItemCreateDto
     {
-        public int ItemId { get; set; }
         public string Description { get; set; }
         public int Quantity { get; set; }
         public string? SerialNum { get; set; }

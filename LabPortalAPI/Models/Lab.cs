@@ -7,6 +7,7 @@ namespace LabPortal.Models
     {
         public Lab()
         {
+            Items = new HashSet<Item>();
             Logs = new HashSet<Log>();
             Schedules = new HashSet<Schedule>();
         }
@@ -17,6 +18,7 @@ namespace LabPortal.Models
         public int? DeptId { get; set; }
 
         public virtual Department? Dept { get; set; }
+        public virtual ICollection<Item> Items { get; set; }
         public virtual ICollection<Log> Logs { get; set; }
         public virtual ICollection<Schedule> Schedules { get; set; }
     }

@@ -20,7 +20,7 @@ class LabService {
     private baseUrl: string;
 
     constructor() {
-        this.baseUrl = 'https://localhost:7282/api/Labs';
+        this.baseUrl = `${process.env.EXPO_PUBLIC_API}/Labs`
     }
 
     // GET: /api/Labs

@@ -24,18 +24,15 @@ namespace LabPortal.Models
         public virtual DbSet<ErrorLog> ErrorLogs { get; set; } = null!;
         public virtual DbSet<ErrorLogTypeLookup> ErrorLogTypeLookups { get; set; } = null!;
         public virtual DbSet<Item> Items { get; set; } = null!;
-        public virtual DbSet<ItemLog> ItemLogs { get; set; } = null!;
         public virtual DbSet<Lab> Labs { get; set; } = null!;
         public virtual DbSet<Log> Logs { get; set; } = null!;
         public virtual DbSet<LogSummary> LogSummaries { get; set; } = null!;
         public virtual DbSet<PermissionLookup> PermissionLookups { get; set; } = null!;
         public virtual DbSet<PositionLookup> PositionLookups { get; set; } = null!;
         public virtual DbSet<Schedule> Schedules { get; set; } = null!;
-        public virtual DbSet<ScheduleTypeLookup> ScheduleTypeLookups { get; set; } = null!;
         public virtual DbSet<TransactionTypeLookup> TransactionTypeLookups { get; set; } = null!;
         public virtual DbSet<User> Users { get; set; } = null!;
         public virtual DbSet<UserToken> UserTokens { get; set; } = null!;
-
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -196,58 +193,21 @@ namespace LabPortal.Models
                     .HasMaxLength(30)
                     .HasColumnName("description");
 
+                entity.Property(e => e.FkLab).HasColumnName("fk_lab");
+
+                entity.Property(e => e.Picture).HasColumnName("picture");
+
                 entity.Property(e => e.Quantity).HasColumnName("quantity");
 
                 entity.Property(e => e.SerialNum)
                     .HasMaxLength(30)
                     .HasColumnName("serialNum");
-            });
 
-            modelBuilder.Entity<ItemLog>(entity =>
-            {
-                entity.HasKey(e => e.LogId)
-                    .HasName("PK__ItemLogs__7839F62D9DBE3424");
-
-                entity.Property(e => e.LogId).HasColumnName("logID");
-
-                entity.Property(e => e.FkParentTransaction).HasColumnName("fk_ParentTransaction");
-
-                entity.Property(e => e.ItemId).HasColumnName("itemID");
-
-                entity.Property(e => e.MonitorId).HasColumnName("monitorID");
-
-                entity.Property(e => e.StudentId).HasColumnName("studentID");
-
-                entity.Property(e => e.Timestamp)
-                    .HasColumnType("datetime")
-                    .HasColumnName("timestamp");
-
-                entity.Property(e => e.TransactionType).HasColumnName("transactionType");
-
-                entity.HasOne(d => d.FkParentTransactionNavigation)
-                    .WithMany(p => p.InverseFkParentTransactionNavigation)
-                    .HasForeignKey(d => d.FkParentTransaction)
-                    .HasConstraintName("FK_ItemLogs_CompletedTransaction");
-
-                entity.HasOne(d => d.Item)
-                    .WithMany(p => p.ItemLogs)
-                    .HasForeignKey(d => d.ItemId)
-                    .HasConstraintName("FK__ItemLogs__itemID__656C112C");
-
-                entity.HasOne(d => d.Monitor)
-                    .WithMany(p => p.ItemLogMonitors)
-                    .HasForeignKey(d => d.MonitorId)
-                    .HasConstraintName("FK__ItemLogs__monito__6754599E");
-
-                entity.HasOne(d => d.Student)
-                    .WithMany(p => p.ItemLogStudents)
-                    .HasForeignKey(d => d.StudentId)
-                    .HasConstraintName("FK__ItemLogs__studen__66603565");
-
-                entity.HasOne(d => d.TransactionTypeNavigation)
-                    .WithMany(p => p.ItemLogs)
-                    .HasForeignKey(d => d.TransactionType)
-                    .HasConstraintName("FK_ItemLogs_TransactionType");
+                entity.HasOne(d => d.FkLabNavigation)
+                    .WithMany(p => p.Items)
+                    .HasForeignKey(d => d.FkLab)
+                    .OnDelete(DeleteBehavior.ClientSetNull)
+                    .HasConstraintName("FK_Items_Lab");
             });
 
             modelBuilder.Entity<Lab>(entity =>
@@ -288,6 +248,11 @@ namespace LabPortal.Models
 
                 entity.Property(e => e.TransactionType).HasColumnName("transactionType");
 
+                entity.HasOne(d => d.Item)
+                    .WithMany(p => p.Logs)
+                    .HasForeignKey(d => d.ItemId)
+                    .HasConstraintName("FK_Log_Items");
+
                 entity.HasOne(d => d.Lab)
                     .WithMany(p => p.Logs)
                     .HasForeignKey(d => d.LabId)
@@ -323,6 +288,11 @@ namespace LabPortal.Models
                 entity.Property(e => e.CheckOutTime).HasColumnType("datetime");
 
                 entity.Property(e => e.LastUpdateTime).HasColumnType("datetime");
+
+                entity.HasOne(d => d.Item)
+                    .WithMany(p => p.LogSummaries)
+                    .HasForeignKey(d => d.ItemId)
+                    .HasConstraintName("FK_LogSummary_Items");
             });
 
             modelBuilder.Entity<PermissionLookup>(entity =>
@@ -361,25 +331,27 @@ namespace LabPortal.Models
             {
                 entity.Property(e => e.ScheduleId).HasColumnName("scheduleID");
 
+                entity.Property(e => e.DayOfWeek).HasColumnName("dayOfWeek");
+
+                entity.Property(e => e.FkLab).HasColumnName("fk_lab");
+
                 entity.Property(e => e.Location).HasColumnName("location");
 
-                entity.Property(e => e.ScheduleType).HasColumnName("scheduleType");
+                entity.Property(e => e.TimeIn)
+                    .HasMaxLength(5)
+                    .HasColumnName("timeIn");
 
-                entity.Property(e => e.TextSchedule)
-                    .HasColumnType("text")
-                    .HasColumnName("textSchedule");
+                entity.Property(e => e.TimeOut)
+                    .HasMaxLength(5)
+                    .HasColumnName("timeOut");
 
                 entity.Property(e => e.UserId).HasColumnName("userID");
+
 
                 entity.HasOne(d => d.LocationNavigation)
                     .WithMany(p => p.Schedules)
                     .HasForeignKey(d => d.Location)
                     .HasConstraintName("FK__Schedules__locat__72C60C4A");
-
-                entity.HasOne(d => d.ScheduleTypeNavigation)
-                    .WithMany(p => p.Schedules)
-                    .HasForeignKey(d => d.ScheduleType)
-                    .HasConstraintName("FK__Schedules__sched__71D1E811");
 
                 entity.HasOne(d => d.User)
                     .WithMany(p => p.Schedules)
@@ -387,21 +359,6 @@ namespace LabPortal.Models
                     .HasConstraintName("FK__Schedules__userI__70DDC3D8");
             });
 
-            modelBuilder.Entity<ScheduleTypeLookup>(entity =>
-            {
-                entity.HasKey(e => e.TypeId)
-                    .HasName("PK__Schedule__F04DF11A142920EC");
-
-                entity.ToTable("ScheduleTypeLookup");
-
-                entity.Property(e => e.TypeId)
-                    .ValueGeneratedNever()
-                    .HasColumnName("typeID");
-
-                entity.Property(e => e.TypeName)
-                    .HasMaxLength(10)
-                    .HasColumnName("typeName");
-            });
 
             modelBuilder.Entity<TransactionTypeLookup>(entity =>
             {

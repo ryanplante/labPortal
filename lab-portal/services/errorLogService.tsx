@@ -6,7 +6,7 @@ import { getUserByToken } from './loginService';
 // Use require to import the package.json file
 const { version: appVersion } = require('../package.json');
 
-const API_BASE_URL = 'https://localhost:7282/api';
+const API_BASE_URL = process.env.EXPO_PUBLIC_API;
 
 export type ErrorLogType = 'informative' | 'error' | 'warning' | 'critical';
 

@@ -5,7 +5,6 @@ using LabPortal.Models.Dto;
 using LabPortal.Models.CreateDtos;
 using Microsoft.Data.SqlClient;
 using System.Data;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
 
 namespace LabPortal.Controllers
 {
@@ -21,11 +20,10 @@ namespace LabPortal.Controllers
         }
 
         // GET: api/Logs/FilteredLogs
-        // Retrieves all logs from the database by lab, optional start date and end dates
         [HttpGet("FilteredLogs/Lab")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<ActionResult<IEnumerable<FilteredLogDto>>> GetLogs([FromQuery]int labId, [FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate)
+        public async Task<ActionResult<IEnumerable<FilteredLogDto>>> GetLogs([FromQuery] int labId, [FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate)
         {
             if (_context.Logs == null)
             {
@@ -43,6 +41,7 @@ namespace LabPortal.Controllers
                     command.Parameters.Add(new SqlParameter("@LabId", labId));
                     command.Parameters.Add(new SqlParameter("@StartDate", startDate ?? (object)DBNull.Value));
                     command.Parameters.Add(new SqlParameter("@EndDate", endDate ?? (object)DBNull.Value));
+
                     using (var reader = await command.ExecuteReaderAsync())
                     {
                         while (await reader.ReadAsync())
@@ -51,10 +50,12 @@ namespace LabPortal.Controllers
                             {
                                 Id = reader.GetInt32(0),
                                 StudentId = reader.GetInt32(1),
-                                StudentName = reader.GetString(2) + " " + reader.GetString(3),
-                                TimeIn = reader.GetDateTime(4),
-                                TimeOut = reader.IsDBNull(5) ? (DateTime?)null : reader.GetDateTime(5),
-                                MonitorID = reader.IsDBNull(6) ? 99999999 : reader.GetInt32(6)
+                                ItemId = reader.GetInt32(2),
+                                ItemDescription = reader.GetString(3),
+                                StudentName = reader.GetString(4) + " " + reader.GetString(5),
+                                TimeIn = reader.GetDateTime(6),
+                                TimeOut = reader.IsDBNull(7) ? (DateTime?)null : reader.GetDateTime(7),
+                                MonitorID = reader.IsDBNull(8) ? 99999999 : reader.GetInt32(8)
                             };
                             filteredLogs.Add(log);
                         }
@@ -71,7 +72,6 @@ namespace LabPortal.Controllers
         }
 
         // GET: api/Logs/FilteredByDate
-        // Retrieves logs filtered by a specified date range
         [HttpGet("FilteredLogs")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -101,10 +101,13 @@ namespace LabPortal.Controllers
                             {
                                 Id = reader.GetInt32(0),
                                 StudentId = reader.GetInt32(1),
-                                StudentName = reader.GetString(2) + " " + reader.GetString(3),
-                                TimeIn = reader.GetDateTime(4),
-                                TimeOut = reader.IsDBNull(5) ? (DateTime?)null : reader.GetDateTime(5),
-                                MonitorID = reader.IsDBNull(6) ? 99999999 : reader.GetInt32(6)
+                                ItemId = reader.GetInt32(2),
+                                ItemDescription = reader.GetString(3),
+                                ItemPicture = reader.IsDBNull(4) ? null : reader.GetString(4),
+                                StudentName = reader.GetString(5) + " " + reader.GetString(6),
+                                TimeIn = reader.GetDateTime(7),
+                                TimeOut = reader.IsDBNull(8) ? (DateTime?)null : reader.GetDateTime(8),
+                                MonitorID = reader.IsDBNull(9) ? 99999999 : reader.GetInt32(9)
                             };
                             filteredLogs.Add(log);
                         }
@@ -121,7 +124,6 @@ namespace LabPortal.Controllers
         }
 
         // PUT: api/Logs/5
-        // Updates a log by creating a new transaction and updating the old one
         [HttpPut("{id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -135,6 +137,7 @@ namespace LabPortal.Controllers
                 var commandText = @"
                     EXEC [dbo].[usp_UpdateLogTransaction] 
                     @StudentId = @StudentId, 
+                    @ItemId = @ItemId,
                     @Timein = @Timein, 
                     @Timeout = @Timeout, 
                     @TransactionType = @TransactionType, 
@@ -145,8 +148,9 @@ namespace LabPortal.Controllers
                 var parameters = new[]
                 {
                     new SqlParameter("@StudentId", logDto.StudentId),
+                    new SqlParameter("@ItemId", logDto.ItemId ?? (object)DBNull.Value),
                     new SqlParameter("@Timein", logDto.Timein),
-                    new SqlParameter("@Timeout", logDto.Timein),
+                    new SqlParameter("@Timeout", logDto.Timeout ?? (object)DBNull.Value),
                     new SqlParameter("@TransactionType", transactionTypeId),
                     new SqlParameter("@LabId", logDto.LabId),
                     new SqlParameter("@MonitorId", logDto.MonitorId),
@@ -163,7 +167,6 @@ namespace LabPortal.Controllers
         }
 
         // POST: api/Logs
-        // Creates a new log entry (Check In)
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -181,18 +184,20 @@ namespace LabPortal.Controllers
                     using (var command = connection.CreateCommand())
                     {
                         command.CommandText = @"
-                    DECLARE @SummaryID INT;
-                    EXEC @SummaryID = [dbo].[usp_InsertLog] 
-                        @StudentId = @StudentId, 
-                        @LabId = @LabId, 
-                        @MonitorId = @MonitorId, 
-                        @Timein = @Timein;
-                    SELECT @SummaryID;";
+                            DECLARE @SummaryID INT;
+                            EXEC @SummaryID = [dbo].[usp_InsertLog] 
+                                @StudentId = @StudentId, 
+                                @LabId = @LabId, 
+                                @MonitorId = @MonitorId, 
+                                @Timein = @Timein,
+                                @ItemID = @ItemID;
+                            SELECT @SummaryID;";
 
                         command.Parameters.Add(new SqlParameter("@StudentId", logDto.StudentId));
-                        command.Parameters.Add(new SqlParameter("@Timein", logDto.Timein));
                         command.Parameters.Add(new SqlParameter("@LabId", logDto.LabId));
                         command.Parameters.Add(new SqlParameter("@MonitorId", logDto.MonitorId));
+                        command.Parameters.Add(new SqlParameter("@Timein", logDto.Timein));
+                        command.Parameters.Add(new SqlParameter("@ItemID", logDto.ItemId ?? (object)DBNull.Value));
 
                         summaryId = (int)await command.ExecuteScalarAsync();
                     }
@@ -205,6 +210,7 @@ namespace LabPortal.Controllers
                     Timein = logDto.Timein,
                     LabId = logDto.LabId,
                     MonitorId = logDto.MonitorId,
+                    ItemId = logDto.ItemId,
                     IsDeleted = false
                 };
 
@@ -216,10 +222,7 @@ namespace LabPortal.Controllers
             }
         }
 
-
-
         // PUT: api/Logs/TimeOut/5
-        // Creates a timeout transaction for a log
         [HttpPut("TimeOut/{id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -239,6 +242,7 @@ namespace LabPortal.Controllers
                 var commandText = @"
                     EXEC [dbo].[usp_UpdateLogTransaction] 
                     @StudentId = @StudentId, 
+                    @ItemId = @ItemId,
                     @Timein = @Timein, 
                     @Timeout = @Timeout, 
                     @TransactionType = @TransactionType, 
@@ -249,8 +253,9 @@ namespace LabPortal.Controllers
                 var parameters = new[]
                 {
                     new SqlParameter("@StudentId", log.StudentId),
+                    new SqlParameter("@ItemId", log.ItemId ?? (object)DBNull.Value),
                     new SqlParameter("@Timein", log.CheckInTime),
-                    new SqlParameter("@Timeout", log.CheckInTime),
+                    new SqlParameter("@Timeout", DateTime.UtcNow),
                     new SqlParameter("@TransactionType", transactionTypeId),
                     new SqlParameter("@LabId", log.LabId),
                     new SqlParameter("@MonitorId", monitor),
@@ -268,7 +273,6 @@ namespace LabPortal.Controllers
         }
 
         // DELETE: api/Logs/5
-        // Creates a delete transaction for a log
         [HttpDelete("{id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -289,25 +293,27 @@ namespace LabPortal.Controllers
                 var timeIn = log.CheckInTime.HasValue ? log.CheckInTime.Value : (object)DBNull.Value;
 
                 var commandText = @"
-            EXEC [dbo].[usp_UpdateLogTransaction] 
-            @StudentId = @StudentId, 
-            @Timein = @Timein, 
-            @Timeout = @Timeout, 
-            @TransactionType = @TransactionType, 
-            @LabId = @LabId, 
-            @MonitorId = @MonitorId, 
-            @FkLog = @FkLog";
+                    EXEC [dbo].[usp_UpdateLogTransaction] 
+                    @StudentId = @StudentId, 
+                    @ItemId = @ItemId,
+                    @Timein = @Timein, 
+                    @Timeout = @Timeout, 
+                    @TransactionType = @TransactionType, 
+                    @LabId = @LabId, 
+                    @MonitorId = @MonitorId, 
+                    @FkLog = @FkLog";
 
                 var parameters = new[]
                 {
-            new SqlParameter("@StudentId", log.StudentId),
-            new SqlParameter("@Timein", timeIn),
-            new SqlParameter("@Timeout", DBNull.Value),
-            new SqlParameter("@TransactionType", transactionTypeId),
-            new SqlParameter("@LabId", log.LabId),
-            new SqlParameter("@MonitorId", monitor),
-            new SqlParameter("@FkLog", id)
-        };
+                    new SqlParameter("@StudentId", log.StudentId),
+                    new SqlParameter("@ItemId", log.ItemId ?? (object)DBNull.Value),
+                    new SqlParameter("@Timein", timeIn),
+                    new SqlParameter("@Timeout", DBNull.Value),
+                    new SqlParameter("@TransactionType", transactionTypeId),
+                    new SqlParameter("@LabId", log.LabId),
+                    new SqlParameter("@MonitorId", monitor),
+                    new SqlParameter("@FkLog", id)
+                };
 
                 await _context.Database.ExecuteSqlRawAsync(commandText, parameters);
 
@@ -318,7 +324,6 @@ namespace LabPortal.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError, new { error = ex.Message });
             }
         }
-
 
         // Retrieves the log history for a given LogSummary ID
         [HttpGet("History/{summaryId}")]
@@ -348,10 +353,11 @@ namespace LabPortal.Controllers
                             var log = new LogHistoryDto
                             {
                                 StudentId = reader.GetInt32(0),
-                                Timestamp = reader.GetDateTime(1),
-                                TransactionType = reader.GetString(2),
-                                LabId = reader.GetInt32(3),
-                                MonitorId = reader.GetInt32(4)
+                                ItemId = reader.GetInt32(1),
+                                Timestamp = reader.GetDateTime(2),
+                                TransactionType = reader.GetString(3),
+                                LabId = reader.GetInt32(4),
+                                MonitorId = reader.GetInt32(5)
                             };
                             logHistory.Add(log);
                         }
@@ -368,7 +374,6 @@ namespace LabPortal.Controllers
         }
 
         // GET: api/Logs/{summaryId}
-        // Retrieves a log summary by SummaryId
         [HttpGet("{summaryId}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -384,6 +389,7 @@ namespace LabPortal.Controllers
                     Timeout = s.CheckOutTime,
                     LabId = s.LabId,
                     MonitorId = s.MonitorId,
+                    ItemId = s.ItemId,
                     IsDeleted = s.IsDeleted
                 })
                 .FirstOrDefaultAsync();
@@ -397,7 +403,6 @@ namespace LabPortal.Controllers
         }
 
         // GET: api/Logs/
-        // Retrieves all log entries
         [HttpGet]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<ActionResult<IEnumerable<CheckinDto>>> GetAllSummaries()
@@ -411,12 +416,14 @@ namespace LabPortal.Controllers
                     Timeout = s.CheckOutTime,
                     LabId = s.LabId,
                     MonitorId = s.MonitorId,
+                    ItemId = s.ItemId,
                     IsDeleted = s.IsDeleted
                 })
                 .ToListAsync();
 
             return Ok(summaries);
         }
+
 
         //// GET: api/Logs/Lab/{labId}
         //// Retrieves log summaries filtered by LabId
