@@ -3,10 +3,10 @@ import { Alert, Platform } from 'react-native';
 import * as Updates from 'expo-updates';
 import { CreateErrorLog } from './errorLogService';
 
-export const crossPlatformAlert = (title: string, message: string) => {
+export const crossPlatformAlert = async (title: string, message: string) => {
     if (Platform.OS === 'web') {
       // Use the native browser alert for web
-      window.alert(`${title}\n\n${message}`);
+      await Updates.reloadAsync();
     } else {
       // Use the React Native Alert for iOS and Android
       Alert.alert(title, message);
@@ -24,7 +24,7 @@ export const crossPlatformAlert = (title: string, message: string) => {
 
   export const reload = async () => {
     try {
-      if (Platform.OS === 'ios') {
+      if ('iosandroid'.includes(Platform.OS)) {
         await Updates.reloadAsync(); // Reload the app using Expo's reload for iOS
       } else {
         window.location.reload(); // Restart the app using window.location.reload for other platforms
