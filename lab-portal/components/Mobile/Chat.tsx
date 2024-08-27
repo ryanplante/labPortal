@@ -1,25 +1,28 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Platform, Keyboard } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Platform, Keyboard, SafeAreaView, StatusBar } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 const MobileChat = () => {
   const [messages, setMessages] = useState<string[]>([]);
   const [input, setInput] = useState<string>('');
   const [status, setStatus] = useState<string>('available');
 
-  useEffect(() => {
-    const handleKeyPress = (e: KeyboardEvent) => {
-      if (e.key === 'Enter' && !e.shiftKey && Platform.OS === 'web') {
-        e.preventDefault();
-        handleSend();
-      }
-    };
+  // useEffect(() => {
+  //   const handleKeyPress = (e: KeyboardEvent) => {
+  //     if (e.key === 'Enter' && !e.shiftKey && Platform.OS === 'web') {
+  //       e.preventDefault();
+  //       handleSend();
+  //     }
+  //   };
 
-    document.addEventListener('keydown', handleKeyPress);
+  //   document.addEventListener('keydown', handleKeyPress);
 
-    return () => {
-      document.removeEventListener('keydown', handleKeyPress);
-    };
-  }, [input]);
+  //   return () => {
+  //     document.removeEventListener('keydown', handleKeyPress);
+  //   };
+  // }, [input]);
+
+// -- NOTE: --
+  //above code crashes the app when run, commented out for styling purposes
 
   const handleSend = () => {
     if (input.trim() !== '') {
@@ -29,7 +32,7 @@ const MobileChat = () => {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <Text style={styles.header}>Mobile Chat</Text>
       <Picker
         selectedValue={status}
@@ -68,7 +71,7 @@ const MobileChat = () => {
           <Text style={styles.notAvailableText}>Please try again in a few minutes.</Text>
         </View>
       )}
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -76,6 +79,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
+    marginTop:StatusBar.currentHeight,
   },
   header: {
     fontSize: 24,
