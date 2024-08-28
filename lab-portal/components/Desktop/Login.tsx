@@ -8,7 +8,7 @@ import { reload } from '../../services/helpers';
 import * as Device from "expo-device";
 
 const Login = () => {
-  const [username, setUsername] = useState('');
+  const [username, setUsername] = useState(null);
   const [password, setPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState(''); 
   const [loading, setLoading] = useState(false);  
@@ -41,7 +41,6 @@ const Login = () => {
 
 	const isMobile =
 		Device.deviceType == 1 || (Device.deviceType == 2 && orientation == "PORTRAIT");
-
 	const adaptiveWidth = {
 		width: isMobile ? "90%" : "30%",
 	};
@@ -81,6 +80,7 @@ const Login = () => {
       <Text style={[styles.labelText, adaptiveWidth]}>Username</Text>
       <TextInput
         style={[styles.input, adaptiveWidth]}
+        inputMode='numeric'
         placeholder="Username"
         value={username}
         onChangeText={setUsername}
@@ -93,7 +93,7 @@ const Login = () => {
         onChangeText={setPassword}
         secureTextEntry
       />
-      <TouchableOpacity style={styles.button} onPress={handleLogin}>
+      <TouchableOpacity style={[styles.button, adaptiveWidth]} onPress={handleLogin}>
         {loading ? (
           <ActivityIndicator size="small" color="#fff" />
         ) : (
@@ -135,7 +135,6 @@ const styles = StyleSheet.create({
     padding: 15,
     borderRadius: 5,
     marginTop: 20,
-    width: '50%',
     alignItems: 'center',
   },
   buttonText: {

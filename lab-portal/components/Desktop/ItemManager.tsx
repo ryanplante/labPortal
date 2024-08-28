@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, TextInput, Button, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, TextInput, Button, Alert, ActivityIndicator, Dimensions } from 'react-native';
 import ItemService from '../../services/itemService';
 import LabService from '../../services/labsService';
 import DynamicForm from '../Modals/DynamicForm';
 import ConfirmationModal from '../Modals/ConfirmationModal';
 import LabPicker from '../LabPicker';
+import ActionsModal from '../Modals/ActionsModal'; // Import ActionsModal
 import * as ImagePicker from 'expo-image-picker';
 
 interface Lab {
@@ -27,6 +28,7 @@ const ItemManager = () => {
     const [items, setItems] = useState<Item[]>([]);
     const [labs, setLabs] = useState<Lab[]>([]); // State to hold all labs
     const [selectedItem, setSelectedItem] = useState<Item | null>(null);
+    const [highlightedItemId, setHighlightedItemId] = useState<number | null>(null); // State to manage the highlighted row
     const [isFormOpen, setFormOpen] = useState(false);
     const [isDeleteModalVisible, setDeleteModalVisible] = useState(false);
     const [itemToDelete, setItemToDelete] = useState<Item | null>(null);
@@ -35,6 +37,10 @@ const ItemManager = () => {
     const [imageBase64, setImageBase64] = useState<string | null>(null);
     const [validationErrors, setValidationErrors] = useState<{ [key: string]: string }>({});
     const [loading, setLoading] = useState<boolean>(true);
+    const [isActionsMenuVisible, setActionsMenuVisible] = useState(false); // State for ActionsModal visibility
+    const [itemForAction, setItemForAction] = useState<Item | null>(null); // State for selected item
+
+    const screenWidth = Dimensions.get('window').width; // Get screen width
 
     useEffect(() => {
         fetchItemsAndLabs(); // Fetch items and labs when the component mounts
@@ -48,13 +54,13 @@ const ItemManager = () => {
                 ItemService.getItems(),
                 LabService.getAllLabs(),
             ]);
-    
+
             // Enrich items with lab details
             const enrichedItems = await Promise.all(fetchedItems.map(async (item) => {
                 const lab = await LabService.getLabById(item.lab);
                 return { ...item, lab }; // Add the lab details to the item
             }));
-    
+
             setItems(enrichedItems); // Store enriched items in state
             setLabs(fetchedLabs); // Store fetched labs in state
         } catch (error) {
@@ -63,11 +69,10 @@ const ItemManager = () => {
             setLoading(false);
         }
     };
-    
 
     const handleCreateOrUpdateItem = async () => {
         let errors: { [key: string]: string } = {};
-    
+
         if (!selectedItem) {
             errors['item'] = 'Item details are missing.';
         } else {
@@ -76,19 +81,19 @@ const ItemManager = () => {
             } else if (selectedItem.description.length > 30) {
                 errors['description'] = 'Description should not exceed 30 characters.';
             }
-    
+
             if (!selectedLabId) {
                 errors['lab'] = 'Lab is required.';
             }
-    
+
             if (selectedItem.quantity <= 0) {
                 errors['quantity'] = 'Quantity must be greater than 0.';
             }
-    
+
             if (selectedItem.serialNum && selectedItem.serialNum.length > 30) {
                 errors['serialNum'] = 'Serial Number should not exceed 30 characters.';
             }
-    
+
             if (!selectedItem.picture && !imageBase64) {
                 errors['picture'] = 'Please upload a valid image.';
             } else if (imageBase64) {
@@ -98,20 +103,20 @@ const ItemManager = () => {
                 }
             }
         }
-    
+
         if (Object.keys(errors).length > 0) {
             setValidationErrors(errors);
             setError('Please fix the highlighted errors.');
             return;
         }
-    
+
         try {
             const itemToSave = {
                 ...selectedItem,
                 lab: selectedLabId, // Ensure labId is set correctly
                 picture: imageBase64 || selectedItem.picture,
             };
-    
+
             if (selectedItem.itemId) {
                 await ItemService.updateItem(selectedItem.itemId, itemToSave);
             } else {
@@ -125,11 +130,8 @@ const ItemManager = () => {
             console.error('Error saving item:', error);
         }
     };
-    
 
     const handleEdit = (item: Item) => {
-        console.log("Editing Item:", item); // Log the item being edited
-        console.log("Selected Lab ID:", item.lab ? item.lab.labId : null); // Log the labId being set
         setSelectedLabId(item.lab ? item.lab.labId : null);
         setSelectedItem(item);
         setImageBase64(item.picture);
@@ -137,8 +139,6 @@ const ItemManager = () => {
         setError(null);
         setValidationErrors({});
     };
-    
-    
 
     const handleDelete = (item: Item) => {
         setItemToDelete(item);
@@ -155,6 +155,7 @@ const ItemManager = () => {
             } finally {
                 setDeleteModalVisible(false);
                 setItemToDelete(null);
+                setActionsMenuVisible(false);
             }
         }
     };
@@ -184,6 +185,31 @@ const ItemManager = () => {
             Alert.alert('Image selection failed', 'Please try selecting an image again.');
         }
     };
+
+    const openActionsMenu = (item: Item) => {
+        setItemForAction(item);
+        setHighlightedItemId(item.itemId); // Highlight the row
+        setActionsMenuVisible(true); // Show ActionsModal on item tap
+    };
+
+    const actionButtons = [
+        {
+            name: 'Edit',
+            icon: require('../../assets/edit.png'),
+            onPress: () => {
+                setActionsMenuVisible(false);
+                handleEdit(itemForAction!);
+            },
+        },
+        {
+            name: 'Delete',
+            icon: require('../../assets/trash.png'),
+            onPress: () => {
+                setActionsMenuVisible(false);
+                handleDelete(itemForAction!);
+            },
+        },
+    ];
 
     const formComponents = [
         <View key="descriptionWrapper">
@@ -288,14 +314,22 @@ const ItemManager = () => {
                         <Text style={[styles.tableHeaderCell, styles.tableHeaderCellQuantity]}>Quantity</Text>
                         <Text style={[styles.tableHeaderCell, styles.tableHeaderCellSerialNum]}>Serial Number</Text>
                         <Text style={[styles.tableHeaderCell, styles.tableHeaderCellLab]}>Lab</Text>
-                        <Text style={[styles.tableHeaderCell, styles.tableHeaderCellActions]}>Actions</Text>
+                        {screenWidth >= 600 && (
+                            <Text style={[styles.tableHeaderCell, styles.tableHeaderCellActions]}>Actions</Text>
+                        )}
                     </View>
 
                     <FlatList
                         data={items}
                         keyExtractor={(item) => item.itemId.toString()}
                         renderItem={({ item }) => (
-                            <View style={styles.entryRow}>
+                            <TouchableOpacity
+                                onPress={() => openActionsMenu(item)}
+                                style={[
+                                    styles.entryRow,
+                                    highlightedItemId === item.itemId && styles.highlightedRow,
+                                ]}
+                            >
                                 <View style={styles.tableCellImage}>
                                     {item.picture ? (
                                         <Image
@@ -318,17 +352,20 @@ const ItemManager = () => {
                                 <View style={styles.tableCellLab}>
                                     <Text>{item.lab?.name} - {item.lab?.roomNum}</Text>
                                 </View>
-                                <View style={styles.tableCellActions}>
-                                    <TouchableOpacity onPress={() => handleEdit(item)} style={styles.iconButton}>
-                                        <Image source={require('../../assets/edit.png')} style={styles.iconImage} />
-                                    </TouchableOpacity>
-                                    <TouchableOpacity onPress={() => handleDelete(item)} style={styles.iconButton}>
-                                        <Image source={require('../../assets/trash.png')} style={styles.iconImage} />
-                                    </TouchableOpacity>
-                                </View>
-                            </View>
+                                {screenWidth >= 600 && (
+                                    <View style={styles.tableCellActions}>
+                                        <TouchableOpacity onPress={() => handleEdit(item)} style={styles.iconButton}>
+                                            <Image source={require('../../assets/edit.png')} style={styles.iconImage} />
+                                        </TouchableOpacity>
+                                        <TouchableOpacity onPress={() => handleDelete(item)} style={styles.iconButton}>
+                                            <Image source={require('../../assets/trash.png')} style={styles.iconImage} />
+                                        </TouchableOpacity>
+                                    </View>
+                                )}
+                            </TouchableOpacity>
                         )}
                     />
+
                     <DynamicForm
                         visible={isFormOpen}
                         title={selectedItem?.itemId ? 'Update Item' : 'Add Item'}
@@ -347,6 +384,12 @@ const ItemManager = () => {
                         onConfirm={confirmDelete}
                         onCancel={() => setDeleteModalVisible(false)}
                         type="yesNoDanger"
+                    />
+
+                    <ActionsModal
+                        visible={isActionsMenuVisible}
+                        onClose={() => setActionsMenuVisible(false)}
+                        actionButtons={actionButtons}
                     />
                 </>
             )}
@@ -413,6 +456,9 @@ const styles = StyleSheet.create({
         paddingVertical: 10,
         borderBottomWidth: 1,
         borderBottomColor: '#ccc',
+    },
+    highlightedRow: {
+        backgroundColor: '#e0e0e0', // Highlighted color
     },
     tableCellImage: {
         flex: 1,

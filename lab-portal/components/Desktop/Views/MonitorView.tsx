@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, TextInput, Image, Button, Picker } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, TextInput, Image, Button, Picker, Dimensions } from 'react-native';
 import moment from 'moment-timezone';
 import StudentSearcher from '../../Modals/StudentSearcher';
 import DynamicForm from '../../Modals/DynamicForm';
@@ -8,7 +8,8 @@ import { checkHeartbeat, deleteToken, getUserByToken } from '../../../services/l
 import LogService from '../../../services/logService';
 import LabService from '../../../services/labsService';
 import { User } from '../../../services/userService';
-import ConfirmationModal from "../../Modals/ConfirmationModal";
+import ConfirmationModal from '../../Modals/ConfirmationModal';
+import ActionsModal from '../../Modals/ActionsModal';
 import { crossPlatformAlert, reload } from '../../../services/helpers';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -27,6 +28,13 @@ const MonitorView = () => {
   const [labId, setLabId] = useState<number | null>(null);
   const [isDeleteModalVisible, setDeleteModalVisible] = useState(false);
   const [entryToDelete, setEntryToDelete] = useState<Entry | null>(null);
+  const [highlightedItemId, setHighlightedItemId] = useState<string | null>(null);
+  const [isActionsMenuVisible, setActionsMenuVisible] = useState(false);
+  const [selectedEntryForAction, setSelectedEntryForAction] = useState<Entry | null>(null);
+
+  const screenWidth = Dimensions.get('window').width;
+  const [currentScreenWidth, setCurrentScreenWidth] = useState(screenWidth);
+  const isWideScreen = currentScreenWidth >= 700;
 
   type Entry = {
     id: string;
@@ -38,16 +46,24 @@ const MonitorView = () => {
 
   useEffect(() => {
     fetchUserAndLabId();
+
+    const updateScreenWidth = () => {
+      setCurrentScreenWidth(Dimensions.get('window').width);
+    };
+
+    Dimensions.addEventListener('change', updateScreenWidth);
+
+    return () => {
+      Dimensions.removeEventListener('change', updateScreenWidth);
+    };
   }, []);
 
   const fetchUserAndLabId = async () => {
     try {
-      console.log('hii');
       const isApiHealthy = await checkHeartbeat();
       if (!isApiHealthy) {
         throw new Error('The server is currently unavailable.');
       }
-      console.log(isApiHealthy)
       const token = await AsyncStorage.getItem('token');
       if (token && isApiHealthy) {
         const user = await getUserByToken();
@@ -64,7 +80,7 @@ const MonitorView = () => {
     } catch (error) {
       const errorMessage = error.message.includes('server')
         ? 'Server is currently down. Please try again later.'
-        : 'Token has expired please refresh the app and re-login to continue.';
+        : 'Token has expired, please refresh the app and re-login to continue.';
       crossPlatformAlert('Error', errorMessage);
       await deleteToken();
       await reload();
@@ -80,10 +96,10 @@ const MonitorView = () => {
 
       const formattedLogs = logs.map(log => ({
         id: log.id.toString(),
-        studentId: log.studentId.toString().padStart(8, '0'), // Zero padding student ID
+        studentId: log.studentId.toString().padStart(8, '0'),
         studentName: log.studentName,
-        timeIn: moment(log.timeIn).format('h:mm:ss a'), // Show only time
-        timeOut: log.timeOut ? moment(log.timeOut).format('h:mm:ss a') : null, // Show only time
+        timeIn: moment(log.timeIn).format('h:mm:ss a'),
+        timeOut: log.timeOut ? moment(log.timeOut).format('h:mm:ss a') : null,
       }));
 
       setEntries(formattedLogs);
@@ -143,7 +159,7 @@ const MonitorView = () => {
 
       const newEntry: Entry = {
         id: newEntryId || Date.now().toString(),
-        studentId: selectedStudent.id.toString().padStart(8, '0'), // Zero padding student ID
+        studentId: selectedStudent.id.toString().padStart(8, '0'),
         studentName: `${selectedStudent.firstName} ${selectedStudent.lastName}`,
         timeIn: moment(checkInTime).format('h:mm:ss a'),
         timeOut: checkOutTime ? moment(checkOutTime).format('h:mm:ss a') : null,
@@ -185,28 +201,25 @@ const MonitorView = () => {
   };
 
   const handleEdit = async (entry: Entry) => {
-    const userAndLabLoaded = await fetchUserAndLabId();
-    if (!userAndLabLoaded) return;
-
+    setSelectedEntryForAction(entry);
+    setEditingEntryId(entry.id);
     setSelectedStudent({
       id: entry.studentId,
       firstName: entry.studentName.split(' ')[0],
       lastName: entry.studentName.split(' ')[1],
     });
-
     setCheckInTime(new Date(moment(entry.timeIn, 'h:mm:ss a').toISOString()));
     setCheckOutTime(!entry.timeOut ? undefined : new Date(moment(entry.timeOut, 'h:mm:ss a').toISOString()));
-    setEditingEntryId(entry.id);
     setFormOpen(true);
     setError(null);
+    setActionsMenuVisible(false);
   };
 
   const handleDelete = async (entry: Entry) => {
-    const userAndLabLoaded = await fetchUserAndLabId();
-    if (!userAndLabLoaded) return;
-
+    setSelectedEntryForAction(entry);
     setEntryToDelete(entry);
     setDeleteModalVisible(true);
+    setActionsMenuVisible(false);
   };
 
   const confirmDelete = async () => {
@@ -255,7 +268,32 @@ const MonitorView = () => {
     return entries; // Default to 'All'
   };
 
+  const openActionsMenu = (entry: Entry) => {
+    setHighlightedItemId(entry.id);
+    setSelectedEntryForAction(entry);
+    setActionsMenuVisible(true);
+  };
+
   if (!user) return null;
+
+  const actionButtons = [
+    {
+      name: 'Edit',
+      icon: require('../../../assets/edit.png'),
+      onPress: () => handleEdit(selectedEntryForAction!),
+    },
+    {
+      name: 'Delete',
+      icon: require('../../../assets/trash.png'),
+      onPress: () => handleDelete(selectedEntryForAction!),
+    },
+    {
+      name: 'Time Out',
+      icon: require('../../../assets/time.png'),
+      onPress: () => handleClockOut(selectedEntryForAction!.id),
+      disabled: selectedEntryForAction?.timeOut !== null, // Disable if already timed out
+    },
+  ];
 
   const studentPickerComponent = [
     <View style={styles.inputContainer} key="inputContainer">
@@ -267,7 +305,7 @@ const MonitorView = () => {
         style={styles.readOnlyInput}
         placeholder="Student ID"
         value={selectedStudent.id}
-        editable={false}
+        readOnly={true}
       />
       <TouchableOpacity
         key="searchButton"
@@ -325,7 +363,7 @@ const MonitorView = () => {
           <Text style={styles.addButtonText}>Log new student</Text>
         </TouchableOpacity>
         <View style={styles.filterContainer}>
-          <Text style={styles.filterLabel}>Filter by Status:</Text> {/* Added label */}
+          <Text style={styles.filterLabel}>Filter by Status:</Text>
           <Picker
             selectedValue={selectedFilter}
             style={styles.filterPicker}
@@ -339,10 +377,11 @@ const MonitorView = () => {
       </View>
 
       <View style={styles.tableHeader}>
-        <Text style={styles.tableHeaderText}>Student ID</Text>
-        <Text style={styles.tableHeaderText}>Student Name</Text>
-        <Text style={styles.tableHeaderText}>Time In</Text>
-        <Text style={styles.tableHeaderText}>Time Out</Text>
+        <Text style={[styles.tableHeaderText, styles.tableHeaderStudentId]}>Student ID</Text>
+        <Text style={[styles.tableHeaderText, styles.tableHeaderStudentName]}>Student Name</Text>
+        <Text style={[styles.tableHeaderText, styles.tableHeaderTime]}>Time In</Text>
+        <Text style={[styles.tableHeaderText, styles.tableHeaderTime]}>Time Out</Text>
+        {isWideScreen && <Text style={[styles.tableHeaderText, styles.tableHeaderActions]}>Actions</Text>}
       </View>
 
       {entries.length === 0 ? (
@@ -352,32 +391,42 @@ const MonitorView = () => {
           data={filterEntries(entries)}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
-            <View style={styles.entryRow}>
-              <View style={styles.tableCell}>
-                <Text>{item.studentId}</Text>
+            <TouchableOpacity
+              onPress={() => openActionsMenu(item)}
+              style={[
+                styles.entryRow,
+                highlightedItemId === item.id && styles.highlightedRow,
+              ]}
+            >
+              <View style={[styles.tableCell, styles.tableCellStudentId]}>
+                <Text style={styles.cellText}>{item.studentId}</Text>
               </View>
-              <View style={styles.tableCell}>
-                <Text>{item.studentName}</Text>
+              <View style={[styles.tableCell, styles.tableCellStudentName]}>
+                <Text style={styles.cellText}>{item.studentName}</Text>
               </View>
-              <View style={styles.tableCell}>
-                <Text>{item.timeIn}</Text>
+              <View style={[styles.tableCell, styles.tableCellTime]}>
+                <Text style={styles.cellText}>{item.timeIn}</Text>
               </View>
-              <View style={styles.tableCell}>
+              <View style={[styles.tableCell, styles.tableCellTime]}>
                 {item.timeOut ? (
-                  <Text>{item.timeOut}</Text>
+                  <Text style={styles.cellText}>{item.timeOut}</Text>
                 ) : (
                   <TouchableOpacity onPress={() => handleClockOut(item.id)} style={styles.clockButton}>
                     <Image source={require('../../../assets/time.png')} style={styles.iconImage} />
                   </TouchableOpacity>
                 )}
               </View>
-              <TouchableOpacity onPress={() => handleEdit(item)} style={styles.editButton}>
-                <Image source={require('../../../assets/edit.png')} style={styles.iconImage} />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => handleDelete(item)} style={styles.deleteButton}>
-                <Image source={require('../../../assets/trash.png')} style={styles.iconImage} />
-              </TouchableOpacity>
-            </View>
+              {isWideScreen && (
+                <View style={[styles.tableCellActions, styles.tableCell]}>
+                  <TouchableOpacity onPress={() => handleEdit(item)} style={styles.actionButton}>
+                    <Image source={require('../../../assets/edit.png')} style={styles.iconImage} />
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => handleDelete(item)} style={styles.actionButton}>
+                    <Image source={require('../../../assets/trash.png')} style={styles.iconImage} />
+                  </TouchableOpacity>
+                </View>
+              )}
+            </TouchableOpacity>
           )}
         />
       )}
@@ -410,6 +459,12 @@ const MonitorView = () => {
         onCancel={() => setDeleteModalVisible(false)}
         type="yesNoDanger"
       />
+
+      <ActionsModal
+        visible={isActionsMenuVisible}
+        onClose={() => setActionsMenuVisible(false)}
+        actionButtons={actionButtons.filter(button => !(button.name === 'Time Out' && selectedEntryForAction?.timeOut !== null))}
+      />
     </View>
   );
 };
@@ -422,10 +477,6 @@ const styles = StyleSheet.create({
   header: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 20,
-  },
-  subHeader: {
-    fontSize: 18,
     marginBottom: 20,
   },
   headerRow: {
@@ -443,11 +494,11 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
   },
-  filterContainer: {   /* Added container for filter */
+  filterContainer: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  filterLabel: {        /* Added label styling */
+  filterLabel: {
     fontSize: 16,
     fontWeight: 'bold',
     marginRight: 10,
@@ -456,40 +507,29 @@ const styles = StyleSheet.create({
     width: 200,
     height: 40,
   },
-  filtersContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-  },
-  pickerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  pickerLabel: {
-    fontSize: 16,
-    marginRight: 10,
-  },
-  picker: {
-    height: 50,
-    width: 150,
-  },
   tableHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: '#ccc',
     backgroundColor: '#f8f8f8',
   },
   tableHeaderText: {
-    flex: 1,
     fontWeight: 'bold',
-    textAlign: 'center',
+    textAlign: 'left', 
+    paddingHorizontal: 10,
+  },
+  tableHeaderStudentId: {
+    flex: 1, // Fixed size for student ID, as it is always 8 characters
+  },
+  tableHeaderStudentName: {
+    flex: 3, // More space for the student name
+  },
+  tableHeaderTime: {
+    flex: 1.5, // Time columns have smaller width
+  },
+  tableHeaderActions: {
+    flex: 1.5, // Similar width as the time columns for actions
   },
   noLogsText: {
     textAlign: 'center',
@@ -499,25 +539,38 @@ const styles = StyleSheet.create({
   },
   entryRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: '#ccc',
   },
+  highlightedRow: {
+    backgroundColor: '#e0e0e0',
+  },
   tableCell: {
-    flex: 1,
     justifyContent: 'center',
+    alignItems: 'flex-start', 
+    paddingHorizontal: 10,
+  },
+  tableCellStudentId: {
+    flex: 1,
+  },
+  tableCellStudentName: {
+    flex: 3,
+  },
+  tableCellTime: {
+    flex: 1.5,
+  },
+  tableCellActions: {
+    flex: 1.5,
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
     alignItems: 'center',
   },
-  editButton: {
-    padding: 10,
+  cellText: {
+    textAlign: 'left',
   },
-  deleteButton: {
-    padding: 10,
-  },
-  clockButton: {
-    padding: 10,
+  actionButton: {
+    paddingHorizontal: 5, 
   },
   inputContainer: {
     flexDirection: 'row',
@@ -533,8 +586,7 @@ const styles = StyleSheet.create({
     height: 45,
     backgroundColor: '#aaaaaaaa',
   },
-  iconButton: {
-  },
+  iconButton: {},
   iconImage: {
     width: 20,
     height: 20,
