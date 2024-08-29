@@ -33,36 +33,51 @@ const MobileAdmin = () => {
 				return <AdminItemsView />;
 		}
 	};
+	const selected = {
+		backgroundColor: "lightBlue",
+	};
 	return (
 		<SafeAreaView style={[styles.container]}>
-			<Text style={styles.text}>Mobile Admin</Text>
 			<View style={styles.tabView}>
 				<Pressable
-					style={styles.pressable}
+					style={[
+						styles.pressable,
+						selectedView === "Users" && styles.selectedPressable,
+					]}
 					onPress={() => setSelectedView("Users")}
 				>
-					<Text>Users</Text>
+					<Text style={[styles.pressableText]}>Users</Text>
 				</Pressable>
+
 				<Pressable
-					style={styles.pressable}
+					style={[
+						styles.pressable,
+						selectedView === "Departments" && styles.selectedPressable,
+					]}
 					onPress={() => setSelectedView("Departments")}
 				>
-					<Text>Departments</Text>
+					<Text style={styles.pressableText}>Departments</Text>
 				</Pressable>
 				<Pressable
-					style={styles.pressable}
+					style={[
+						styles.pressable,
+						selectedView === "Labs" && styles.selectedPressable,
+					]}
 					onPress={() => setSelectedView("Labs")}
 				>
-					<Text>Labs</Text>
+					<Text style={styles.pressableText}>Labs</Text>
 				</Pressable>
 				<Pressable
-					style={styles.pressable}
+					style={[
+						styles.pressable,
+						selectedView === "Items" && styles.selectedPressable,
+					]}
 					onPress={() => setSelectedView("Items")}
 				>
-					<Text>Items</Text>
+					<Text style={styles.pressableText}>Items</Text>
 				</Pressable>
 			</View>
-			<View>{renderView()}</View>
+			<View style={styles.renderView}>{renderView()}</View>
 		</SafeAreaView>
 	);
 };
@@ -77,18 +92,30 @@ const styles = StyleSheet.create({
 		width: "100%",
 		marginTop: StatusBar.currentHeight,
 	},
+	renderView:{
+		width:"100%"
+	},
 	text: {
 		fontSize: 20,
 	},
 	pressable: {
-		borderWidth: 1,
-		borderColor: "black",
-		width: "20%",
+		// borderWidth: 1,
+		// borderColor: "black",
+		width: "25%",
 		backgroundColor: "lightgray",
-		marginVertical: 5,
+		justifyContent: "center",
 	},
-	tabView:{
-		flexDirection:"row",
-		height:100
-	}
+	pressableText: {
+		width: "100%",
+		textAlign: "center",
+		fontSize: 20,
+	},
+	tabView: {
+		flexDirection: "row",
+		height: 60,
+		width: "100%",
+	},
+	selectedPressable: {
+		backgroundColor: "#f2f2f2",
+	},
 });
