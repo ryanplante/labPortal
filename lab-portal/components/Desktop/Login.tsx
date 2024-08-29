@@ -29,13 +29,13 @@ const Login = () => {
 
 	useEffect(() => {
 		determineAndSetOrientation();
-		const test = Dimensions.addEventListener(
+		const Screen = Dimensions.addEventListener(
 			"change",
 			determineAndSetOrientation
 		);
 
 		return () => {
-			test.remove();
+			Screen.remove();
 		};
 	}, []);
 
