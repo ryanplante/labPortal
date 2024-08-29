@@ -27,7 +27,7 @@ import ExamplePage from './components/Desktop/Example';
 import ItemManager from './components/Desktop/ItemManager';
 import * as Device from "expo-device";
 import MobileMainPage from './components/Mobile/MainPage';
-import MobileLabs from './components/Mobile/Labs';
+import MobileLabs from './components/Mobile/Monitors';
 import MobileReports from './components/Mobile/Reports';
 import MobileSchedule from './components/Mobile/Schedule';
 import MobileManageLabs from './components/Mobile/ManageLabs';
@@ -105,8 +105,9 @@ const App = () => {
       }
 
     };
-
+    console.log("b4 validatetoken")
     validateToken();    
+    console.log("after validatetoken")
   }, []);
 
   

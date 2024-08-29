@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import Reports from '../../Mobile/Reports';
 
 const MobileDepartmentHeadView = () => {
   return (
