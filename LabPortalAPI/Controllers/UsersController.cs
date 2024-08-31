@@ -246,10 +246,12 @@ namespace LabPortal.Controllers
             {
                 return BadRequest("Query cannot be null or empty.");
             }
-
             var matchingUsers = await _context.Users
-                .Where(u => u.UserId.ToString().Contains(query)) // Treat UserId as a string for matching purposes
-                .ToListAsync();
+                .ToListAsync(); // Fetch all users into memory
+
+            matchingUsers = matchingUsers
+                .Where(u => u.UserId.ToString().PadLeft(8, '0').Contains(query)) // Apply the padding and filtering in memory
+                .ToList();
 
             if (!matchingUsers.Any())
             {
