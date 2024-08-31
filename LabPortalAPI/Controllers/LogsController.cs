@@ -143,7 +143,8 @@ namespace LabPortal.Controllers
                     @TransactionType = @TransactionType, 
                     @LabId = @LabId, 
                     @MonitorId = @MonitorId, 
-                    @FkLog = @FkLog";
+                    @FkLog = @FkLog,
+                    @Scanned = @Scanned";
 
                 var parameters = new[]
                 {
@@ -154,7 +155,8 @@ namespace LabPortal.Controllers
                     new SqlParameter("@TransactionType", transactionTypeId),
                     new SqlParameter("@LabId", logDto.LabId),
                     new SqlParameter("@MonitorId", logDto.MonitorId),
-                    new SqlParameter("@FkLog", id)
+                    new SqlParameter("@FkLog", id),
+                    new SqlParameter("@Scanned", logDto.IsScanned)
                 };
 
                 await _context.Database.ExecuteSqlRawAsync(commandText, parameters);
@@ -190,7 +192,8 @@ namespace LabPortal.Controllers
                                 @LabId = @LabId, 
                                 @MonitorId = @MonitorId, 
                                 @Timein = @Timein,
-                                @ItemID = @ItemID;
+                                @ItemID = @ItemID,
+                                @Scanned = @Scanned;
                             SELECT @SummaryID;";
 
                         command.Parameters.Add(new SqlParameter("@StudentId", logDto.StudentId));
@@ -198,6 +201,7 @@ namespace LabPortal.Controllers
                         command.Parameters.Add(new SqlParameter("@MonitorId", logDto.MonitorId));
                         command.Parameters.Add(new SqlParameter("@Timein", logDto.Timein));
                         command.Parameters.Add(new SqlParameter("@ItemID", logDto.ItemId ?? (object)DBNull.Value));
+                        command.Parameters.Add(new SqlParameter("@Scanned", logDto.IsScanned));
 
                         summaryId = (int)await command.ExecuteScalarAsync();
                     }
@@ -211,7 +215,7 @@ namespace LabPortal.Controllers
                     LabId = logDto.LabId,
                     MonitorId = logDto.MonitorId,
                     ItemId = logDto.ItemId,
-                    IsDeleted = false
+                    IsDeleted = false,
                 };
 
                 return CreatedAtAction(nameof(GetLogs), new { id = summaryId }, checkinDto);
@@ -227,7 +231,7 @@ namespace LabPortal.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> TimeOutLog(int id, int monitor)
+        public async Task<IActionResult> TimeOutLog(int id, int monitor, bool isScanned)
         {
             try
             {
@@ -248,7 +252,8 @@ namespace LabPortal.Controllers
                     @TransactionType = @TransactionType, 
                     @LabId = @LabId, 
                     @MonitorId = @MonitorId, 
-                    @FkLog = @FkLog";
+                    @FkLog = @FkLog,
+                    @Scanned = @Scanned";
 
                 var parameters = new[]
                 {
@@ -259,7 +264,8 @@ namespace LabPortal.Controllers
                     new SqlParameter("@TransactionType", transactionTypeId),
                     new SqlParameter("@LabId", log.LabId),
                     new SqlParameter("@MonitorId", monitor),
-                    new SqlParameter("@FkLog", id)
+                    new SqlParameter("@FkLog", id),
+                    new SqlParameter("@Scanned", isScanned)
                 };
 
                 await _context.Database.ExecuteSqlRawAsync(commandText, parameters);
@@ -301,7 +307,8 @@ namespace LabPortal.Controllers
                     @TransactionType = @TransactionType, 
                     @LabId = @LabId, 
                     @MonitorId = @MonitorId, 
-                    @FkLog = @FkLog";
+                    @FkLog = @FkLog,
+                    @Scanned = @Scanned";
 
                 var parameters = new[]
                 {
@@ -312,7 +319,8 @@ namespace LabPortal.Controllers
                     new SqlParameter("@TransactionType", transactionTypeId),
                     new SqlParameter("@LabId", log.LabId),
                     new SqlParameter("@MonitorId", monitor),
-                    new SqlParameter("@FkLog", id)
+                    new SqlParameter("@FkLog", id),
+                    new SqlParameter("@Scanned", false)
                 };
 
                 await _context.Database.ExecuteSqlRawAsync(commandText, parameters);
@@ -353,11 +361,12 @@ namespace LabPortal.Controllers
                             var log = new LogHistoryDto
                             {
                                 StudentId = reader.GetInt32(0),
-                                ItemId = reader.GetInt32(1),
+                                ItemId = reader.IsDBNull(1) ? null : reader.GetInt32(1),
                                 Timestamp = reader.GetDateTime(2),
                                 TransactionType = reader.GetString(3),
                                 LabId = reader.GetInt32(4),
-                                MonitorId = reader.GetInt32(5)
+                                MonitorId = reader.GetInt32(5),
+                                isScanned = !reader.IsDBNull(6) && reader.GetBoolean(6),
                             };
                             logHistory.Add(log);
                         }

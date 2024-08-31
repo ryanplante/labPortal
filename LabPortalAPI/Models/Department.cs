@@ -13,6 +13,7 @@ namespace LabPortal.Models
 
         public int DeptId { get; set; }
         public string? Name { get; set; }
+        public string? Password { get; set; }
 
         public virtual ICollection<Lab> Labs { get; set; }
         public virtual ICollection<User> Users { get; set; }

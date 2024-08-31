@@ -172,6 +172,7 @@ const MonitorView = () => {
           timeout: checkOutTime ? moment(checkOutTime).toISOString() : '',
           labId: labId ?? 1,
           monitorId: user?.userId ?? 0,
+          Scanned: false
         });
       } else {
         const createdLog = await LogService.createLog({
@@ -180,6 +181,7 @@ const MonitorView = () => {
           timeout: checkOutTime ? moment(checkOutTime).toISOString() : '',
           labId: labId ?? 1,
           monitorId: user?.userId ?? 0,
+          Scanned: false
         });
         newEntryId = createdLog.summaryId.toString();
         newEntry.id = newEntryId;

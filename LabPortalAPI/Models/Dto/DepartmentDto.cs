@@ -6,5 +6,6 @@ namespace LabPortal.Models.Dto
     {
         public int DeptId { get; set; }
         public string? Name { get; set; }
+        public string? Password { get; set; }
     }
 }

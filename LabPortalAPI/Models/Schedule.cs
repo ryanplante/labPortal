@@ -13,6 +13,7 @@ namespace LabPortal.Models
         public string? TimeOut { get; set; }
         public int? DayOfWeek { get; set; }
 
+        public virtual ScheduleTypeLookup? FkLabNavigation { get; set; }
         public virtual Lab? LocationNavigation { get; set; }
         public virtual User? User { get; set; }
     }

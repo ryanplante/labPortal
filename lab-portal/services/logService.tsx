@@ -22,6 +22,7 @@ interface LogCreate {
     labId: number;
     monitorId: number;
     itemId?: number;
+    Scanned: boolean;
 }
 
 interface Checkin {
@@ -33,6 +34,7 @@ interface Checkin {
     monitorId: number;
     itemId?: number;
     isDeleted: boolean;
+    Scanned: boolean;
 }
 
 interface LogHistory {
@@ -42,6 +44,7 @@ interface LogHistory {
     transactionType: string;
     labId: number;
     monitorId: number;
+    isScanned: boolean;
 }
 
 class LogService {
@@ -129,9 +132,9 @@ class LogService {
         }
     }
 
-    async timeOutLog(id: number, monitorId: number): Promise<void> {
+    async timeOutLog(id: number, monitorId: number, isScanned: boolean): Promise<void> {
         try {
-            const params = { monitor: monitorId };
+            const params = { monitor: monitorId, isScanned: isScanned };
             await axios.put(`${this.baseUrl}/TimeOut/${id}`, null, { params });
             await this.audit('update', `Timed out log with ID: ${id}`, monitorId);
         } catch (error) {

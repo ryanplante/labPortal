@@ -1,7 +1,5 @@
-﻿using MessagePack;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations.Schema;
 
 namespace LabPortal.Models
 {
@@ -12,7 +10,7 @@ namespace LabPortal.Models
             LogSummaries = new HashSet<LogSummary>();
             Logs = new HashSet<Log>();
         }
-        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+
         public int ItemId { get; set; }
         public string Description { get; set; } = null!;
         public int Quantity { get; set; }

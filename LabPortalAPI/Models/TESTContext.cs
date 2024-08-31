@@ -30,6 +30,7 @@ namespace LabPortal.Models
         public virtual DbSet<PermissionLookup> PermissionLookups { get; set; } = null!;
         public virtual DbSet<PositionLookup> PositionLookups { get; set; } = null!;
         public virtual DbSet<Schedule> Schedules { get; set; } = null!;
+        public virtual DbSet<ScheduleTypeLookup> ScheduleTypeLookups { get; set; } = null!;
         public virtual DbSet<TransactionTypeLookup> TransactionTypeLookups { get; set; } = null!;
         public virtual DbSet<User> Users { get; set; } = null!;
         public virtual DbSet<UserToken> UserTokens { get; set; } = null!;
@@ -127,6 +128,11 @@ namespace LabPortal.Models
                 entity.Property(e => e.Name)
                     .HasMaxLength(30)
                     .HasColumnName("name");
+
+                entity.Property(e => e.Password)
+                    .HasMaxLength(4)
+                    .HasColumnName("password")
+                    .IsFixedLength();
             });
 
             modelBuilder.Entity<ErrorLog>(entity =>
@@ -187,9 +193,7 @@ namespace LabPortal.Models
 
             modelBuilder.Entity<Item>(entity =>
             {
-                entity.Property(e => e.ItemId)
-                    .ValueGeneratedOnAdd()
-                    .HasColumnName("itemID");
+                entity.Property(e => e.ItemId).HasColumnName("itemID");
 
                 entity.Property(e => e.Description)
                     .HasMaxLength(30)
@@ -237,6 +241,8 @@ namespace LabPortal.Models
                 entity.Property(e => e.LogId).HasColumnName("logID");
 
                 entity.Property(e => e.FkLog).HasColumnName("fk_log");
+
+                entity.Property(e => e.IsScanned).HasColumnName("isScanned");
 
                 entity.Property(e => e.LabId).HasColumnName("labID");
 
@@ -349,6 +355,10 @@ namespace LabPortal.Models
 
                 entity.Property(e => e.UserId).HasColumnName("userID");
 
+                entity.HasOne(d => d.FkLabNavigation)
+                    .WithMany(p => p.Schedules)
+                    .HasForeignKey(d => d.FkLab)
+                    .HasConstraintName("FK__Schedules__sched__71D1E811");
 
                 entity.HasOne(d => d.LocationNavigation)
                     .WithMany(p => p.Schedules)
@@ -361,6 +371,21 @@ namespace LabPortal.Models
                     .HasConstraintName("FK__Schedules__userI__70DDC3D8");
             });
 
+            modelBuilder.Entity<ScheduleTypeLookup>(entity =>
+            {
+                entity.HasKey(e => e.TypeId)
+                    .HasName("PK__Schedule__F04DF11A142920EC");
+
+                entity.ToTable("ScheduleTypeLookup");
+
+                entity.Property(e => e.TypeId)
+                    .ValueGeneratedNever()
+                    .HasColumnName("typeID");
+
+                entity.Property(e => e.TypeName)
+                    .HasMaxLength(10)
+                    .HasColumnName("typeName");
+            });
 
             modelBuilder.Entity<TransactionTypeLookup>(entity =>
             {

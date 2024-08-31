@@ -8,5 +8,7 @@
         public int LabId { get; set; }
         public int ? ItemId { get; set; }
         public int MonitorId { get; set; } // Foreign key reference to Users table
+
+        public bool IsScanned { get; set; }
     }
 }

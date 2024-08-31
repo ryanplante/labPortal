@@ -9,6 +9,7 @@ using LabPortal.Models;
 using System.Text;
 using System.Security.Cryptography;
 using LabPortal.Models.Dto;
+using LabPortal.Models.CreateDtos;
 
 namespace LabPortal.Controllers
 {
@@ -38,7 +39,8 @@ namespace LabPortal.Controllers
             var depertmentDtos = departments.Select(Department => new DepartmentDto
             {
                 DeptId = Department.DeptId,
-                Name = Department.Name
+                Name = Department.Name,
+                Password = Department.Password
             }).ToList();
 
             return Ok(depertmentDtos);
@@ -65,7 +67,8 @@ namespace LabPortal.Controllers
             var departmentDto = new DepartmentDto
             {
                 DeptId = department.DeptId,
-                Name = department.Name
+                Name = department.Name,
+                Password = department.Password
             };
 
             return Ok(departmentDto);
@@ -76,13 +79,8 @@ namespace LabPortal.Controllers
         [HttpPut("{id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> PutDepartment(int id, DepartmentDto departmentDto)
+        public async Task<IActionResult> PutDepartment(int id, DepartmentCreateDto departmentDto)
         {
-            if (id != departmentDto.DeptId)
-            {
-                return BadRequest();
-            }
-
             var department = await _context.Departments.FindAsync(id);
             if (department == null)
             {
@@ -90,7 +88,7 @@ namespace LabPortal.Controllers
             }
 
             department.Name = departmentDto.Name;
-
+            department.Password = departmentDto.Password;
             _context.Entry(department).State = EntityState.Modified;
 
             try
@@ -117,7 +115,7 @@ namespace LabPortal.Controllers
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<ActionResult<DepartmentDto>> PostDepartment(DepartmentDto departmentDto)
+        public async Task<ActionResult<DepartmentCreateDto>> PostDepartment(DepartmentCreateDto departmentDto)
         {
             if (_context.Departments == null)
             {
@@ -126,7 +124,8 @@ namespace LabPortal.Controllers
 
             var department = new Department
             {
-                Name = departmentDto.Name
+                Name = departmentDto.Name,
+                Password = departmentDto.Password,
             };
 
             _context.Departments.Add(department);
@@ -163,6 +162,31 @@ namespace LabPortal.Controllers
             await _context.SaveChangesAsync();
 
             return NoContent();
+        }
+
+        // POST: api/Departments/verify-password
+        [HttpPost("verify-password")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> VerifyPassword(int deptId, string password)
+        {
+            if (string.IsNullOrEmpty(password))
+            {
+                return BadRequest("Password is required.");
+            }
+
+            var department = await _context.Departments.FindAsync(deptId);
+            if (department == null)
+            {
+                return NotFound();
+            }
+
+            if (department.Password == null || department.Password != password)
+            {
+                return BadRequest("Invalid password.");
+            }
+
+            return Ok("Password verified successfully.");
         }
 
         private bool DepartmentExists(int id)
