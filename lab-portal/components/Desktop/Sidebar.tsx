@@ -3,15 +3,13 @@ import { View, StyleSheet, Image, Text, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { checkHeartbeat, deleteToken, getUserByToken } from '../../services/loginService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { CreateAuditLog } from '../../services/auditService';
 import { crossPlatformAlert, reload } from '../../services/helpers';
 
-const Sidebar = ({ onProfilePress }: { onProfilePress: () => void }) => {
+const Sidebar = ({ onProfilePress, onClose }: { onProfilePress: () => void; onClose: () => void }) => {
   const navigation = useNavigation();
   const [privLvl, setPrivLvl] = useState<number>(0);
 
   const fetchUserData = async () => {
-    
     const token = await AsyncStorage.getItem('token');
     try {
       const isApiHealthy = await checkHeartbeat();
@@ -40,6 +38,7 @@ const Sidebar = ({ onProfilePress }: { onProfilePress: () => void }) => {
   const handlePress = async (screenName: string, permittedLevels: number[]) => {
     await fetchUserData();
     if (permittedLevels.includes(privLvl)) {
+      onClose(); // Close the profile sidebar only when navigating
       navigation.navigate(screenName);
     } else {
       crossPlatformAlert('Access Denied', 'You do not have permission to access this screen.');
@@ -47,6 +46,7 @@ const Sidebar = ({ onProfilePress }: { onProfilePress: () => void }) => {
   };
 
   const labMonitors = "   Add/Edit\nLab Monitors";
+  const deptManager = "  Department\n    Manager"
 
   return (
     <View style={styles.sidebar}>
@@ -57,10 +57,16 @@ const Sidebar = ({ onProfilePress }: { onProfilePress: () => void }) => {
         <Image source={require('../../assets/user-icon.png')} style={styles.icon} />
         <Text style={styles.menuText}>Profile</Text>
       </TouchableOpacity>
-      {(privLvl > 4) && (
-        <TouchableOpacity style={styles.menuItem} onPress={() => handlePress('Labs', [5])}>
+      {(privLvl == 5) && (
+        <TouchableOpacity style={styles.menuItem} onPress={() => handlePress('ManageLabs', [5])}>
           <Image source={require('../../assets/labs-icon.png')} style={styles.icon} />
           <Text style={styles.menuText}>{labMonitors}</Text>
+        </TouchableOpacity>
+      )}
+      {(privLvl == 5) && (
+        <TouchableOpacity style={styles.menuItem} onPress={() => handlePress('DepartmentManager', [5])}>
+          <Image source={require('../../assets/department-icon.png')} style={styles.icon} />
+          <Text style={styles.menuText}>{deptManager}</Text>
         </TouchableOpacity>
       )}
       {(privLvl >= 1 && privLvl <= 3) && (
@@ -101,7 +107,7 @@ const Sidebar = ({ onProfilePress }: { onProfilePress: () => void }) => {
       )}
       {(privLvl === 5) && (
         <TouchableOpacity style={styles.menuItem} onPress={() => handlePress('Item', [5])}>
-          <Image source={require('../../assets/admin-icon.png')} style={styles.icon} />
+          <Image source={require('../../assets/item-icon.png')} style={styles.icon} />
           <Text style={styles.menuText}>Item Manager</Text>
         </TouchableOpacity>
       )}
@@ -128,12 +134,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 20,
     height: '100%',
-    backgroundImage: 'linear-gradient(to bottom, #002147, #000000)',
-  },
-  logo: {
-    width: 50,
-    height: 50,
-    marginBottom: 20,
+    zIndex: 1, // Ensure it is behind the profile sidebar
   },
   menuItem: {
     alignItems: 'center',

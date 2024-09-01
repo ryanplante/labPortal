@@ -3,10 +3,10 @@ import { Alert, Platform } from 'react-native';
 import * as Updates from 'expo-updates';
 import { CreateErrorLog } from './errorLogService';
 
-export const crossPlatformAlert = async (title: string, message: string) => {
+export const crossPlatformAlert = (title: string, message: string) => {
     if (Platform.OS === 'web') {
       // Use the native browser alert for web
-      await Updates.reloadAsync();
+      window.alert(`${title}\n\n${message}`);
     } else {
       // Use the React Native Alert for iOS and Android
       Alert.alert(title, message);

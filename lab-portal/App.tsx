@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ActivityIndicator, View, StyleSheet, Alert, Dimensions } from 'react-native';
+import { ActivityIndicator, View, StyleSheet, Dimensions } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
@@ -8,7 +8,7 @@ import MainPage from './components/Desktop/MainPage';
 import Labs from './components/Desktop/Labs';
 import Reports from './components/Desktop/Reports';
 import Schedule from './components/Desktop/Schedule';
-import ManageLabs from './components/Desktop/ManageLabs';
+import ManageLabs from './components/Desktop/ManageLabs'; // Ensure correct import path
 import LabSchedules from './components/Desktop/LabSchedules';
 import Chat from './components/Desktop/Chat';
 import ScanItem from './components/Desktop/ScanItem';
@@ -30,7 +30,7 @@ import MobileMainPage from './components/Mobile/MainPage';
 import MobileLabs from './components/Mobile/Monitors';
 import MobileReports from './components/Mobile/Reports';
 import MobileSchedule from './components/Mobile/Schedule';
-import MobileManageLabs from './components/Mobile/ManageLabs';
+import MobileManageLabs from './components/Mobile/ManageLabs'; // Ensure correct import path
 import MobileLabSchedules from './components/Mobile/LabSchedules';
 import MobileChat from './components/Mobile/Chat';
 import MobileScanItem from './components/Mobile/ScanItem';
@@ -38,6 +38,7 @@ import MobileLogHistory from './components/Mobile/LogHistory';
 import MobileAdmin from './components/Mobile/Admin';
 import MobileProfile from './components/Mobile/Profile';
 import MobileSidebar from './components/Mobile/Sidebar';
+import DepartmentManager from './components/Desktop/DepartmentManager'; // Ensure correct import path
 
 const Stack = createStackNavigator();
 
@@ -47,35 +48,35 @@ const App = () => {
   const [isProfileSidebarVisible, setIsProfileSidebarVisible] = useState(false);
   const [orientation, setOrientation] = useState("LANDSCAPE");
 
-	const determineAndSetOrientation = () => {
-		let width = Dimensions.get("window").width;
-		let height = Dimensions.get("window").height;
+  const determineAndSetOrientation = () => {
+    let width = Dimensions.get("window").width;
+    let height = Dimensions.get("window").height;
 
-		if (width < height) {
-			setOrientation("PORTRAIT");
-		} else {
-			setOrientation("LANDSCAPE");
-		}
-	};
+    if (width < height) {
+      setOrientation("PORTRAIT");
+    } else {
+      setOrientation("LANDSCAPE");
+    }
+  };
 
   useEffect(()=>{
     determineAndSetOrientation();
-		const test = Dimensions.addEventListener(
-			"change",
-			determineAndSetOrientation
-		);
+    const test = Dimensions.addEventListener(
+      "change",
+      determineAndSetOrientation
+    );
 
-		return () => {
-			test.remove();
-		};
-  }, [])
+    return () => {
+      test.remove();
+    };
+  }, []);
+
   const isMobile = Device.deviceType == 1 || (Device.deviceType == 2 && orientation == "PORTRAIT");
 
   const adaptiveFlexDirection = {
     flexDirection: isMobile ? "column" : "row"
-  }
+  };
 
-	
   useEffect(() => {
     const validateToken = async () => {
       try {
@@ -93,28 +94,30 @@ const App = () => {
           setUser(null);
         }
       } catch (error) {
-        const errorMessage = error.message.includes('unavailable')
+        console.log(error);
+        const errorMessage = error.message.includes('server')
           ? 'Server is currently down. Please try again later.'
           : 'Token has expired. Please refresh the app and re-login to continue.';
-        crossPlatformAlert('Error', error.message);
+        crossPlatformAlert('Error', errorMessage);
 
         await deleteToken();
         setUser(null);
       } finally {
         setLoading(false);  
       }
-
     };
-    console.log("b4 validatetoken")
+
     validateToken();    
-    console.log("after validatetoken")
   }, []);
 
-  
-
-
   const toggleProfileSidebar = () => {
-    setIsProfileSidebarVisible(!isProfileSidebarVisible);
+    console.log('Toggling Profile Sidebar visibility');
+    setIsProfileSidebarVisible((prev) => !prev);
+  };
+
+  const handleCloseSidebar = () => {
+    console.log('Closing Profile Sidebar');
+    setIsProfileSidebarVisible(false);
   };
 
   if (loading) {  
@@ -125,15 +128,14 @@ const App = () => {
     );
   }
 
-  console.log("before return, isMobile", isMobile)
   return (
     <NavigationContainer>
       <View style={[styles.container, adaptiveFlexDirection]}>
         {user && !isMobile && (
           <>
-            <Sidebar onProfilePress={toggleProfileSidebar} />
+            <Sidebar onProfilePress={toggleProfileSidebar} onClose={handleCloseSidebar} />
             {isProfileSidebarVisible && (
-              <ProfileSidebar visible={isProfileSidebarVisible} onClose={toggleProfileSidebar} />
+              <ProfileSidebar visible={isProfileSidebarVisible} onClose={handleCloseSidebar} />
             )}
           </>
         )}
@@ -162,6 +164,7 @@ const App = () => {
                   <Stack.Screen name="Reports" component={Reports} />
                   <Stack.Screen name="Schedule" component={Schedule} />
                   <Stack.Screen name="ManageLabs" component={ManageLabs} />
+                  <Stack.Screen name="DepartmentManager" component={DepartmentManager} />
                   <Stack.Screen name="LabSchedules" component={LabSchedules} />
                   <Stack.Screen name="Chat" component={Chat} />
                   <Stack.Screen name="Help" component={HelpScreen} />
@@ -181,8 +184,7 @@ const App = () => {
             )}
           </Stack.Navigator>
         </View>
-        {user && isMobile && <MobileSidebar onProfilePress={toggleProfileSidebar} />}
-
+        {user && isMobile && <MobileSidebar onProfilePress={toggleProfileSidebar} onClose={handleCloseSidebar} />}
       </View>
     </NavigationContainer>
   );
@@ -190,7 +192,6 @@ const App = () => {
 
 const styles = StyleSheet.create({
   container: {
-    // flexDirection: 'row',
     flex: 1,
   },
   mainContent: {

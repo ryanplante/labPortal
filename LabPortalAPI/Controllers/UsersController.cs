@@ -128,6 +128,7 @@ namespace LabPortal.Controllers
             return NoContent();
         }
 
+
         // POST: api/Users
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
@@ -444,6 +445,49 @@ namespace LabPortal.Controllers
 
             return NoContent();
         }
+
+        // PUT: api/Users/UpdatePermission/{id}
+        [HttpPut("UpdatePermission/{id}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> UpdatePermission(int id, [FromBody] int permission)
+        {
+            if (_context.Users == null)
+            {
+                return NotFound("User context is not available.");
+            }
+
+            var user = await _context.Users.FindAsync(id);
+            if (user == null)
+            {
+                return NotFound("User not found.");
+            }
+
+            // Update the user's permission level
+            user.PrivLvl = permission;
+
+            _context.Entry(user).State = EntityState.Modified;
+
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!UserExists(id))
+                {
+                    return NotFound();
+                }
+                else
+                {
+                    throw;
+                }
+            }
+
+            return Ok($"User permission level updated to {permission}.");
+        }
+
         // DELETE api/Users/DeleteToken/{token}
         [HttpDelete("DeleteToken/{token}")]
         [ProducesResponseType(StatusCodes.Status200OK)]

@@ -48,16 +48,21 @@ class LabService {
     }
 
     // GET: /api/Labs/Department/{id}
-    async getLabByDept(deptId: number): Promise<number> {
+    async getLabByDept(deptId: number): Promise<Lab[]> {
         try {
-            const response: AxiosResponse<number> = await axios.get(`${this.baseUrl}/Department`, { params: { id: deptId } });
+            const response: AxiosResponse<Lab[]> = await axios.get(`${this.baseUrl}/Department/${deptId}`);
             await this.audit('view', `Viewed lab by department ID: ${deptId}`);
             return response.data;
         } catch (error) {
+            if (axios.isAxiosError(error) && error.response?.status === 404) {
+                console.warn(`No labs found for department ID: ${deptId}`);
+                return []; // Return an empty array instead of throwing an error
+            }
             await this.handleError(error, 'getLabByDept');
             throw error;
         }
     }
+
 
     // PUT: /api/Labs/{id}
     async updateLab(id: number, labDto: Lab): Promise<void> {

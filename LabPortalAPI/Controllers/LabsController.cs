@@ -79,26 +79,34 @@ namespace LabPortal.Controllers
         }
 
         // GET: api/Labs/Department/1
-        [HttpGet("Department")]
+        [HttpGet("Department/{id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<int>> GetLabByDept(int id)
+        public async Task<ActionResult<IEnumerable<LabDto>>> GetLabsByDept(int id)
         {
             if (_context.Labs == null)
             {
                 return NotFound();
             }
-            var lab = await _context.Labs
-                .Include(l => l.Dept)
-                .FirstOrDefaultAsync(l => l.DeptId == id);
 
-            if (lab == null)
+            var labs = await _context.Labs
+                .Where(l => l.DeptId == id)
+                .Select(l => new LabDto
+                {
+                    LabId = l.LabId,
+                    Name = l.Name,
+                    RoomNum = l.RoomNum,
+                    DeptId = l.DeptId
+                })
+                .ToListAsync();
+
+            if (labs == null || labs.Count == 0)
             {
                 return NotFound();
             }
 
-            return Ok(lab.LabId);
+            return Ok(labs);
         }
 
         // PUT: api/Labs/5

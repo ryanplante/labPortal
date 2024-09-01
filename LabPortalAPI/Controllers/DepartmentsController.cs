@@ -6,8 +6,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LabPortal.Models;
-using System.Text;
-using System.Security.Cryptography;
 using LabPortal.Models.Dto;
 using LabPortal.Models.CreateDtos;
 
@@ -35,15 +33,18 @@ namespace LabPortal.Controllers
             {
                 return NotFound();
             }
-            var departments = await _context.Departments.ToListAsync();
-            var depertmentDtos = departments.Select(Department => new DepartmentDto
+            var departments = await _context.Departments
+                                             .Where(d => d.DeptId != 0) // Filter out DeptId 0
+                                             .ToListAsync();
+
+            var departmentDtos = departments.Select(department => new DepartmentDto
             {
-                DeptId = Department.DeptId,
-                Name = Department.Name,
-                Password = Department.Password
+                DeptId = department.DeptId,
+                Name = department.Name,
+                Password = department.Password
             }).ToList();
 
-            return Ok(depertmentDtos);
+            return Ok(departmentDtos);
         }
 
         // GET: api/Departments/5
@@ -57,7 +58,11 @@ namespace LabPortal.Controllers
             {
                 return NotFound();
             }
-            var department = await _context.Departments.FindAsync(id);
+
+            // Ensure we don't return the department with DeptId 0
+            var department = await _context.Departments
+                                           .Where(d => d.DeptId != 0 && d.DeptId == id)
+                                           .FirstOrDefaultAsync();
 
             if (department == null)
             {
@@ -75,7 +80,6 @@ namespace LabPortal.Controllers
         }
 
         // PUT: api/Departments/5
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -87,9 +91,54 @@ namespace LabPortal.Controllers
                 return NotFound();
             }
 
+            // Update department details
             department.Name = departmentDto.Name;
             department.Password = departmentDto.Password;
             _context.Entry(department).State = EntityState.Modified;
+
+            // Handle department head promotion/demotion
+            if (departmentDto.DepartmentHeadId.HasValue)
+            {
+                var newHead = await _context.Users.FindAsync(departmentDto.DepartmentHeadId.Value);
+                if (newHead == null)
+                {
+                    return BadRequest("Invalid Department Head User ID.");
+                }
+
+                // Check if the new head is different from the current head
+                var currentHead = await _context.Users
+                    .FirstOrDefaultAsync(u => u.UserDept == id && u.PrivLvl == 4);
+
+                if (currentHead == null || currentHead.UserId != newHead.UserId)
+                {
+                    if (newHead.PrivLvl == 4)
+                    {
+                        return BadRequest("This user is already a department head.");
+                    }
+
+                    // Demote previous head if they exist and are different from the new head
+                    if (currentHead != null && currentHead.UserId != newHead.UserId)
+                    {
+                        currentHead.PrivLvl = 0;
+                    }
+
+                    // Promote the new head
+                    newHead.PrivLvl = 4;
+                    newHead.UserDept = id;
+                }
+            }
+            else if (departmentDto.DepartmentHeadId == null)
+            {
+                // Demote the current head if no new head is assigned
+                var currentHead = await _context.Users
+                    .FirstOrDefaultAsync(u => u.UserDept == id && u.PrivLvl == 4);
+
+                if (currentHead != null)
+                {
+                    currentHead.PrivLvl = 0;
+                    currentHead.UserDept = 0; // Assign to the unknown department
+                }
+            }
 
             try
             {
@@ -111,7 +160,6 @@ namespace LabPortal.Controllers
         }
 
         // POST: api/Departments
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -129,14 +177,29 @@ namespace LabPortal.Controllers
             };
 
             _context.Departments.Add(department);
-            try
+            await _context.SaveChangesAsync();
+
+            // Now that the department is created, get its ID
+            int departmentId = department.DeptId;
+
+            // Handle department head promotion (if one is assigned)
+            if (departmentDto.DepartmentHeadId.HasValue)
             {
+                var newHead = await _context.Users.FindAsync(departmentDto.DepartmentHeadId.Value);
+                if (newHead == null)
+                {
+                    return BadRequest("Invalid Department Head User ID.");
+                }
+
+                if (newHead.PrivLvl == 4)
+                {
+                    return BadRequest("This user is already a department head.");
+                }
+
+                // Promote the new head
+                newHead.PrivLvl = 4;
+                newHead.UserDept = departmentId;
                 await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateException ex)
-            {
-                // Simplified the error as to not show more info than needed
-                return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while saving the department.");
             }
 
             return Ok();
@@ -152,10 +215,22 @@ namespace LabPortal.Controllers
             {
                 return NotFound();
             }
+
             var department = await _context.Departments.FindAsync(id);
             if (department == null)
             {
                 return NotFound();
+            }
+
+            // Remove all labs associated with this department
+            var labs = _context.Labs.Where(l => l.DeptId == id).ToList();
+            _context.Labs.RemoveRange(labs);
+
+            // Reassign users to the unknown department (id 0)
+            var users = _context.Users.Where(u => u.UserDept == id).ToList();
+            foreach (var user in users)
+            {
+                user.UserDept = 0; // Assign to the unknown department
             }
 
             _context.Departments.Remove(department);
