@@ -19,8 +19,8 @@ const MobileLabs = () => {
         const fetchUsers = async () => {
             try {
                 const response = await userService.getAllUsers();
-                const allUsers = response["$values"];  // Access the "$values" array
-                const filteredUsers = allUsers.filter((user: { position: number; }) => user.position === 1);
+                const allUsers = response["$values"];
+                const filteredUsers = allUsers.filter((user: { position: number; }) => user.position === 0 || user.position === 1 || user.position === 2);
                 setUsers(filteredUsers);
             } catch (error) {
                 console.error('Failed to fetch users:', error);
@@ -38,26 +38,33 @@ const MobileLabs = () => {
     const handleEdit = (user: User) => {
       setItemForAction(user);  // Set the user to be edited
       setEditModalVisible(true);  // Open the edit modal
-  };
+    };
 
     const handleSave = async (updatedUser: User) => {
-      try {
+        try {
           await userService.updateUser(updatedUser.userId, updatedUser);
 
           setConfirmModalVisible(false);
 
-        const response = await userService.getAllUsers();
-        const allUsers = response["$values"];
-        const filteredUsers = allUsers.filter((user: { position: number; }) => user.position === 1);
-        setUsers(filteredUsers);
-      } catch (error) {
-          console.error('Failed to update user:', error);
-      }
-  };
+            const response = await userService.getAllUsers();
+            const allUsers = response["$values"];
+            const filteredUsers = allUsers.filter((user: { position: number; }) => user.position === 0 || user.position === 1 || user.position === 2);
+            setUsers(filteredUsers);
+        } catch (error) {
+            console.error('Failed to update user:', error);
+        }
+    };
 
-    const handleDelete = (user: User) => {
-        // Implement the delete logic here
-        console.log("Delete user:", user);
+    const handleDelete = async (user: User) => {
+        if (user) {
+            const updatedUser = { ...user, position: null }; // Set position to NULL
+            try {
+                await handleSave(updatedUser);  // Save the updated user
+            } catch (error) {
+                console.error('Failed to update user:', error);
+            }
+        }
+        console.log("Demoted User:", user);
     };
 
     const actionButtons = [
@@ -86,9 +93,9 @@ const MobileLabs = () => {
     return (
       <SafeAreaView style={styles.container}>
           <View style={styles.headerContainer}>
-              <Text style={styles.header}>[Department] Lab Monitors</Text>
+              <Text style={styles.header}>[Department] Lab Monitors & Tutors</Text>
           </View>
-          <Text style={styles.subHeader}>Current Monitors</Text>
+          <Text style={styles.subHeader}>Current Monitors & Tutors</Text>
           <ScrollView contentContainerStyle={styles.scrollViewContent}>
             <FlatList
                 data={users}
@@ -101,11 +108,12 @@ const MobileLabs = () => {
                     >
                         <Text style={styles.tableCell}>{item.userId}</Text>
                         <Text style={styles.tableCell}>{item.fName} {item.lName}</Text>
+                        <Text style={styles.tableCell}>{item.position === 0 ? "Tutor" : item.position === 1 ? "Monitor" : item.position === 2 ? "Monitor/Tutor" : ""}</Text>
                     </TouchableOpacity>
                 )}
             />
           <TouchableOpacity style={styles.addButton} onPress={() => setSearchModalVisible(true)}>
-              <Text style={styles.addButtonText}>Add new monitor</Text>
+              <Text style={styles.addButtonText}>Add New Monitor/Tutor</Text>
           </TouchableOpacity>
           </ScrollView>
           <ActionsModal

@@ -1,33 +1,42 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, Modal, Switch, TouchableOpacity, StyleSheet } from 'react-native';
+import RNPickerSelect from 'react-native-picker-select';
 
 const ConfirmMonitorModal = ({ visible, user, onClose, onSave }) => {
-  const [isMonitor, setIsMonitor] = useState(user?.position === 1);
+  const [selectedPosition, setSelectedPosition] = useState(user?.position?.toString() || 'NULL');
 
   useEffect(() => {
-    if (user) {
-      setIsMonitor(user.position === 1);
+    if (user && user.position !== undefined) {
+      setSelectedPosition(user.position.toString());
+    } else {
+      setSelectedPosition('NULL'); // Default to '0' if position is undefined
     }
   }, [user]);
-  
+
   const handleSave = () => {
-    const updatedUser = { ...user, position: isMonitor ? 1 : 0 };
-    onSave(updatedUser);
+    if (user) {
+      const updatedUser = { ...user, position: parseInt(selectedPosition) };
+      onSave(updatedUser);  // Call the onSave function passed as a prop
+    }
   };
 
   return (
     <Modal visible={visible} animationType="slide">
       <View style={styles.modalContainer}>
-        <Text style={styles.modalTitle}>Set Monitor Status</Text>
+        <Text style={styles.modalTitle}>Set Position Status</Text>
         <Text>{user?.fName} {user?.lName}</Text>
-        <View style={styles.switchContainer}>
-          <Text>No</Text>
-          <Switch
-            value={isMonitor}
-            onValueChange={setIsMonitor}
-          />
-          <Text>Yes</Text>
-        </View>
+        
+        <RNPickerSelect
+          onValueChange={(value) => setSelectedPosition(value)}
+          items={[
+            { label: 'Tutor', value: '0' },
+            { label: 'Monitor', value: '1' },
+            { label: 'Tutor/Monitor', value: '2' },
+          ]}
+          value={selectedPosition}
+          style={pickerSelectStyles}
+        />
+
         <TouchableOpacity onPress={handleSave} style={styles.saveButton}>
           <Text style={styles.saveButtonText}>Save</Text>
         </TouchableOpacity>
@@ -76,6 +85,31 @@ const styles = StyleSheet.create({
   closeButtonText: {
     color: '#000',
     fontSize: 16,
+  },
+});
+
+const pickerSelectStyles = StyleSheet.create({
+  inputIOS: {
+    fontSize: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    borderWidth: 1,
+    borderColor: 'gray',
+    borderRadius: 4,
+    color: 'black',
+    paddingRight: 30, // to ensure the text is not behind the icon
+    marginBottom: 20,
+  },
+  inputAndroid: {
+    fontSize: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderWidth: 0.5,
+    borderColor: 'purple',
+    borderRadius: 8,
+    color: 'black',
+    paddingRight: 30, // to ensure the text is not behind the icon
+    marginBottom: 20,
   },
 });
 
