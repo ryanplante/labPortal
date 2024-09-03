@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Button, StyleSheet, FlatList, Text, TextInput, TouchableOpacity } from 'react-native';
 import DynamicForm from '../Modals/DynamicForm';
-import StudentSearcher from '../Modals/StudentSearcher';
+import UserSearcher from '../Modals/UserSearcher';
 import moment from 'moment-timezone';
 import { Ionicons } from '@expo/vector-icons';
 import PlatformSpecificTimePicker from '../Modals/PlatformSpecificTimePicker';
@@ -209,7 +209,7 @@ const ExamplePage = () => {
                         resetForm();
                     }}
                     title={activeTabIndex === 0 ? "Example 1" : "Example 2"}
-                    components={isStudentSearcherOpen ? [[<StudentSearcher key="searcher" onSelect={handleStudentSelect} onBackPress={() => setStudentSearcherOpen(false)} />]] : [example1Components, example2Components]}
+                    components={isStudentSearcherOpen ? [[<UserSearcher key="searcher" onSelect={handleStudentSelect} onBackPress={() => setStudentSearcherOpen(false)} isTeacher={null} />]] : [example1Components, example2Components]}
                     tabs={['Example 1', 'Example 2']}
                     activeTabIndex={activeTabIndex}
                     backgroundColor="#d6d6d6"

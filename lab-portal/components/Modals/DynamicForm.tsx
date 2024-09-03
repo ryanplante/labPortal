@@ -18,7 +18,7 @@ const DynamicForm = ({
     visible,
     title,
     onClose,
-    components,
+    components = [[]], // Ensure components is always an array of arrays
     tabs = [''],
     activeTabIndex = 0,
     isStudentSearcherOpen = false,
@@ -85,7 +85,7 @@ const DynamicForm = ({
                     </View>
                     {error && <Text style={styles.errorLabel}>{error}</Text>}
                     <ScrollView style={styles.content}>
-                        {components[activeTab].map((Component, index) => (
+                        {components[activeTab]?.map((Component, index) => (
                             <View key={index} style={styles.componentContainer}>
                                 {Component}
                             </View>

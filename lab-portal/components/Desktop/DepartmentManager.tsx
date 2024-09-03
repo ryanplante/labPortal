@@ -4,7 +4,7 @@ import DepartmentService, { Department } from '../../services/departmentService'
 import DynamicForm from '../Modals/DynamicForm';
 import ConfirmationModal from '../Modals/ConfirmationModal';
 import ActionsModal from '../Modals/ActionsModal';
-import TeacherSearcher from '../Modals/TeacherSearcher';
+import UserSearcher from '../Modals/UserSearcher';
 import userService, { User } from '../../services/userService';
 
 const DepartmentManager = ({ navigation }) => {
@@ -331,19 +331,21 @@ const DepartmentManager = ({ navigation }) => {
             }}
             components={
               isTeacherSearcherOpen ? (
-                [[<TeacherSearcher
-                  key="teacherSearcher"
-                  onSelect={(teacher) => {
-                    if (teacher.userId === selectedDepartmentHead?.userId) {
-                      setError('Selected teacher is already the department head.');
-                      return;
-                    }
-                    setSelectedDepartmentHead(teacher);
-                    setTeacherSearcherOpen(false);
-                    setError(null);
-                  }}
-                  onBackPress={() => setTeacherSearcherOpen(false)}
-                />]]
+                [[<UserSearcher
+                    key="userSearcher"
+                    onSelect={(user) => {
+                        if (user.userId === selectedDepartmentHead?.userId) {
+                            setError('Selected user is already the department head.');
+                            return;
+                        }
+                        setSelectedDepartmentHead(user);
+                        setTeacherSearcherOpen(false);
+                        setError(null);
+                    }}
+                    onBackPress={() => setTeacherSearcherOpen(false)}
+                    isTeacher={true}
+                />
+                ]]
               ) : (
                 [formComponents] 
               )

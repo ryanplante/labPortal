@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, TextInput, Image, Button, Picker, Dimensions } from 'react-native';
 import moment from 'moment-timezone';
-import StudentSearcher from '../../Modals/StudentSearcher';
+import UserSearcher from '../../Modals/UserSearcher';
 import DynamicForm from '../../Modals/DynamicForm';
 import PlatformSpecificTimePicker from '../../Modals/PlatformSpecificTimePicker';
 import { checkHeartbeat, deleteToken, getUserByToken } from '../../../services/loginService';
@@ -442,7 +442,7 @@ const MonitorView = () => {
         }}
         components={
           [
-            isStudentSearcherOpen ? [[<StudentSearcher key="searcher" onSelect={handleStudentSelect} onBackPress={() => setStudentSearcherOpen(false)} />]] : [
+            isStudentSearcherOpen ? [[<UserSearcher key="searcher" onSelect={handleStudentSelect} onBackPress={() => setStudentSearcherOpen(false)} isTeacher={null} />]] : [
               ...studentPickerComponent,
               ...timePickerComponent,
               ...addButtonComponent

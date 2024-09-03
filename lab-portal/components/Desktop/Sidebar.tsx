@@ -57,8 +57,8 @@ const Sidebar = ({ onProfilePress, onClose }: { onProfilePress: () => void; onCl
         <Image source={require('../../assets/user-icon.png')} style={styles.icon} />
         <Text style={styles.menuText}>Profile</Text>
       </TouchableOpacity>
-      {(privLvl == 5) && (
-        <TouchableOpacity style={styles.menuItem} onPress={() => handlePress('ManageLabs', [5])}>
+      {(privLvl >= 4) && (
+        <TouchableOpacity style={styles.menuItem} onPress={() => handlePress('ManageLabs', [4,5])}>
           <Image source={require('../../assets/labs-icon.png')} style={styles.icon} />
           <Text style={styles.menuText}>{labMonitors}</Text>
         </TouchableOpacity>

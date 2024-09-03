@@ -3,22 +3,24 @@ import { View, TextInput, Button, StyleSheet, FlatList, TouchableOpacity, Alert,
 import userService from '../../services/userService';
 import { Ionicons } from '@expo/vector-icons';
 
-type Student = {
+type User = {
     userId: number;
     fName: string;
     lName: string;
+    isTeacher: boolean;
 };
 
-interface StudentSearcherProps {
-    onSelect: (student: Student) => void;
-    onBackPress: () => void; // Callback for the back button
+interface UserSearcherProps {
+    onSelect: (user: User) => void;
+    onBackPress: () => void;
+    isTeacher: boolean | null; // Accepts true, false, or null to filter by user type
 }
 
-const StudentSearcher = ({ onSelect, onBackPress }: StudentSearcherProps) => {
+const UserSearcher = ({ onSelect, onBackPress, isTeacher }: UserSearcherProps) => {
     const [searchId, setSearchId] = useState('');
     const [searchFirstName, setSearchFirstName] = useState('');
     const [searchLastName, setSearchLastName] = useState('');
-    const [students, setStudents] = useState<Student[]>([]);
+    const [users, setUsers] = useState<User[]>([]);
 
     const handleSearch = async () => {
         try {
@@ -26,32 +28,47 @@ const StudentSearcher = ({ onSelect, onBackPress }: StudentSearcherProps) => {
                 Alert.alert('Error', 'Please enter an ID, first name, or last name to search.');
                 return;
             }
-
+    
             let results;
             if (searchId.trim() !== '') {
-                results = await userService.fuzzySearchById(searchId);
+                results = await userService.fuzzySearchById(parseInt(searchId, 10));
             } else {
                 results = await userService.fuzzySearchByName(searchFirstName, searchLastName);
             }
-
+    
             if (results?.$values) {
-                const mappedResults = results.$values.map((student: any) => ({
-                    userId: student.userId,
-                    fName: student.fName,
-                    lName: student.lName,
+                let filteredResults = results.$values;
+                if (isTeacher !== null) {
+                    filteredResults = filteredResults.filter(user => {
+                        console.log(user)
+                        if (isTeacher) {
+                            return user.isTeacher === true;
+                        } else {
+                            console.log(user.isTeacher)
+                            return user.isTeacher === false || user.isTeacher === undefined;
+                        }
+                    });
+                }
+    
+                const mappedResults = filteredResults.map((user: any) => ({
+                    userId: parseInt(user.userId.toString().padStart(8, '0')),
+                    fName: user.fName,
+                    lName: user.lName,
                 }));
-
-                setStudents(mappedResults || []);
+                console.log(mappedResults)
+    
+                setUsers(mappedResults);
             } else {
-                setStudents([]);
+                setUsers([]);
             }
         } catch (error) {
-            console.error('Error fetching students:', error);
+            console.error('Error fetching users:', error);
         }
     };
+    
 
-    const handleSelect = (student: Student) => {
-        onSelect(student);
+    const handleSelect = (user: User) => {
+        onSelect(user);
     };
 
     return (
@@ -87,17 +104,17 @@ const StudentSearcher = ({ onSelect, onBackPress }: StudentSearcherProps) => {
             <Button title="Search" onPress={handleSearch} />
 
             <FlatList
-                data={students}
+                data={users}
                 keyExtractor={(item) => item.userId.toString()}
                 renderItem={({ item }) => (
-                    <TouchableOpacity onPress={() => handleSelect(item)} style={styles.studentRow}>
+                    <TouchableOpacity onPress={() => handleSelect(item)} style={styles.userRow}>
                         <Text style={styles.selectText}>Select</Text>
-                        <Text>ID: {item.userId}</Text>
+                        <Text>ID: {item.userId.toString().padStart(8, '0')}</Text>
                         <Text>First Name: {item.fName}</Text>
                         <Text>Last Name: {item.lName}</Text>
                     </TouchableOpacity>
                 )}
-                ListEmptyComponent={<Text>No students found.</Text>}
+                ListEmptyComponent={<Text>No users found.</Text>}
             />
         </View>
     );
@@ -121,7 +138,7 @@ const styles = StyleSheet.create({
         marginBottom: 10,
         borderRadius: 10,
     },
-    studentRow: {
+    userRow: {
         flexDirection: 'column',
         justifyContent: 'space-between',
         padding: 10,
@@ -137,4 +154,4 @@ const styles = StyleSheet.create({
     },
 });
 
-export default StudentSearcher;
+export default UserSearcher;

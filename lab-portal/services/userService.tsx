@@ -70,13 +70,19 @@ class UserService {
     // PUT: /api/Users/UpdatePermission/{id}
     async updatePermission(userId: number, newPermissionLevel: number): Promise<void> {
         try {
-            await axios.put(`${this.baseUrl}/UpdatePermission/${userId}`, newPermissionLevel);
+            // Send the newPermissionLevel as JSON with the correct Content-Type header
+            await axios.put(`${this.baseUrl}/UpdatePermission/${userId}`, newPermissionLevel, {
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
             await this.audit('update', `Updated permission level for user with ID: ${userId} to ${newPermissionLevel}`, userId);
         } catch (error) {
             await this.handleError(error, 'updatePermission');
             throw error;
         }
     }
+    
 
     // GET: /api/Users/FuzzySearchById/{id}
     async fuzzySearchById(id: number): Promise<User[]> {
