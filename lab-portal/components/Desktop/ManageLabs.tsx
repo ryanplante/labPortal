@@ -366,7 +366,7 @@ const ManageLabs = ({ route, navigation, department: initialDepartment }) => {
               placeholder="Select a user"
               value={editingUser ? `${editingUser.fName} ${editingUser.lName}` : ''}
               editable={false}
-              style={styles.input}
+              style={styles.readOnlyInput}
             />
             {!isEditing && (
               <TouchableOpacity onPress={() => setUserSearcherOpen(true)} style={styles.iconButton}>
@@ -726,13 +726,23 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: 10,
+  },
+  readOnlyInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    padding: 10,
+    borderRadius: 10,
+    height: 45,
+    backgroundColor: '#aaaaaaaa',
   },
   iconButton: {
     marginLeft: 10,
   },
   searchIcon: {
-    width: 30,
-    height: 30, 
+    width: 45,
+    height: 45,
   },  
 });
 
