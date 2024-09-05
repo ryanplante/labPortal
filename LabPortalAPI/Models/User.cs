@@ -13,6 +13,7 @@ namespace LabPortal.Models
             ErrorLogs = new HashSet<ErrorLog>();
             LogMonitors = new HashSet<Log>();
             LogStudents = new HashSet<Log>();
+            ScheduleExemptions = new HashSet<ScheduleExemption>();
             Schedules = new HashSet<Schedule>();
             UserTokens = new HashSet<UserToken>();
         }
@@ -36,6 +37,7 @@ namespace LabPortal.Models
         public virtual ICollection<ErrorLog> ErrorLogs { get; set; }
         public virtual ICollection<Log> LogMonitors { get; set; }
         public virtual ICollection<Log> LogStudents { get; set; }
+        public virtual ICollection<ScheduleExemption> ScheduleExemptions { get; set; }
         public virtual ICollection<Schedule> Schedules { get; set; }
         public virtual ICollection<UserToken> UserTokens { get; set; }
     }

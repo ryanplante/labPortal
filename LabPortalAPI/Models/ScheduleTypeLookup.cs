@@ -7,12 +7,14 @@ namespace LabPortal.Models
     {
         public ScheduleTypeLookup()
         {
-            Schedules = new HashSet<Schedule>();
+            ScheduleFkLabNavigations = new HashSet<Schedule>();
+            ScheduleFkScheduleTypeNavigations = new HashSet<Schedule>();
         }
 
         public int TypeId { get; set; }
         public string? TypeName { get; set; }
 
-        public virtual ICollection<Schedule> Schedules { get; set; }
+        public virtual ICollection<Schedule> ScheduleFkLabNavigations { get; set; }
+        public virtual ICollection<Schedule> ScheduleFkScheduleTypeNavigations { get; set; }
     }
 }

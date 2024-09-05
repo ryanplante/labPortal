@@ -23,6 +23,7 @@ namespace LabPortal.Models
         public virtual DbSet<Department> Departments { get; set; } = null!;
         public virtual DbSet<ErrorLog> ErrorLogs { get; set; } = null!;
         public virtual DbSet<ErrorLogTypeLookup> ErrorLogTypeLookups { get; set; } = null!;
+        public virtual DbSet<ExemptionTypeLookup> ExemptionTypeLookups { get; set; } = null!;
         public virtual DbSet<Item> Items { get; set; } = null!;
         public virtual DbSet<Lab> Labs { get; set; } = null!;
         public virtual DbSet<Log> Logs { get; set; } = null!;
@@ -30,6 +31,7 @@ namespace LabPortal.Models
         public virtual DbSet<PermissionLookup> PermissionLookups { get; set; } = null!;
         public virtual DbSet<PositionLookup> PositionLookups { get; set; } = null!;
         public virtual DbSet<Schedule> Schedules { get; set; } = null!;
+        public virtual DbSet<ScheduleExemption> ScheduleExemptions { get; set; } = null!;
         public virtual DbSet<ScheduleTypeLookup> ScheduleTypeLookups { get; set; } = null!;
         public virtual DbSet<TransactionTypeLookup> TransactionTypeLookups { get; set; } = null!;
         public virtual DbSet<User> Users { get; set; } = null!;
@@ -191,6 +193,20 @@ namespace LabPortal.Models
                     .HasColumnName("typeName");
             });
 
+            modelBuilder.Entity<ExemptionTypeLookup>(entity =>
+            {
+                entity.HasKey(e => e.PkType)
+                    .HasName("PK_TypeLookup");
+
+                entity.ToTable("ExemptionTypeLookup");
+
+                entity.Property(e => e.PkType).HasColumnName("pk_type");
+
+                entity.Property(e => e.Name)
+                    .HasMaxLength(30)
+                    .HasColumnName("name");
+            });
+
             modelBuilder.Entity<Item>(entity =>
             {
                 entity.Property(e => e.ItemId).HasColumnName("itemID");
@@ -343,7 +359,11 @@ namespace LabPortal.Models
 
                 entity.Property(e => e.FkLab).HasColumnName("fk_lab");
 
-                entity.Property(e => e.Location).HasColumnName("location");
+                entity.Property(e => e.FkScheduleType).HasColumnName("fk_scheduleType");
+
+                entity.Property(e => e.Location)
+                    .HasMaxLength(50)
+                    .HasColumnName("location");
 
                 entity.Property(e => e.TimeIn)
                     .HasMaxLength(5)
@@ -356,19 +376,67 @@ namespace LabPortal.Models
                 entity.Property(e => e.UserId).HasColumnName("userID");
 
                 entity.HasOne(d => d.FkLabNavigation)
-                    .WithMany(p => p.Schedules)
+                    .WithMany(p => p.ScheduleFkLabNavigations)
                     .HasForeignKey(d => d.FkLab)
                     .HasConstraintName("FK__Schedules__sched__71D1E811");
 
-                entity.HasOne(d => d.LocationNavigation)
-                    .WithMany(p => p.Schedules)
-                    .HasForeignKey(d => d.Location)
-                    .HasConstraintName("FK__Schedules__locat__72C60C4A");
+                entity.HasOne(d => d.FkScheduleTypeNavigation)
+                    .WithMany(p => p.ScheduleFkScheduleTypeNavigations)
+                    .HasForeignKey(d => d.FkScheduleType)
+                    .HasConstraintName("FK_Schedules_ScheduleTypeLookup");
 
                 entity.HasOne(d => d.User)
                     .WithMany(p => p.Schedules)
                     .HasForeignKey(d => d.UserId)
                     .HasConstraintName("FK__Schedules__userI__70DDC3D8");
+            });
+
+            modelBuilder.Entity<ScheduleExemption>(entity =>
+            {
+                entity.HasKey(e => e.PkScheduleExemptions);
+
+                entity.Property(e => e.PkScheduleExemptions).HasColumnName("pk_schedule_exemptions");
+
+                entity.Property(e => e.EndDate)
+                    .HasColumnType("datetime")
+                    .HasColumnName("end_date");
+
+                entity.Property(e => e.FkExemptionType).HasColumnName("fk_exemption_type");
+
+                entity.Property(e => e.FkLab).HasColumnName("fk_lab");
+
+                entity.Property(e => e.FkSchedule).HasColumnName("fk_schedule");
+
+                entity.Property(e => e.FkUser).HasColumnName("fk_user");
+
+                entity.Property(e => e.StartDate)
+                    .HasColumnType("datetime")
+                    .HasColumnName("start_date");
+
+                entity.Property(e => e.Verified).HasColumnName("verified");
+
+                entity.HasOne(d => d.FkExemptionTypeNavigation)
+                    .WithMany(p => p.ScheduleExemptions)
+                    .HasForeignKey(d => d.FkExemptionType)
+                    .OnDelete(DeleteBehavior.ClientSetNull)
+                    .HasConstraintName("FK_ScheduleExemptions_TypeLookup");
+
+                entity.HasOne(d => d.FkLabNavigation)
+                    .WithMany(p => p.ScheduleExemptions)
+                    .HasForeignKey(d => d.FkLab)
+                    .OnDelete(DeleteBehavior.ClientSetNull)
+                    .HasConstraintName("FK_ScheduleExemptions_Labs");
+
+                entity.HasOne(d => d.FkScheduleNavigation)
+                    .WithMany(p => p.ScheduleExemptions)
+                    .HasForeignKey(d => d.FkSchedule)
+                    .HasConstraintName("FK_ScheduleExemptions_Schedules");
+
+                entity.HasOne(d => d.FkUserNavigation)
+                    .WithMany(p => p.ScheduleExemptions)
+                    .HasForeignKey(d => d.FkUser)
+                    .OnDelete(DeleteBehavior.ClientSetNull)
+                    .HasConstraintName("FK_ScheduleExemptions_Users");
             });
 
             modelBuilder.Entity<ScheduleTypeLookup>(entity =>

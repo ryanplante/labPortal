@@ -9,7 +9,7 @@ namespace LabPortal.Models
         {
             Items = new HashSet<Item>();
             Logs = new HashSet<Log>();
-            Schedules = new HashSet<Schedule>();
+            ScheduleExemptions = new HashSet<ScheduleExemption>();
         }
 
         public int LabId { get; set; }
@@ -20,6 +20,6 @@ namespace LabPortal.Models
         public virtual Department? Dept { get; set; }
         public virtual ICollection<Item> Items { get; set; }
         public virtual ICollection<Log> Logs { get; set; }
-        public virtual ICollection<Schedule> Schedules { get; set; }
+        public virtual ICollection<ScheduleExemption> ScheduleExemptions { get; set; }
     }
 }
