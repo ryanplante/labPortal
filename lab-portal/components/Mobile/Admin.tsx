@@ -20,21 +20,18 @@ const MobileAdmin = () => {
 	const renderView = () => {
 		switch (selectedView) {
 			case "Users":
-				console.log("users view");
+				// console.log("users view");
 				return <AdminUsersView />;
 			case "Departments":
-				console.log("dept view");
+				// console.log("dept view");
 				return <AdminDeptView />;
 			case "Labs":
-				console.log("lab view");
+				// console.log("lab view");
 				return <AdminLabView />;
 			case "Items":
-				console.log("items view");
+				// console.log("items view");
 				return <AdminItemsView />;
 		}
-	};
-	const selected = {
-		backgroundColor: "lightBlue",
 	};
 	return (
 		<SafeAreaView style={[styles.container]}>
@@ -117,5 +114,11 @@ const styles = StyleSheet.create({
 	},
 	selectedPressable: {
 		backgroundColor: "#f2f2f2",
+	},
+	modalTitle: {
+		fontSize: 24,
+		fontWeight: "bold",
+		marginBottom: 10,
+		color: "#000",
 	},
 });
