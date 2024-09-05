@@ -115,7 +115,7 @@ export const updatePassword = async (userId: number, newPassword: string) => {
       lastUpdated: currentDateISO,
     });
 
-    if (response.status === 200) {
+    if (response.status === 204) {
       Alert.alert('Success', 'Password updated successfully.');
     } else {
       Alert.alert('Update Failed', 'There was a problem updating the password.');
