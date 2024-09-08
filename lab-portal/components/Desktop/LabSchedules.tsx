@@ -765,7 +765,7 @@ const handleWorkWeekSelection = (value) => {
       setDatetimeIn(new Date()); // Only reset to current time if no selected schedule
       setDatetimeOut(new Date());
     }
-    setSelectedDays([]);\
+    setSelectedDays([]);
     setIsWorkWeek(false);
 
     // Reset other form fields
