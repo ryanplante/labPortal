@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, Button, ScrollView, TouchableOpacity, Modal } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, ScrollView, Pressable, TouchableOpacity } from 'react-native';
 import ScheduleService from '../../services/scheduleService';
 import { deleteToken, getUserByToken } from '../../services/loginService';
 import moment from 'moment';
@@ -12,6 +12,7 @@ import { Checkbox } from 'expo-checkbox';
 import PlatformSpecificDateTimePicker from '../Modals/PlatformSpecificDateTimePicker';
 import { User } from '../../services/userService';
 import { crossPlatformAlert, reload } from '../../services/helpers';
+import { Dimensions } from 'react-native';
 
 const LabSchedules = () => {
   const [scheduleData, setScheduleData] = useState([]);
@@ -55,7 +56,6 @@ const LabSchedules = () => {
       // Fetch schedules by department and date range
       const data = await ScheduleService.getWorkScheduleByDepartment(departmentId, startDate, endDate);
       const exemptions = await ScheduleService.getScheduleExemptions();
-      console.log('Schedules:', data, 'Exemptions:', exemptions); // Debugging output
       setScheduleExemptions(exemptions.$values); // Store exemptions in state
       setScheduleData(data.$values ?? exemptions);
     } catch (error) {
@@ -65,39 +65,37 @@ const LabSchedules = () => {
     }
   };
 
-  const fetchUser = async() => {
+  const fetchUser = async () => {
     try {
       setLoading(true);
       const user = await getUserByToken();
-      setUser(user)
-    }
-    catch (error) {
-        const errorMessage = error.message.includes('server')
-          ? 'Server is currently down. Please try again later.'
-          : 'Token has expired, please refresh the app and re-login to continue.';
-        crossPlatformAlert('Error', errorMessage);
-        await deleteToken();
-        await reload();
-        return false;      
+      setUser(user);
+    } catch (error) {
+      const errorMessage = error.message.includes('server')
+        ? 'Server is currently down. Please try again later.'
+        : 'Token has expired, please refresh the app and re-login to continue.';
+      crossPlatformAlert('Error', errorMessage);
+      await deleteToken();
+      await reload();
+      return false;
     }
     if (user.privLvl === 0) {
       crossPlatformAlert('Error', 'You do not have the privilege to view this page.');
       return false;
     }
-  }
+  };
 
   const isExemption = (scheduleId) => {
     // Find matching exemption by scheduleId
     if (scheduleExemptions) {
       const exemption = scheduleExemptions.find(exemption => exemption.scheduleExemptionId === scheduleId);
-      return exemption
+      return exemption;
     }
     return null;
   };
 
   const renderVerificationStatus = (scheduleId) => {
     const exemption = isExemption(scheduleId);
-
     if (exemption) {
       if (exemption.verified) {
         return null; // No indicator if verified
@@ -107,7 +105,6 @@ const LabSchedules = () => {
     }
     return null; // Not an exemption
   };
-
 
   const handleNextWeek = () => {
     setCurrentWeek(currentWeek.clone().add(1, 'week'));
@@ -145,6 +142,8 @@ const LabSchedules = () => {
         return styles.late;
       case 'Calling out':
         return styles.callingOut;
+      case 'Leaving early':
+        return styles.leavingEarly;
       default:
         return styles.defaultType;
     }
@@ -153,84 +152,101 @@ const LabSchedules = () => {
   const handleScheduleClick = async (scheduleId, scheduleType) => {
     try {
       let scheduleInfo;
-      if (scheduleType.includes('School', 'Off') || scheduleType == undefined) {
-        return; // Prevent clicking on off/school schedules
+  
+      if (scheduleType.includes('School', 'Off') || scheduleType === undefined) {
+        return;
       }
-
+  
+      console.log('Schedule Type:', scheduleType);
+  
       if (scheduleType === 'Work') {
         scheduleInfo = await ScheduleService.getScheduleById(scheduleId);
+        console.log('Selected Work Schedule Info:', scheduleInfo);
+        
+        // Log important state updates
+        console.log('Before state updates - datetimeIn:', datetimeIn, 'datetimeOut:', datetimeOut);
+        
         setSelectedSchedule(scheduleInfo);
-
         setSelectedUser(scheduleInfo.userId);
         setSelectedLab(scheduleInfo.fkLab);
-
-        // Calculate the date based on currentWeek and dayOfWeek, this is used to populate schedule exemptions with the schedule's date of the selected week
+  
+        // Calculate the new date and log it
         const calculatedInDate = moment(currentWeek)
-          .day(scheduleInfo.dayOfWeek + 1) // Set the correct day of the week
+          .day(scheduleInfo.dayOfWeek + 1)
           .set({
             hour: moment(scheduleInfo.timeIn, 'HH:mm').hours(),
             minute: moment(scheduleInfo.timeIn, 'HH:mm').minutes(),
           });
-
         const calculatedOutDate = moment(currentWeek)
-          .day(scheduleInfo.dayOfWeek) // Set the correct day of the week
+          .day(scheduleInfo.dayOfWeek + 1)
           .set({
             hour: moment(scheduleInfo.timeOut, 'HH:mm').hours(),
             minute: moment(scheduleInfo.timeOut, 'HH:mm').minutes(),
           });
-
-        // Set DateTimeIn and DateTimeOut
+  
+        console.log('Calculated In Date:', calculatedInDate, 'Calculated Out Date:', calculatedOutDate);
+        
         setDatetimeIn(calculatedInDate.toDate());
         setDatetimeOut(calculatedOutDate.toDate());
         setTimeIn(moment(scheduleInfo.timeIn, 'HH:mm').toDate());
         setTimeOut(moment(scheduleInfo.timeOut, 'HH:mm').toDate());
         setDayOfWeek(scheduleInfo.dayOfWeek);
         setFormMode('scheduleOptions');
-      }
-      else {
+      } else {
+        setLoading(true);
         scheduleInfo = await ScheduleService.getScheduleExemptionById(scheduleId);
-        setSelectedSchedule(scheduleInfo);
-        // if the schedule has a fk reference to the table, set the time in and time out values so that the exemption can check if its in the time in and time out bounds
+        console.log('Selected Exemption Schedule Info:', scheduleInfo);
+  
+        const exemptionStartDate = moment(scheduleInfo.startDate).toDate();
+        const exemptionEndDate = moment(scheduleInfo.endDate).toDate();
+  
+        console.log('Exemption Start Date:', exemptionStartDate, 'Exemption End Date:', exemptionEndDate);
+        
+        setDatetimeIn(exemptionStartDate);
+        setDatetimeOut(exemptionEndDate);
+        
         if (scheduleInfo.fkSchedule) {
           const parentSchedule = await ScheduleService.getScheduleById(scheduleInfo.fkSchedule);
           setTimeIn(moment(parentSchedule.timeIn, 'HH:mm').toDate());
           setTimeOut(moment(parentSchedule.timeOut, 'HH:mm').toDate());
           setDayOfWeek(parentSchedule.dayOfWeek);
         }
-        // Handle startDate and endDate as local time
-        setDatetimeIn(moment(scheduleInfo.startDate).toDate());
-        setDatetimeOut(moment(scheduleInfo.endDate).toDate());
-
+  
         handleExemptionTypeChange(scheduleInfo.fkExemptionType);
         setVerified(scheduleInfo.verified);
         setSelectedUser(scheduleInfo.fkUser);
         setSelectedLab(scheduleInfo.fkLab);
         setFormMode('exemption');
+        setLoading(false);
       }
-
+  
+      console.log('State after setting datetimeIn:', datetimeIn, 'datetimeOut:', datetimeOut);
       setIsFormOpen(true);
     } catch (error) {
       console.error('Error fetching schedule details:', error);
     }
   };
+  
+  
+  
+  
 
   const checkDateBounds = () => {
     // Check to make sure the exemption is within the schedule if they're updating/creating an exemption
 
     // Ensure the day of the week is between Monday (1) and Friday (5)
-    console.log(moment(datetimeIn).isoWeekday())
     if (moment(datetimeIn).isoWeekday() > 5) {
-      setFormError("You must select a workday (Monday to Friday)!");
+      setFormError('You must select a workday (Monday to Friday)!');
       return false;
     }
     // Special case for exemptionType 4: Ensure start and end times are not identical
     if (moment(datetimeIn).isSame(moment(datetimeOut))) {
-      setFormError("Start time and end time cannot be the same!");
+      setFormError('Start time and end time cannot be the same!');
       return false;
     }
     // Ensure datetimeIn and datetimeOut are on the same day
     if (!moment(datetimeIn).isSame(datetimeOut, 'day')) {
-      setFormError("Start time and end time must be on the same day!");
+      setFormError('Start time and end time must be on the same day!');
       return false;
     }
 
@@ -251,45 +267,42 @@ const LabSchedules = () => {
 
       // Ensure datetimeIn is after the start of the schedule
       if (moment(datetimeIn).isBefore(calculatedInDate)) {
-        setFormError("Start time cannot be before schedule start time!");
+        setFormError('Start time cannot be before schedule start time!');
         return false;
       }
 
       // Ensure datetimeOut is before the end of the schedule
       if (moment(datetimeOut).isAfter(calculatedOutDate)) {
-        setFormError("End time cannot be after schedule end time!");
+        setFormError('End time cannot be after schedule end time!');
         return false;
       }
 
       return true;
     }
     return true;
-  }
-
+  };
 
   const checkErrors = () => {
     let error = '';
     if (!selectedUser || isNaN(selectedUser)) {
-      error = error + "Please select a user\n";
+      error = error + 'Please select a user\n';
     }
     if (!selectedLab || isNaN(selectedLab)) {
-      error = error + "Please select a lab\n";
+      error = error + 'Please select a lab\n';
     }
 
-    if (error !== "") {
+    if (error !== '') {
       setFormError(error);
-      return true
+      return true;
     }
     return false;
-
-  }
+  };
 
   const handleFormSubmit = async () => {
     try {
       let check, formData, collisionResult;
       setFormError(null);
-      if (checkErrors())
-        return;
+      if (checkErrors()) return;
       // Handle 'work' schedule case
       if (formMode === 'work') {
         check = {
@@ -314,8 +327,7 @@ const LabSchedules = () => {
         };
 
         collisionResult = await ScheduleService.checkScheduleCollision(check);
-        console.log(collisionResult, collisionResult.length);
-        if (collisionResult && collisionResult[0] !== "No schedule conflicts") {
+        if (collisionResult && collisionResult[0] !== 'No schedule conflicts') {
           setFormError(`Schedule conflict detected:\n${collisionResult.join('\n')}`);
           return;
         }
@@ -329,7 +341,7 @@ const LabSchedules = () => {
         // Handle 'exemption' case
       } else if (formMode.includes('exemption')) {
         const startDate = moment(datetimeIn).format('YYYY-MM-DDTHH:mm:ss'); // Format start date as local time
-        const endDate = moment(datetimeOut).format('YYYY-MM-DDTHH:mm:ss');   // Format end date as local time
+        const endDate = moment(datetimeOut).format('YYYY-MM-DDTHH:mm:ss'); // Format end date as local time
 
         const fkSchedule = selectedSchedule ? (selectedSchedule.fkSchedule ? selectedSchedule.fkSchedule : selectedSchedule.scheduleId) : null;
 
@@ -356,8 +368,7 @@ const LabSchedules = () => {
           };
 
           collisionResult = await ScheduleService.checkScheduleCollision(check);
-          console.log(collisionResult, collisionResult.length);
-          if (collisionResult && collisionResult[0] !== "No schedule conflicts") {
+          if (collisionResult && collisionResult[0] !== 'No schedule conflicts') {
             setFormError(`Schedule conflict detected:\n${collisionResult.join('\n')}`);
             return;
           }
@@ -396,33 +407,32 @@ const LabSchedules = () => {
     }
   };
 
-  const handleExemptionTypeChange = (value) => {
+  const handleExemptionTypeChange = async (value) => {
     setExemptionType(value);
     // Calculate the date based on currentWeek and dayOfWeek, this is used to populate schedule exemptions with the schedule's date of the selected week
-    const calculatedInDate = moment(currentWeek)
-      .day(dayOfWeek + 1) // Set the correct day of the week
-      .set({
-        hour: moment(timeIn, 'HH:mm').hours(),
-        minute: moment(timeOut, 'HH:mm').minutes(),
-      });
+    if (formMode.includes("schedule")) {
+        const calculatedInDate = moment(currentWeek)
+        .day(dayOfWeek + 1) // Set the correct day of the week
+        .set({
+          hour: moment(timeIn, 'HH:mm').hours(),
+          minute: moment(timeOut, 'HH:mm').minutes(),
+        });
 
-    const calculatedOutDate = moment(currentWeek)
-      .day(dayOfWeek + 1) // Set the correct day of the week
-      .set({
-        hour: moment(timeOut, 'HH:mm').hours(),
-        minute: moment(timeOut, 'HH:mm').minutes(),
-      });
+      const calculatedOutDate = moment(currentWeek)
+        .day(dayOfWeek + 1) // Set the correct day of the week
+        .set({
+          hour: moment(timeOut, 'HH:mm').hours(),
+          minute: moment(timeOut, 'HH:mm').minutes(),
+        });
 
-
-    if (value == 1) {
-      setDatetimeIn(calculatedInDate.toDate());
-      setDatetimeOut(calculatedOutDate.toDate());
-    }
-    else if (value == 2) {
-      setDatetimeIn(calculatedInDate.toDate());
-    }
-    else if (value == 5) {
-      setDatetimeOut(calculatedOutDate.toDate());
+      if (value == 1) {
+        setDatetimeIn(calculatedInDate.toDate());
+        setDatetimeOut(calculatedOutDate.toDate());
+      } else if (value == 2) {
+        setDatetimeIn(calculatedInDate.toDate());
+      } else if (value == 5) {
+        setDatetimeOut(calculatedOutDate.toDate());
+      }
     }
 
 
@@ -432,36 +442,32 @@ const LabSchedules = () => {
         case 1: // Calling out
           return [true, true];
         case 2: // Late
-          return [true, false]; 
+          return [true, false];
         case 5: // Leaving early
           return [false, true];
         default:
           return [false, false];
       }
     });
-    console.log(isTimePickerReadOnly);
   };
-
-
 
   const getFormComponents = () => {
     let components = [];
     const isUserError = (!selectedUser || isNaN(selectedUser)) && formError && formError.includes('Please select a user');
-    console.log(selectedLab);
     const isLabError = (!selectedLab || isNaN(selectedLab)) && formError && formError.includes('Please select a lab');
     if (formMode === 'scheduleOptions') {
       return [
         [
-          <TouchableOpacity key="modifySchedule" style={styles.optionButton} onPress={() => setFormMode('work')}>
+          <Pressable key="modifySchedule" style={styles.optionButton} onPress={() => setFormMode('work')}>
             <Text style={styles.optionText}>Modify Schedule</Text>
-          </TouchableOpacity>,
-          <TouchableOpacity key="addExemption" style={styles.optionButton} onPress={() => {
-            handleExemptionTypeChange(1);  // Default to "Calling out"
-            setVerified(true);     // Set verified to true
+          </Pressable>,
+          <Pressable key="addExemption" style={styles.optionButton} onPress={() => {
+            handleExemptionTypeChange(1); // Default to "Calling out"
+            setVerified(true); // Set verified to true
             setFormMode('exemption-schedule');
           }}>
             <Text style={styles.optionText}>Add Exemption</Text>
-          </TouchableOpacity>,
+          </Pressable>,
         ]
       ];
     }
@@ -469,12 +475,12 @@ const LabSchedules = () => {
     if (formMode === 'addOptions') {
       return [
         [
-          <TouchableOpacity key="addSchedule" style={styles.optionButton} onPress={() => setFormMode('work')}>
+          <Pressable key="addSchedule" style={styles.optionButton} onPress={() => setFormMode('work')}>
             <Text style={styles.optionText}>Add New Schedule</Text>
-          </TouchableOpacity>,
-          <TouchableOpacity key="addExemption" style={styles.optionButton} onPress={handleAddExemption}>
+          </Pressable>,
+          <Pressable key="addExemption" style={styles.optionButton} onPress={handleAddExemption}>
             <Text style={styles.optionText}>Add a Schedule Exemption</Text>
-          </TouchableOpacity>,
+          </Pressable>,
         ]
       ];
     }
@@ -507,7 +513,9 @@ const LabSchedules = () => {
             ))}
           </Picker>
         </View>,
-        <Button key="submitButton" title={selectedSchedule ? "Update Schedule" : "Add Schedule"} onPress={handleFormSubmit} />
+        <Pressable key="submitButton" style={styles.submitButton} onPress={handleFormSubmit}>
+          <Text style={styles.optionText}>{selectedSchedule ? "Update Schedule" : "Add Schedule"}</Text>
+        </Pressable>
       ];
     }
     if (formMode.includes('exemption')) {
@@ -553,14 +561,16 @@ const LabSchedules = () => {
               <Picker.Item label="Calling out" value={1} />
               <Picker.Item label="Late" value={2} />
               <Picker.Item label="Working in new room" value={3} />
-              <Picker.Item label="Leaving early" value={5}/>
+              <Picker.Item label="Leaving early" value={5} />
             </Picker>
           </View>,
           <View key="verified">
             <Text>Verified</Text>
             <Checkbox value={verified} onValueChange={setVerified} color={verified ? '#007BFF' : undefined} />
           </View>,
-          <Button key="submitButton" title={"Add Exemption"} onPress={handleFormSubmit} />
+          <Pressable key="submitButton" style={styles.submitButton} onPress={handleFormSubmit}>
+            <Text style={styles.optionText}>{"Add Exemption"}</Text>
+          </Pressable>
         ];
       }
 
@@ -604,17 +614,12 @@ const LabSchedules = () => {
           <View key="exemptionType">
             {selectedSchedule && (<>
               <Text>Exemption Type</Text>
-              <Picker selectedValue={exemptionType} onValueChange={handleExemptionTypeChange} enabled={selectedSchedule ? false : true} >
+              <Picker selectedValue={exemptionType} onValueChange={handleExemptionTypeChange} enabled={selectedSchedule ? false : true}>
                 <Picker.Item label="Calling out" value={1} />
                 <Picker.Item label="Late" value={2} />
                 <Picker.Item label="Working in new room" value={3} />
-                {selectedSchedule && (
-                  <>
-                    <Picker.Item label="Working outside of schedule" value={4} />
-                  </>
-
-                )}
-                <Picker.Item label="Leaving early" value={5}/>
+                {selectedSchedule && <Picker.Item label="Working outside of schedule" value={4} />}
+                <Picker.Item label="Leaving early" value={5} />
               </Picker>
             </>)}
           </View>,
@@ -622,44 +627,51 @@ const LabSchedules = () => {
             <Text>Verified</Text>
             <Checkbox value={verified} onValueChange={setVerified} color={verified ? '#007BFF' : undefined} />
           </View>,
-          <Button key="submitButton" title={selectedSchedule ? "Update Exemption" : "Add Exemption"} onPress={handleFormSubmit} />
+          <Pressable key="submitButton" style={styles.submitButton} onPress={handleFormSubmit}>
+            <Text style={styles.optionText}>{selectedSchedule ? "Update Exemption" : "Add Exemption"}</Text>
+          </Pressable>
         ];
       }
     }
 
-
-
-
     if (selectedSchedule && formMode != 'exemption-schedule') {
       components.push(
-        <Button key="deleteButton" title="Delete" color="red" onPress={handleDelete} />
+        <Pressable key="deleteButton" style={[styles.submitButton, { backgroundColor: 'red' }]} onPress={handleDelete}>
+          <Text style={styles.optionText}>Delete</Text>
+        </Pressable>
       );
     }
     return [components];
   };
 
   const clearForm = () => {
-    //setSelectedSchedule(null);
-    setTimeIn(new Date);
-    setTimeOut(new Date);
-    setDatetimeIn(new Date);
-    setDatetimeOut(new Date);
-    handleExemptionTypeChange(4);
+    // Keep existing times for schedule updates, but reset for new entries
+    if (!selectedSchedule) {
+      setDatetimeIn(new Date()); // Only reset to current time if no selected schedule
+      setDatetimeOut(new Date());
+    }
+  
+    // Reset other form fields
+    setTimeIn(new Date());
+    setTimeOut(new Date());
+    handleExemptionTypeChange(4); // Default to 'Working outside of schedule'
     setVerified(true);
     setSelectedUser(undefined);
     setSelectedLab(undefined);
     setFormError(null);
-  }
-
+  };
+  
+  
 
   const handleCloseForm = () => {
     setSelectedSchedule(null);
     setIsFormOpen(false);
     clearForm();
-  }
+  };
 
   const handleAddExemption = () => {
     clearForm();
+    handleExemptionTypeChange(4); // set the exemption type to working outside of schedule
     setFormMode('exemption'); // Set the mode to exemption
     setIsFormOpen(true);
   };
@@ -678,20 +690,28 @@ const LabSchedules = () => {
   return (
     <View style={styles.container}>
       <View style={styles.navigation}>
-        <Button title="< Previous Week" onPress={handlePreviousWeek} />
+        <Pressable style={styles.navigationButton} onPress={handlePreviousWeek}>
+          <Text style={styles.optionText}>{"< Previous Week"}</Text>
+        </Pressable>
         <Text style={styles.weekDisplay}>{weekDisplay}</Text>
-        <Button title="Next Week >" onPress={handleNextWeek} />
+        <Pressable style={styles.navigationButton} onPress={handleNextWeek}>
+          <Text style={styles.optionText}>{"Next Week >"}</Text>
+        </Pressable>
       </View>
 
+      {/* Outer scroll for horizontal and vertical scrolling */}
       <ScrollView horizontal={true}>
-        <ScrollView>
-          <View style={styles.table}>
-            <View style={styles.tableRow}>
+        <ScrollView vertical={true} style={styles.tableBody}>
+          <View style={styles.stickyHeaderContainer}>
+            <View style={[styles.tableRow, styles.stickyHeader]}>
               <Text style={[styles.tableCell, styles.tableHeader]}>User</Text>
               {daysOfWeek.map((day) => (
                 <Text key={day} style={[styles.tableCell, styles.tableHeader]}>{day}</Text>
               ))}
             </View>
+          </View>
+
+          <View style={styles.table}>
             {Object.entries(scheduleData.reduce((acc, entry) => {
               const userId = entry.userId;
               if (!acc[userId]) acc[userId] = [];
@@ -703,15 +723,14 @@ const LabSchedules = () => {
                 {daysOfWeek.map((day, index) => (
                   <View key={day} style={styles.tableCell}>
                     {groupByDay(userEntries, index).map((item, idx) => (
-                      <TouchableOpacity
+                      <Pressable
                         key={idx}
                         style={[styles.scheduleItem, getScheduleStyle(item.scheduleType)]}
                         onPress={() => handleScheduleClick(item.scheduleId, item.scheduleType)}
                       >
                         {item.lab && <Text>{`${item.lab} (${formatHours(item.hours)})`}</Text>}
-                        {renderVerificationStatus(item.scheduleId)}
                         <Text>{item.scheduleType}</Text>
-                      </TouchableOpacity>
+                      </Pressable>
                     ))}
                   </View>
                 ))}
@@ -721,9 +740,37 @@ const LabSchedules = () => {
         </ScrollView>
       </ScrollView>
 
-      <TouchableOpacity style={styles.addButton} onPress={() => { setFormMode('addOptions'); clearForm(); setSelectedSchedule(null); setIsFormOpen(true); }}>
+      <View style={styles.colorKeyContainer}>
+        <Text style={styles.colorKeyTitle}>Color Code Key:</Text>
+        <View style={styles.colorKeyItem}>
+          <View style={[styles.colorSquare, styles.work]} />
+          <Text>Work</Text>
+        </View>
+        <View style={styles.colorKeyItem}>
+          <View style={[styles.colorSquare, styles.school]} />
+          <Text>School</Text>
+        </View>
+        <View style={styles.colorKeyItem}>
+          <View style={[styles.colorSquare, styles.off]} />
+          <Text>Off</Text>
+        </View>
+        <View style={styles.colorKeyItem}>
+          <View style={[styles.colorSquare, styles.late]} />
+          <Text>Late</Text>
+        </View>
+        <View style={styles.colorKeyItem}>
+          <View style={[styles.colorSquare, styles.callingOut]} />
+          <Text>Calling Out</Text>
+        </View>
+        <View style={styles.colorKeyItem}>
+          <View style={[styles.colorSquare, styles.leavingEarly]} />
+          <Text>Leaving Early</Text>
+        </View>
+      </View>
+
+      <Pressable style={styles.addButton} onPress={() => { setFormMode('addOptions'); clearForm(); setSelectedSchedule(null); setIsFormOpen(true); }}>
         <Text style={styles.addButtonText}>+</Text>
-      </TouchableOpacity>
+      </Pressable>
 
       {isFormOpen && (
         <DynamicForm
@@ -757,6 +804,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderBottomWidth: 1,
     borderColor: '#ccc',
+    width: '100%',
   },
   tableRow: {
     flexDirection: 'row',
@@ -815,7 +863,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 20,
     right: 20,
-    backgroundColor: '#007BFF',
+    backgroundColor: 'rgb(255, 193, 7)', // Updated color
     width: 60,
     height: 60,
     borderRadius: 30,
@@ -841,18 +889,84 @@ const styles = StyleSheet.create({
   optionButton: {
     marginVertical: 10,
     padding: 15,
-    backgroundColor: '#007BFF',
+    backgroundColor: 'rgb(255, 193, 7)', // Updated color
     borderRadius: 5,
   },
   optionText: {
     color: 'white',
     fontSize: 18,
   },
+  submitButton: {
+    backgroundColor: 'rgb(255, 193, 7)', // Updated color
+    padding: 15,
+    borderRadius: 5,
+    marginVertical: 10,
+  },
   errorAsterisk: {
     color: 'red',
+  },
+  tableContainer: {
+    width: '150%',
+    alignSelf: 'center',
+    overflow: 'scroll',
+  },
+  leavingEarly: {
+    backgroundColor: '#ffcccc',
+  },
+  stickyHeaderContainer: {
+    height: 50,
+    position: 'sticky',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+    backgroundColor: '#fff',
+  },
+  stickyHeader: {
+    backgroundColor: '#fff',
+    zIndex: 10,
+    elevation: 3,
+  },
+  tableBody: {
+    maxHeight: '80%',
+    width: '150%',
+    paddingTop: 0,
+    marginTop: 50,
+  },
+  colorKeyContainer: {
+    marginTop: 20,
+    backgroundColor: '#fff',
+    width: '25%',
+    padding: 10,
+    borderRadius: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+    elevation: 5,
+  },
+  colorKeyTitle: {
+    fontWeight: 'bold',
+    fontSize: 16,
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  colorKeyItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 5,
+  },
+  colorSquare: {
+    width: 20,
+    height: 20,
+    marginRight: 10,
+    borderRadius: 3,
+  },
+  navigationButton: {
+    backgroundColor: 'rgb(255, 193, 7)', // Updated color for buttons
+    padding: 10,
+    borderRadius: 5,
   },
 });
 
 export default LabSchedules;
-
-
