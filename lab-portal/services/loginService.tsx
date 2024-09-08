@@ -79,7 +79,7 @@ export const validateCredentials = async (username: number, password: string): P
     const formattedLastUpdated = lastUpdated.includes('Z')
       ? lastUpdated
       : `${lastUpdated}Z`;
-
+    console.log(formattedLastUpdated);
     const concatenatedString = password + formattedLastUpdated;
     const hashedPassword = SHA256(concatenatedString).toString();
 

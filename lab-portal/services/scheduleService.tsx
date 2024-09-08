@@ -31,6 +31,15 @@ interface LabScheduleSummary {
     scheduleSummary: string;
 }
 
+interface CollisionCheckDto {
+    userID: number;
+    timeIn: string;   // In "hh:mm" format
+    timeOut: string;  // In "hh:mm" format
+    dayOfWeek: number;
+    week: number
+    pkLog?: number | null;
+}
+
 class ScheduleService {
     private baseUrl: string;
 
@@ -85,6 +94,9 @@ class ScheduleService {
             await this.audit('view', `Viewed current lab for user ID: ${userId}`);
             return response.data;
         } catch (error) {
+            if (error.response && error.response.status === 404) {
+                return 0; // return default lab to silently fail... ie they are working out of schedule
+            }
             await this.handleError(error, 'getCurrentLabForUser');
             throw error;
         }
@@ -113,6 +125,18 @@ class ScheduleService {
         }
     }
 
+    // Get a schedule by ID
+    async getScheduleById(id: number): Promise<Schedule> {
+        try {
+            const response: AxiosResponse<Schedule> = await axios.get(`${this.baseUrl}/${id}`);
+            await this.audit('view', `Viewed schedule with ID: ${id}`);
+            return response.data;
+        } catch (error) {
+            await this.handleError(error, 'getScheduleById');
+            throw error;
+        }
+    }
+
     // Delete a schedule
     async deleteSchedule(id: number): Promise<void> {
         try {
@@ -130,9 +154,29 @@ class ScheduleService {
             const response: AxiosResponse<ScheduleExemption[]> = await axios.get(`${this.baseUrl}/Exemptions`);
             await this.audit('view', 'Viewed all schedule exemptions');
             return response.data;
+        } catch (error: any) {
+            if (error.response && error.response.status === 404) {
+                //console.warn('No exemptions found, returning empty list.');
+                return []; // Return empty list if 404
+            }
+            else {
+                await this.handleError(error, 'getScheduleExemptions');
+                throw error;
+            }
+        }
+    }
+    // Gets unverified exemption count to display on navbar
+    async getUnverifiedExemptionCountByDept(deptId: number): Promise<number> {
+        try {
+            const response: AxiosResponse<number> = await axios.get(`${this.baseUrl}/UnverifiedExemptions/Count/${deptId}`);
+            return response.data;
         } catch (error) {
-            await this.handleError(error, 'getScheduleExemptions');
-            throw error;
+            if (error.response && error.response.status === 404) {
+                return 0; // No unverified exemptions found
+            } else {
+                await this.handleError(error, 'getUnverifiedExemptionCountByDept');
+                throw error;
+            }
         }
     }
 
@@ -160,6 +204,17 @@ class ScheduleService {
         }
     }
 
+    // Update an existing schedule exemption
+    async updateScheduleExemption(id: number, exemptionData: ScheduleExemption): Promise<void> {
+        try {
+            await axios.put(`${this.baseUrl}/Exemptions/${id}`, exemptionData);
+            await this.audit('update', `Updated schedule exemption with ID: ${id}`);
+        } catch (error) {
+            await this.handleError(error, 'updateScheduleExemption');
+            throw error;
+        }
+    }
+
     // Delete a schedule exemption
     async deleteScheduleExemption(id: number): Promise<void> {
         try {
@@ -168,6 +223,23 @@ class ScheduleService {
         } catch (error) {
             await this.handleError(error, 'deleteScheduleExemption');
             throw error;
+        }
+    }
+
+        // Check for schedule collisions
+    async checkScheduleCollision(collisionData: CollisionCheckDto): Promise<string[]> {
+        try {
+            const response: AxiosResponse<string[]> = await axios.post(`${this.baseUrl}/CheckCollision`, collisionData);
+            await this.audit('view', `Checked schedule collision for user ID: ${collisionData.userID}`);
+            return response.data.$values;
+        } catch (error) {
+            if (error.response && error.response.status === 400) {
+                // Return the 400 Bad Request response directly
+                return [error.response.data];
+            } else {
+                await this.handleError(error, 'checkScheduleCollision');
+                throw error;
+            }
         }
     }
 }

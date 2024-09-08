@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Picker, View, Text, StyleSheet } from 'react-native';
-import LabService from '../services/labsService';
+import LabService from '../services/labsService'; // Service to fetch lab data
+import { getUserByToken } from '../services/loginService'; // To get logged-in user's department
 
 interface Lab {
   labId: number;
@@ -10,43 +11,54 @@ interface Lab {
 }
 
 interface LabPickerProps {
-  selectedLabId: number | null;
-  onLabChange: (labId: number | null) => void; // Allow null for "Choose Lab"
+  selectedLabId: number | null; // Current selected lab ID
+  onLabChange: (labId: number | null) => void; // Callback to parent component when a lab is selected
+  readOnly?: boolean; 
 }
 
-const LabPicker = ({ selectedLabId, onLabChange }: LabPickerProps) => {
-  const [labs, setLabs] = useState<Lab[]>([]);
+const LabPicker = ({ selectedLabId, onLabChange, readOnly = false }: LabPickerProps) => {
+  const [labs, setLabs] = useState<Lab[]>([]); // Holds the labs data
+  const [loading, setLoading] = useState(true); // Loading state for fetching labs
 
   useEffect(() => {
     const fetchLabs = async () => {
       try {
+        setLoading(true);
+        const loggedInUser = await getUserByToken(); // Get logged-in user
+        const departmentId = loggedInUser.userDept; // Get department ID
+
+        // Fetch all labs and filter by department
         const response = await LabService.getAllLabs();
-        const fetchedLabs = response?.$values || []; // Access the labs via $values
-        setLabs(fetchedLabs);
+        const filteredLabs = response?.$values.filter(lab => lab.deptId === departmentId && lab.labId !== 0); // Omit labId 0
+
+        setLabs(filteredLabs);
       } catch (error) {
         console.error('Failed to fetch labs:', error);
-        setLabs([]); // Handle errors by setting labs to an empty array
+        setLabs([]); // Set labs to empty array on error
+      } finally {
+        setLoading(false); // Set loading to false after fetching
       }
     };
 
     fetchLabs();
-  }, []);
+  }, []); // Fetch labs when the component mounts
+
+  if (loading) {
+    return <Text>Loading labs...</Text>; // Display loading state
+  }
 
   return (
     <View style={styles.container}>
       <Text style={styles.label}>Select Lab:</Text>
       <Picker
-        selectedValue={selectedLabId}
+        selectedValue={selectedLabId} // The currently selected lab
         style={styles.picker}
-        onValueChange={(itemValue) => onLabChange(itemValue)}
+        onValueChange={(itemValue) => onLabChange(itemValue)} // Callback when a lab is selected
+        enabled={!readOnly}
       >
-        <Picker.Item label="Choose Lab" value={null} />
+        <Picker.Item label="Choose Lab" value={null} /> {/* Placeholder */}
         {labs.map((lab) => (
-          <Picker.Item
-            key={lab.labId}
-            label={`${lab.name} - ${lab.roomNum}`}
-            value={lab.labId}
-          />
+          <Picker.Item key={lab.labId} label={`${lab.name} - ${lab.roomNum}`} value={lab.labId} />
         ))}
       </Picker>
     </View>

@@ -6,12 +6,11 @@ import DynamicForm from '../../Modals/DynamicForm';
 import PlatformSpecificTimePicker from '../../Modals/PlatformSpecificTimePicker';
 import { checkHeartbeat, deleteToken, getUserByToken } from '../../../services/loginService';
 import LogService from '../../../services/logService';
-import LabService from '../../../services/labsService';
+import ScheduleService from '../../../services/scheduleService';
 import { User } from '../../../services/userService';
 import ConfirmationModal from '../../Modals/ConfirmationModal';
 import ActionsModal from '../../Modals/ActionsModal';
 import { crossPlatformAlert, reload } from '../../../services/helpers';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const MonitorView = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -60,27 +59,22 @@ const MonitorView = () => {
 
   const fetchUserAndLabId = async () => {
     try {
-      const isApiHealthy = await checkHeartbeat();
-      if (!isApiHealthy) {
-        throw new Error('The server is currently unavailable.');
+      const user = await getUserByToken();
+      if (user.privLvl === 0) {
+        crossPlatformAlert('Error', 'You do not have the privilege to view this page.');
+        return false;
       }
-      const token = await AsyncStorage.getItem('token');
-      if (token && isApiHealthy) {
-        const user = await getUserByToken();
-        if (user.privLvl === 0) {
-          crossPlatformAlert('Error', 'You do not have the privilege to view this page.');
-          return false;
-        }
-        setUser(user);
-        const labId = await LabService.getLabByDept(user.userDept);
-        setLabId(labId);
-        await fetchLogsForToday(labId);
-        return true;
-      }
+      setUser(user);
+      const labId = await ScheduleService.getCurrentLabForUser(user.userId);
+      crossPlatformAlert('Info', labId);
+      console.log(labId);
+      setLabId(labId);
+      await fetchLogsForToday(labId);
+      return true;
     } catch (error) {
       const errorMessage = error.message.includes('server')
         ? 'Server is currently down. Please try again later.'
-        : 'Token has expired, please refresh the app and re-login to continue.';
+        : error.message;
       crossPlatformAlert('Error', errorMessage);
       await deleteToken();
       await reload();

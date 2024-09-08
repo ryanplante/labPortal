@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Image, Text, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { checkHeartbeat, deleteToken, getUserByToken } from '../../services/loginService';
+import { checkHeartbeat, getUserByToken } from '../../services/loginService';
+import ScheduleService from '../../services/scheduleService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { crossPlatformAlert, reload } from '../../services/helpers';
 
 const Sidebar = ({ onProfilePress, onClose }: { onProfilePress: () => void; onClose: () => void }) => {
   const navigation = useNavigation();
-  const [privLvl, setPrivLvl] = useState<number>(0);
+  const [user, setUser] = useState<any>(null);
+  const [unverifiedCount, setUnverifiedCount] = useState<number>(0);
 
   const fetchUserData = async () => {
     const token = await AsyncStorage.getItem('token');
@@ -18,35 +20,46 @@ const Sidebar = ({ onProfilePress, onClose }: { onProfilePress: () => void; onCl
       }
       if (token) {
         const user = await getUserByToken();
-        setPrivLvl(user.privLvl);
+        if (!user)
+          await reload();
+        setUser(user);
+
+        // Fetch unverified schedule exemptions count
+        const count = await ScheduleService.getUnverifiedExemptionCountByDept(user.userDept);
+        setUnverifiedCount(count);
       } else {
-        crossPlatformAlert('Error', 'Token has expired. Please refresh the app and re-login to continue.');
+        crossPlatformAlert('Error', 'AHHHHHHH. Please refresh the app and re-login to continue.');
         await reload();
       }
     } catch (error) {
       const errorMessage = error.message.includes('server')
         ? 'Server is currently down. Please try again later.'
-        : 'Token has expired. Please refresh the app and re-login to continue.';
+        : error.message;
       crossPlatformAlert('Error', errorMessage);
     }
   };
 
   useEffect(() => {
     fetchUserData();
+
+    // Set up interval for polling unverified exemptions count every 15 seconds
+    const intervalId = setInterval(() => {
+      fetchUserData();
+    }, 5000); // fetch user data in the background every 5 seconds to make sure their token didn't expire, update notifications, etc.
+
+    // Cleanup interval on component unmount
+    return () => clearInterval(intervalId);
   }, []);
 
   const handlePress = async (screenName: string, permittedLevels: number[]) => {
     await fetchUserData();
-    if (permittedLevels.includes(privLvl)) {
+    if (user && permittedLevels.includes(user.privLvl)) {
       onClose(); // Close the profile sidebar only when navigating
       navigation.navigate(screenName);
     } else {
       crossPlatformAlert('Access Denied', 'You do not have permission to access this screen.');
     }
   };
-
-  const labMonitors = "   Add/Edit\nLab Monitors";
-  const deptManager = "  Department\n    Manager"
 
   return (
     <View style={styles.sidebar}>
@@ -57,55 +70,62 @@ const Sidebar = ({ onProfilePress, onClose }: { onProfilePress: () => void; onCl
         <Image source={require('../../assets/user-icon.png')} style={styles.icon} />
         <Text style={styles.menuText}>Profile</Text>
       </TouchableOpacity>
-      {(privLvl >= 4) && (
-        <TouchableOpacity style={styles.menuItem} onPress={() => handlePress('ManageLabs', [4,5])}>
+      {(user?.privLvl >= 4) && (
+        <TouchableOpacity style={styles.menuItem} onPress={() => handlePress('ManageLabs', [4, 5])}>
           <Image source={require('../../assets/labs-icon.png')} style={styles.icon} />
-          <Text style={styles.menuText}>{labMonitors}</Text>
+          <Text style={styles.menuText}>Manage Labs</Text>
         </TouchableOpacity>
       )}
-      {(privLvl == 5) && (
+      {(user?.privLvl === 5) && (
         <TouchableOpacity style={styles.menuItem} onPress={() => handlePress('DepartmentManager', [5])}>
           <Image source={require('../../assets/department-icon.png')} style={styles.icon} />
-          <Text style={styles.menuText}>{deptManager}</Text>
+          <Text style={styles.menuText}>Dept Manager</Text>
         </TouchableOpacity>
       )}
-      {(privLvl >= 1) && (
+      {(user?.privLvl >= 1) && (
         <TouchableOpacity style={styles.menuItem} onPress={() => handlePress('LabSchedules', [1, 2, 3, 4, 5])}>
-          <Image source={require('../../assets/schedule-icon.png')} style={styles.icon} />
+          <View>
+            <Image source={require('../../assets/schedule-icon.png')} style={styles.icon} />
+            {unverifiedCount > 0 && (
+              <View style={styles.badgeContainer}>
+                <Text style={styles.badgeText}>{unverifiedCount}</Text>
+              </View>
+            )}
+          </View>
           <Text style={styles.menuText}>Schedule</Text>
         </TouchableOpacity>
       )}
-      {(privLvl <= 3) && (
+      {(user?.privLvl <= 3) && (
         <TouchableOpacity style={styles.menuItem} onPress={() => handlePress('Chat', [0, 1, 2, 3])}>
           <Image source={require('../../assets/chat-icon.png')} style={styles.icon} />
           <Text style={styles.menuText}>Chat</Text>
         </TouchableOpacity>
       )}
-      {(privLvl >= 1 && privLvl <= 3) && (
+      {(user?.privLvl >= 1 && user?.privLvl <= 3) && (
         <TouchableOpacity style={styles.menuItem} onPress={() => handlePress('ScanItem', [1, 2, 3])}>
           <Image source={require('../../assets/scan-icon.png')} style={styles.icon} />
           <Text style={styles.menuText}>Scanner</Text>
         </TouchableOpacity>
       )}
-      {(privLvl >= 1) && (
+      {(user?.privLvl >= 1) && (
         <TouchableOpacity style={styles.menuItem} onPress={() => handlePress('LogHistory', [1, 2, 3, 4, 5])}>
           <Image source={require('../../assets/logs-icon.png')} style={styles.icon} />
           <Text style={styles.menuText}>View Logs</Text>
         </TouchableOpacity>
       )}
-      {(privLvl >= 4) && (
+      {(user?.privLvl >= 4) && (
         <TouchableOpacity style={styles.menuItem} onPress={() => handlePress('Reports', [4, 5])}>
           <Image source={require('../../assets/reports-icon.png')} style={styles.icon} />
           <Text style={styles.menuText}>Reports</Text>
         </TouchableOpacity>
       )}
-      {(privLvl === 5) && (
+      {(user?.privLvl === 5) && (
         <TouchableOpacity style={styles.menuItem} onPress={() => handlePress('Admin', [5])}>
           <Image source={require('../../assets/admin-icon.png')} style={styles.icon} />
           <Text style={styles.menuText}>Admin</Text>
         </TouchableOpacity>
       )}
-      {(privLvl === 5) && (
+      {(user?.privLvl === 5) && (
         <TouchableOpacity style={styles.menuItem} onPress={() => handlePress('Item', [5])}>
           <Image source={require('../../assets/item-icon.png')} style={styles.icon} />
           <Text style={styles.menuText}>Item Manager</Text>
@@ -114,14 +134,6 @@ const Sidebar = ({ onProfilePress, onClose }: { onProfilePress: () => void; onCl
       <TouchableOpacity style={styles.menuItem} onPress={() => handlePress('Help', [0, 1, 2, 3, 4, 5])}>
         <Image source={require('../../assets/help-icon.png')} style={styles.icon} />
         <Text style={styles.menuText}>Help</Text>
-      </TouchableOpacity>
-      <TouchableOpacity style={styles.menuItem} onPress={() => handlePress('Sample', [0, 1, 2, 3, 4, 5])}>
-        <Image source={require('../../assets/favicon.png')} style={styles.icon} />
-        <Text style={styles.menuText}>Sample</Text>
-      </TouchableOpacity>
-      <TouchableOpacity style={styles.menuItem} onPress={() => handlePress('Example', [0, 1, 2, 3, 4, 5])}>
-        <Image source={require('../../assets/favicon.png')} style={styles.icon} />
-        <Text style={styles.menuText}>Example</Text>
       </TouchableOpacity>
     </View>
   );
@@ -148,6 +160,22 @@ const styles = StyleSheet.create({
   menuText: {
     color: '#fff',
     fontSize: 12,
+  },
+  badgeContainer: {
+    position: 'absolute',
+    top: -10,
+    right: -10,
+    backgroundColor: 'red',
+    borderRadius: 10,
+    padding: 3,
+    minWidth: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  badgeText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: 'bold',
   },
 });
 

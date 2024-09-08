@@ -9,7 +9,7 @@ import Labs from './components/Desktop/Labs';
 import Reports from './components/Desktop/Reports';
 import Schedule from './components/Desktop/Schedule';
 import ManageLabs from './components/Desktop/ManageLabs'; // Ensure correct import path
-import LabSchedules from './components/Desktop/LabSchedules';
+import LabSchedules from './components/Desktop/LabSchedules.tsx';
 import Chat from './components/Desktop/Chat';
 import ScanItem from './components/Desktop/ScanItem';
 import LogHistory from './components/Desktop/LogHistory';

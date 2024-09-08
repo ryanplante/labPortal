@@ -349,6 +349,69 @@ namespace LabPortal.Controllers
             return NoContent();
         }
 
+        [HttpPost("CheckCollision")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> CheckScheduleCollision([FromBody] CollisionCheckDto request)
+        {
+            try
+            {
+                // Convert string timeIn and timeOut ("hh:mm") to TimeSpan
+                if (!TimeSpan.TryParse(request.TimeIn, out var timeIn) || !TimeSpan.TryParse(request.TimeOut, out var timeOut))
+                {
+                    return BadRequest("Invalid time format. Please use hh:mm format.");
+                }
+
+                // Check if timeIn is before timeOut and they are not equal
+                if (timeIn >= timeOut)
+                {
+                    return BadRequest("Invalid time range. 'TimeIn' must be before 'TimeOut', and they must not be equal.");
+                }
+
+                var conflicts = new List<string>();
+
+                using (var connection = _context.Database.GetDbConnection())
+                {
+                    await connection.OpenAsync();
+                    using (var command = connection.CreateCommand())
+                    {
+                        // Updated command to include pk_log parameter
+                        command.CommandText = "EXEC [dbo].[usp_CheckScheduleCollision] @userID, @timeIn, @timeOut, @dayOfWeek, @weekNumber, @pk_log";
+                        command.Parameters.Add(new SqlParameter("@userID", request.UserID));
+                        command.Parameters.Add(new SqlParameter("@timeIn", timeIn));
+                        command.Parameters.Add(new SqlParameter("@timeOut", timeOut));
+                        command.Parameters.Add(new SqlParameter("@dayOfWeek", request.DayOfWeek));
+                        command.Parameters.Add(new SqlParameter("@weekNumber", request.Week));
+
+                        // Pass pk_log parameter, which can be null if it's a new schedule
+                        command.Parameters.Add(new SqlParameter("@pk_log", request.PkLog ?? (object)DBNull.Value));
+
+                        using (var reader = await command.ExecuteReaderAsync())
+                        {
+                            while (await reader.ReadAsync())
+                            {
+                                conflicts.Add(reader.GetString(0)); // Read the conflict message
+                            }
+                        }
+                    }
+                }
+
+                if (conflicts.Count == 0)
+                {
+                    return Ok("No schedule conflicts.");
+                }
+
+                return Ok(conflicts);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new { error = ex.Message });
+            }
+        }
+
+
+
         // GET: api/Schedule/{id}
         [HttpGet("{id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
@@ -411,5 +474,35 @@ namespace LabPortal.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError, new { error = ex.Message });
             }
         }
+
+        [HttpGet("UnverifiedExemptions/Count/{deptId}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> GetUnverifiedExemptionCountByDept(int deptId)
+        {
+            try
+            {
+                int count;
+
+                using (var connection = _context.Database.GetDbConnection())
+                {
+                    await connection.OpenAsync();
+                    using (var command = connection.CreateCommand())
+                    {
+                        command.CommandText = "EXEC [dbo].[usp_CountUnverifiedExemptionsByDept] @DeptID";
+                        command.Parameters.Add(new SqlParameter("@DeptID", deptId));
+
+                        count = (int)(await command.ExecuteScalarAsync() ?? 0);
+                    }
+                }
+
+                return Ok(count);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new { error = ex.Message });
+            }
+        }   
     }
 }
