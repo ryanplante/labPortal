@@ -62,7 +62,8 @@ const Sidebar = ({ onProfilePress, onClose }: { onProfilePress: () => void; onCl
       crossPlatformAlert('Access Denied', 'You do not have permission to access this screen.');
     }
   };
-
+  const labMonitors = "   Add/Edit\nLab Monitors";
+  const deptManager = "  Department\n    Manager"
   return (
     <View style={styles.sidebar}>
       <TouchableOpacity style={styles.menuItem} onPress={() => handlePress('Main', [0, 1, 2, 3, 4, 5])}>
@@ -75,13 +76,13 @@ const Sidebar = ({ onProfilePress, onClose }: { onProfilePress: () => void; onCl
       {(user?.privLvl >= 4) && (
         <TouchableOpacity style={styles.menuItem} onPress={() => handlePress('ManageLabs', [4, 5])}>
           <Image source={require('../../assets/labs-icon.png')} style={styles.icon} />
-          <Text style={styles.menuText}>Manage Labs</Text>
+          <Text style={styles.menuText}>{labMonitors}</Text>
         </TouchableOpacity>
       )}
       {(user?.privLvl === 5) && (
         <TouchableOpacity style={styles.menuItem} onPress={() => handlePress('DepartmentManager', [5])}>
           <Image source={require('../../assets/department-icon.png')} style={styles.icon} />
-          <Text style={styles.menuText}>Dept Manager</Text>
+          <Text style={styles.menuText}>{deptManager}</Text>
         </TouchableOpacity>
       )}
       {(user?.privLvl >= 1) && (
