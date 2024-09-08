@@ -11,6 +11,7 @@ import { User } from '../../../services/userService';
 import ConfirmationModal from '../../Modals/ConfirmationModal';
 import ActionsModal from '../../Modals/ActionsModal';
 import { crossPlatformAlert, reload } from '../../../services/helpers';
+import { useNavigation } from '@react-navigation/native';
 
 // Define types for entry and any other objects used in state
 type Entry = {
@@ -21,7 +22,7 @@ type Entry = {
   timeOut: string | null;
 };
 
-const MonitorView: React.FC = () => {
+const MonitorView = () => {
   const [user, setUser] = useState<User | null>(null);
   const [selectedView, setSelectedView] = useState<string>('Logs');
   const [selectedFilter, setSelectedFilter] = useState<string>('All');
@@ -39,7 +40,8 @@ const MonitorView: React.FC = () => {
   const [highlightedItemId, setHighlightedItemId] = useState<string | null>(null);
   const [isActionsMenuVisible, setActionsMenuVisible] = useState<boolean>(false);
   const [selectedEntryForAction, setSelectedEntryForAction] = useState<Entry | null>(null);
-  const [readonly, setReadOnly] = useState<boolean>(false);
+  const [readonly, setReadOnly] = useState<boolean>(true);
+  const navigation = useNavigation();
 
   const screenWidth = Dimensions.get('window').width;
   const [currentScreenWidth, setCurrentScreenWidth] = useState<number>(screenWidth);
@@ -72,10 +74,12 @@ const MonitorView: React.FC = () => {
       const labId = await ScheduleService.getCurrentLabForUser(fetchedUser.userId);
 
       if (labId === 0) {
+        setReadOnly(true); // Enable buttons if everything is fine
         // Show a modal for handling schedule exemption if labId is 0
         setConfirmationModalVisible(true);
       } else {
         setLabId(labId);
+        setReadOnly(false); // Enable buttons if everything is fine
         await fetchLogsForToday(labId);
       }
       return true;
@@ -287,6 +291,8 @@ const MonitorView: React.FC = () => {
 
   // Open the actions menu for the selected entry
   const openActionsMenu = (entry: Entry) => {
+    if (readonly)
+      return;
     setHighlightedItemId(entry.id);
     setSelectedEntryForAction(entry);
     setActionsMenuVisible(true);
@@ -297,7 +303,7 @@ const MonitorView: React.FC = () => {
 
   const handleNavigateToSchedule = () => {
     setConfirmationModalVisible(false);
-    // Navigate to the schedule screen logic here
+    navigation.navigate("Schedule");
   };
 
   const handleCloseConfirmation = () => {
@@ -378,19 +384,26 @@ const MonitorView: React.FC = () => {
   ];
 
   const addButtonComponent = [
-    <Button
+    <TouchableOpacity
       key="updateAdd"
-      title={editingEntryId ? "Update" : "Add"}
       onPress={handleCheckIn}
-      color="#FFC107"
-    />,
+      style={[styles.addButton, readonly && styles.disabledButton]}  // Apply disabled style
+      disabled={readonly}  // Disable button when readonly is true
+    >
+      <Text style={styles.addButtonText}>{editingEntryId ? "Update" : "Add"}</Text>
+    </TouchableOpacity>
   ];
+  
 
   return (
     <View style={styles.container}>
       <Text style={styles.header}>Welcome, {user.fName}</Text>
       <View style={styles.headerRow}>
-        <TouchableOpacity style={styles.addButton} onPress={() => setFormOpen(true)}>
+        <TouchableOpacity 
+          style={[styles.addButton, readonly && styles.disabledButton]}
+          onPress={() => setFormOpen(true)}
+          disabled={readonly}
+          >
           <Text style={styles.addButtonText}>Log new student</Text>
         </TouchableOpacity>
         <View style={styles.filterContainer}>
@@ -638,6 +651,9 @@ const styles = StyleSheet.create({
   },
   errorText: {
     color: 'red',
+  },
+  disabledButton: {
+    backgroundColor: '#cccccc',  // Gray out the button when disabled
   },
 });
 
