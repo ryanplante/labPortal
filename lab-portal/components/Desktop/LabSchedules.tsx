@@ -36,6 +36,27 @@ const LabSchedules = () => {
   const [isTimePickerReadOnly, setIsTimePickerReadOnly] = useState([true, true]); // State for setting time pickers readonly status
   const [user, setUser] = useState<User | null>(null);
   const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+  const [selectedDays, setSelectedDays] = useState([]);
+  const [isWorkWeek, setIsWorkWeek] = useState(false);
+
+const handleDaySelection = (index) => {
+  setSelectedDays(prevDays =>
+    prevDays.includes(index)
+      ? prevDays.filter(day => day !== index)
+      : [...prevDays, index]
+  );
+};
+
+const handleWorkWeekSelection = (value) => {
+  setIsWorkWeek(value);
+  if (value) {
+    // Select all days from Monday to Friday
+    setSelectedDays([0, 1, 2, 3, 4]);
+  } else {
+    // Clear all selected days
+    setSelectedDays([]);
+  }
+};
 
   useEffect(() => {
     fetchSchedules();
@@ -302,50 +323,96 @@ const LabSchedules = () => {
   const handleFormSubmit = async () => {
     try {
       let check, formData, collisionResult;
-      setFormError(null);
+      setFormError(null);  
       if (checkErrors()) return;
+  
       // Handle 'work' schedule case
       if (formMode === 'work') {
-        check = {
-          userId: selectedUser,
-          fkLab: selectedLab,
-          timeIn: moment(timeIn).format('HH:mm'), // Convert date object to 'HH:mm' format
-          timeOut: moment(timeOut).format('HH:mm'), // Convert date object to 'HH:mm' format
-          dayOfWeek,
-          weekNumber,
-          pkLog: selectedSchedule ? selectedSchedule.scheduleId : null, // If updating, pass scheduleId, otherwise null for new schedules
-        };
-
-        formData = {
-          userId: selectedUser,
-          fkLab: selectedLab,
-          // No UTC conversion, save time in local time format
-          timeIn: moment(timeIn).format('HH:mm'),
-          timeOut: moment(timeOut).format('HH:mm'),
-          dayOfWeek,
-          fkScheduleType: 1,
-          location: null,
-        };
-
-        collisionResult = await ScheduleService.checkScheduleCollision(check);
-        if (collisionResult && collisionResult[0] !== 'No schedule conflicts') {
-          setFormError(`Schedule conflict detected:\n${collisionResult.join('\n')}`);
-          return;
-        }
-
+        
+        // For updating an existing schedule
         if (selectedSchedule) {
+          check = {
+            userId: selectedUser,
+            fkLab: selectedLab,
+            timeIn: moment(timeIn).format('HH:mm'), // Convert date object to 'HH:mm' format
+            timeOut: moment(timeOut).format('HH:mm'), // Convert date object to 'HH:mm' format
+            dayOfWeek,
+            weekNumber,
+            pkLog: selectedSchedule.scheduleId, // Pass scheduleId for updating
+          };
+  
+          formData = {
+            userId: selectedUser,
+            fkLab: selectedLab,
+            // No UTC conversion, save time in local time format
+            timeIn: moment(timeIn).format('HH:mm'),
+            timeOut: moment(timeOut).format('HH:mm'),
+            dayOfWeek,
+            fkScheduleType: 1,
+            location: null,
+          };
+  
+          collisionResult = await ScheduleService.checkScheduleCollision(check);
+          if (collisionResult && collisionResult[0] !== 'No schedule conflicts') {
+            setFormError(`Schedule conflict detected:\n${collisionResult.join('\n')}`);
+            return;
+          }
+  
+          // Update the schedule
           await ScheduleService.updateSchedule(selectedSchedule.scheduleId, formData);
+        
+        // For creating a new schedule, iterate over selected days
         } else {
-          await ScheduleService.createSchedule(formData);
+          // Ensure at least one day is selected when adding a new schedule
+          if (!selectedSchedule && selectedDays.length === 0) {
+            setFormError("Please select at least one day.");
+            return;
+          }
+          for (const day of selectedDays) {
+            check = {
+              userId: selectedUser,
+              fkLab: selectedLab,
+              timeIn: moment(timeIn).format('HH:mm'), // Convert date object to 'HH:mm' format
+              timeOut: moment(timeOut).format('HH:mm'), // Convert date object to 'HH:mm' format
+              dayOfWeek: day, // Use the selected day in the loop
+              weekNumber,
+              pkLog: null, // New schedule creation
+            };
+  
+            formData = {
+              userId: selectedUser,
+              fkLab: selectedLab,
+              // No UTC conversion, save time in local time format
+              timeIn: moment(timeIn).format('HH:mm'),
+              timeOut: moment(timeOut).format('HH:mm'),
+              dayOfWeek: day, // Use the selected day in the loop
+              fkScheduleType: 1,
+              location: null,
+            };
+  
+            // Perform the collision check for each day
+            collisionResult = await ScheduleService.checkScheduleCollision(check);
+            if (collisionResult && collisionResult[0] !== 'No schedule conflicts') {
+              setFormError(`Schedule conflict detected for ${daysOfWeek[day]}:\n${collisionResult.join('\n')}`);
+              return;
+            }
+  
+            // Create the new schedule for the selected day
+            await ScheduleService.createSchedule(formData);
+          }
         }
-
-        // Handle 'exemption' case
+        
+        // Close the form and refresh schedules
+        setIsFormOpen(false);
+        await fetchSchedules(); // Refresh schedules
+  
+      // Handle 'exemption' case (no changes to this part)
       } else if (formMode.includes('exemption')) {
         const startDate = moment(datetimeIn).format('YYYY-MM-DDTHH:mm:ss'); // Format start date as local time
         const endDate = moment(datetimeOut).format('YYYY-MM-DDTHH:mm:ss'); // Format end date as local time
-
+  
         const fkSchedule = selectedSchedule ? (selectedSchedule.fkSchedule ? selectedSchedule.fkSchedule : selectedSchedule.scheduleId) : null;
-
+  
         const exemptionData = {
           startDate,
           endDate,
@@ -355,7 +422,7 @@ const LabSchedules = () => {
           verified: verified,
           fkSchedule: fkSchedule,
         };
-
+  
         // Handle collision check for working outside of schedule
         if (exemptionType == 4) {
           check = {
@@ -367,7 +434,7 @@ const LabSchedules = () => {
             weekNumber: moment(datetimeIn).week(),
             pkLog: selectedSchedule ? selectedSchedule.scheduleId : null, // Include scheduleId if updating
           };
-
+  
           collisionResult = await ScheduleService.checkScheduleCollision(check);
           if (collisionResult && collisionResult[0] !== 'No schedule conflicts') {
             setFormError(`Schedule conflict detected:\n${collisionResult.join('\n')}`);
@@ -383,15 +450,17 @@ const LabSchedules = () => {
         } else {
           await ScheduleService.createScheduleExemption(exemptionData);
         }
+  
+        // Close form and refresh schedules after submission
+        setIsFormOpen(false);
+        await fetchSchedules(); // Refresh schedules
       }
-      // Close form and refresh schedules after submission
-      setIsFormOpen(false);
-      await fetchSchedules(); // Refresh schedules
     } catch (error) {
       setFormError('Error submitting form');
       console.error('Error submitting form:', error);
     }
   };
+  
 
   // Adding a delete action
   const handleDelete = async () => {
@@ -492,7 +561,7 @@ const LabSchedules = () => {
     if (formMode === 'addOptions') {
       return [
         [
-          <Pressable key="addSchedule" style={styles.optionButton} onPress={() => {setFormMode('work'); setTimeIn(new Date()); resetTimeValues()}}>
+          <Pressable key="addSchedule" style={styles.optionButton} onPress={() => {setFormMode('work'); setTimeIn(new Date()); setSelectedSchedule(null); resetTimeValues()}}>
             <Text style={styles.optionText}>Add New Schedule</Text>
           </Pressable>,
           <Pressable key="addExemption" style={styles.optionButton} onPress={handleAddExemption}>
@@ -502,10 +571,12 @@ const LabSchedules = () => {
       ];
     }
     if (formMode === 'work') {
+      console.log(selectedSchedule);
       components = [
         <View key="userId" style={styles.formGroup}>
           <Text>
-            <UserPicker selectedUser={selectedUser} onUserChange={setSelectedUser} />{isUserError && <Text style={styles.errorAsterisk}>*</Text>}
+            <UserPicker selectedUser={selectedUser} onUserChange={setSelectedUser} />
+            {isUserError && <Text style={styles.errorAsterisk}>*</Text>}
           </Text>
         </View>,
         <View key="lab" style={styles.formGroup}>
@@ -522,19 +593,46 @@ const LabSchedules = () => {
           <Text>Time Out</Text>
           <PlatformSpecificTimePicker time={timeOut} onTimeChange={setTimeOut} />
         </View>,
-        <View key="dayOfWeek">
-          <Text>Day of Week</Text>
-          <Picker selectedValue={dayOfWeek} onValueChange={setDayOfWeek}>
-            {daysOfWeek.map((day, index) => (
-              <Picker.Item key={index} label={day} value={index} />
-            ))}
-          </Picker>
-        </View>,
+    
+        // Conditional rendering based on whether selectedSchedule is null or not
+        selectedSchedule ? (
+          <View key="dayOfWeek">
+            <Text>Day of Week</Text>
+            <Picker selectedValue={dayOfWeek} onValueChange={setDayOfWeek}>
+              {daysOfWeek.map((day, index) => (
+                <Picker.Item key={index} label={day} value={index} />
+              ))}
+            </Picker>
+          </View>
+        ) : (
+          <View key="dayOfWeekCheckboxes" style={styles.checkboxContainer}>
+            <Text>Days of the Week</Text>
+            <View style={styles.checkboxRow}>
+              {daysOfWeek.map((day, index) => (
+                <View key={index} style={styles.checkboxItem}>
+                  <Text>{day}</Text>
+                  <Checkbox
+                    value={selectedDays.includes(index)}
+                    onValueChange={() => handleDaySelection(index)}
+                  />
+                </View>
+              ))}
+            </View>
+            <View style={styles.checkboxItem}>
+              <Text>Repeat for Work Week</Text>
+              <Checkbox
+                value={isWorkWeek}
+                onValueChange={handleWorkWeekSelection}
+              />
+            </View>
+          </View>
+        ),
+    
         <Pressable key="submitButton" style={styles.submitButton} onPress={handleFormSubmit}>
           <Text style={styles.optionText}>{selectedSchedule ? "Update Schedule" : "Add Schedule"}</Text>
         </Pressable>
       ];
-    }
+    }    
     if (formMode.includes('exemption')) {
       if (formMode === 'exemption-schedule') { // Modified form to add exemption from a schedule
         components = [
@@ -667,7 +765,9 @@ const LabSchedules = () => {
       setDatetimeIn(new Date()); // Only reset to current time if no selected schedule
       setDatetimeOut(new Date());
     }
-  
+    setSelectedDays([]);\
+    setIsWorkWeek(false);
+
     // Reset other form fields
     //setTimeIn(new Date());
     //setTimeOut(new Date());
