@@ -25,10 +25,11 @@ const Sidebar = ({ onProfilePress, onClose }: { onProfilePress: () => void; onCl
         setUser(user);
 
         // Fetch unverified schedule exemptions count
-        const count = await ScheduleService.getUnverifiedExemptionCountByDept(user.userDept);
-        setUnverifiedCount(count);
+        if (user.privLvl > 3) {
+          const count = await ScheduleService.getUnverifiedExemptionCountByDept(user.userDept);
+          setUnverifiedCount(count);
+        }
       } else {
-        crossPlatformAlert('Error', 'AHHHHHHH. Please refresh the app and re-login to continue.');
         await reload();
       }
     } catch (error) {
@@ -36,6 +37,7 @@ const Sidebar = ({ onProfilePress, onClose }: { onProfilePress: () => void; onCl
         ? 'Server is currently down. Please try again later.'
         : error.message;
       crossPlatformAlert('Error', errorMessage);
+      await reload();
     }
   };
 

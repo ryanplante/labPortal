@@ -195,6 +195,7 @@ const LabSchedules = () => {
       } else {
         setLoading(true);
         scheduleInfo = await ScheduleService.getScheduleExemptionById(scheduleId);
+        setSelectedSchedule(scheduleInfo);
         console.log('Selected Exemption Schedule Info:', scheduleInfo);
   
         const exemptionStartDate = moment(scheduleInfo.startDate).toDate();
@@ -451,6 +452,22 @@ const LabSchedules = () => {
     });
   };
 
+  const resetTimeValues = () => {
+    const defaultTimeIn = moment().set({ hour: 9, minute: 0 }).toDate(); // Set to 9:00 AM
+    const defaultTimeOut = moment().set({ hour: 17, minute: 0 }).toDate(); // Set to 5:00 PM
+  
+    setTimeIn(defaultTimeIn);
+    setTimeOut(defaultTimeOut);
+  };  
+
+  const resetDateTimeValues = () => {
+    const defaultTimeIn = moment().set({ hour: 9, minute: 0 }).toDate(); // Set to 9:00 AM
+    const defaultTimeOut = moment().set({ hour: 17, minute: 0 }).toDate(); // Set to 5:00 PM
+  
+    setDatetimeIn(defaultTimeIn);
+    setDatetimeOut(defaultTimeOut);
+  };  
+
   const getFormComponents = () => {
     let components = [];
     const isUserError = (!selectedUser || isNaN(selectedUser)) && formError && formError.includes('Please select a user');
@@ -475,7 +492,7 @@ const LabSchedules = () => {
     if (formMode === 'addOptions') {
       return [
         [
-          <Pressable key="addSchedule" style={styles.optionButton} onPress={() => setFormMode('work')}>
+          <Pressable key="addSchedule" style={styles.optionButton} onPress={() => {setFormMode('work'); setTimeIn(new Date()); resetTimeValues()}}>
             <Text style={styles.optionText}>Add New Schedule</Text>
           </Pressable>,
           <Pressable key="addExemption" style={styles.optionButton} onPress={handleAddExemption}>
@@ -569,7 +586,7 @@ const LabSchedules = () => {
             <Checkbox value={verified} onValueChange={setVerified} color={verified ? '#007BFF' : undefined} />
           </View>,
           <Pressable key="submitButton" style={styles.submitButton} onPress={handleFormSubmit}>
-            <Text style={styles.optionText}>{"Add Exemption"}</Text>
+            <Text style={styles.optionText}>Add Exemption</Text>
           </Pressable>
         ];
       }
@@ -652,8 +669,8 @@ const LabSchedules = () => {
     }
   
     // Reset other form fields
-    setTimeIn(new Date());
-    setTimeOut(new Date());
+    //setTimeIn(new Date());
+    //setTimeOut(new Date());
     handleExemptionTypeChange(4); // Default to 'Working outside of schedule'
     setVerified(true);
     setSelectedUser(undefined);
@@ -664,12 +681,13 @@ const LabSchedules = () => {
   
 
   const handleCloseForm = () => {
-    setSelectedSchedule(null);
     setIsFormOpen(false);
     clearForm();
   };
 
   const handleAddExemption = () => {
+    setSelectedSchedule(null);
+    resetDateTimeValues();
     clearForm();
     handleExemptionTypeChange(4); // set the exemption type to working outside of schedule
     setFormMode('exemption'); // Set the mode to exemption
@@ -730,6 +748,7 @@ const LabSchedules = () => {
                       >
                         {item.lab && <Text>{`${item.lab} (${formatHours(item.hours)})`}</Text>}
                         <Text>{item.scheduleType}</Text>
+                        {renderVerificationStatus(item.scheduleId)}
                       </Pressable>
                     ))}
                   </View>
@@ -768,7 +787,7 @@ const LabSchedules = () => {
         </View>
       </View>
 
-      <Pressable style={styles.addButton} onPress={() => { setFormMode('addOptions'); clearForm(); setSelectedSchedule(null); setIsFormOpen(true); }}>
+      <Pressable style={styles.addButton} onPress={() => { setFormMode('addOptions'); clearForm(); setIsFormOpen(true); }}>
         <Text style={styles.addButtonText}>+</Text>
       </Pressable>
 
