@@ -66,7 +66,8 @@ const styles = StyleSheet.create({
     color: 'black',
   },
   image: {
-    verticalAlign: 'middle'
+    verticalAlign: 'middle',
+    width: '50%',
   },
 });
 
