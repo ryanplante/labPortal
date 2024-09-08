@@ -9,7 +9,6 @@ import Labs from './components/Desktop/Labs';
 import Reports from './components/Desktop/Reports';
 import Schedule from './components/Desktop/Schedule';
 import ManageLabs from './components/Desktop/ManageLabs'; // Ensure correct import path
-import LabSchedules from './components/Desktop/LabSchedules.tsx';
 import Chat from './components/Desktop/Chat';
 import ScanItem from './components/Desktop/ScanItem';
 import LogHistory from './components/Desktop/LogHistory';
@@ -163,10 +162,9 @@ const App = () => {
                   <Stack.Screen name="Labs" component={Labs} />
                   <Stack.Screen name="Reports" component={Reports} />
                   <Stack.Screen name="Schedule" component={Schedule} />
-                  <Stack.Screen name="ManageLabs" component={ManageLabs} />
                   <Stack.Screen name="DepartmentManager" component={DepartmentManager} />
-                  <Stack.Screen name="LabSchedules" component={LabSchedules} />
                   <Stack.Screen name="Chat" component={Chat} />
+                  <Stack.Screen name="ManageLabs" component={ManageLabs} />
                   <Stack.Screen name="Help" component={HelpScreen} />
                   <Stack.Screen name="ScanItem" component={ScanItem} />
                   <Stack.Screen name="LogHistory" component={LogHistory} />

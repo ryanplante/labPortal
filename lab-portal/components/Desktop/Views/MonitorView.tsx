@@ -5,44 +5,47 @@ import UserSearcher from '../../Modals/UserSearcher';
 import DynamicForm from '../../Modals/DynamicForm';
 import PlatformSpecificTimePicker from '../../Modals/PlatformSpecificTimePicker';
 import { checkHeartbeat, deleteToken, getUserByToken } from '../../../services/loginService';
-import LogService from '../../../services/logService';
+import LogService, { LogEntry, CreatedLog } from '../../../services/logService';
 import ScheduleService from '../../../services/scheduleService';
 import { User } from '../../../services/userService';
 import ConfirmationModal from '../../Modals/ConfirmationModal';
 import ActionsModal from '../../Modals/ActionsModal';
 import { crossPlatformAlert, reload } from '../../../services/helpers';
 
-const MonitorView = () => {
+// Define types for entry and any other objects used in state
+type Entry = {
+  id: string;
+  studentId: string;
+  studentName: string;
+  timeIn: string;
+  timeOut: string | null;
+};
+
+const MonitorView: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
-  const [selectedView, setSelectedView] = useState('Logs');
-  const [selectedFilter, setSelectedFilter] = useState('All');
-  const [isFormOpen, setFormOpen] = useState(false);
-  const [isStudentSearcherOpen, setStudentSearcherOpen] = useState(false);
-  const [selectedStudent, setSelectedStudent] = useState({ id: '', firstName: '', lastName: '' });
-  const [checkInTime, setCheckInTime] = useState(new Date());
+  const [selectedView, setSelectedView] = useState<string>('Logs');
+  const [selectedFilter, setSelectedFilter] = useState<string>('All');
+  const [isFormOpen, setFormOpen] = useState<boolean>(false);
+  const [isStudentSearcherOpen, setStudentSearcherOpen] = useState<boolean>(false);
+  const [selectedStudent, setSelectedStudent] = useState<{ id: string, firstName: string, lastName: string }>({ id: '', firstName: '', lastName: '' });
+  const [checkInTime, setCheckInTime] = useState<Date>(new Date());
   const [checkOutTime, setCheckOutTime] = useState<Date | undefined>(undefined);
   const [entries, setEntries] = useState<Entry[]>([]);
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [labId, setLabId] = useState<number | null>(null);
-  const [isDeleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [isDeleteModalVisible, setDeleteModalVisible] = useState<boolean>(false);
   const [entryToDelete, setEntryToDelete] = useState<Entry | null>(null);
   const [highlightedItemId, setHighlightedItemId] = useState<string | null>(null);
-  const [isActionsMenuVisible, setActionsMenuVisible] = useState(false);
+  const [isActionsMenuVisible, setActionsMenuVisible] = useState<boolean>(false);
   const [selectedEntryForAction, setSelectedEntryForAction] = useState<Entry | null>(null);
+  const [readonly, setReadOnly] = useState<boolean>(false);
 
   const screenWidth = Dimensions.get('window').width;
-  const [currentScreenWidth, setCurrentScreenWidth] = useState(screenWidth);
+  const [currentScreenWidth, setCurrentScreenWidth] = useState<number>(screenWidth);
   const isWideScreen = currentScreenWidth >= 700;
 
-  type Entry = {
-    id: string;
-    studentId: string;
-    studentName: string;
-    timeIn: string;
-    timeOut: string | null;
-  };
-
+  // Fetch user and lab ID on component mount and whenever dimensions change
   useEffect(() => {
     fetchUserAndLabId();
 
@@ -57,21 +60,26 @@ const MonitorView = () => {
     };
   }, []);
 
-  const fetchUserAndLabId = async () => {
+  // Fetch user and lab data, and load logs for today if the lab ID is valid
+  const fetchUserAndLabId = async (): Promise<boolean> => {
     try {
-      const user = await getUserByToken();
-      if (user.privLvl === 0) {
+      const fetchedUser = await getUserByToken();
+      if (fetchedUser.privLvl === 0) {
         crossPlatformAlert('Error', 'You do not have the privilege to view this page.');
         return false;
       }
-      setUser(user);
-      const labId = await ScheduleService.getCurrentLabForUser(user.userId);
-      crossPlatformAlert('Info', labId);
-      console.log(labId);
-      setLabId(labId);
-      await fetchLogsForToday(labId);
+      setUser(fetchedUser);
+      const labId = await ScheduleService.getCurrentLabForUser(fetchedUser.userId);
+
+      if (labId === 0) {
+        // Show a modal for handling schedule exemption if labId is 0
+        setConfirmationModalVisible(true);
+      } else {
+        setLabId(labId);
+        await fetchLogsForToday(labId);
+      }
       return true;
-    } catch (error) {
+    } catch (error: any) {
       const errorMessage = error.message.includes('server')
         ? 'Server is currently down. Please try again later.'
         : error.message;
@@ -82,13 +90,14 @@ const MonitorView = () => {
     }
   };
 
+  // Fetch logs for the current day based on the lab ID
   const fetchLogsForToday = async (labId: number) => {
     try {
       const startDate = moment().startOf('day').utc().format();
       const endDate = moment().endOf('day').utc().format();
-      const logs = await LogService.getLogsByLab(labId, startDate, endDate);
+      const logs: LogEntry[] = await LogService.getLogsByLab(labId, startDate, endDate);
 
-      const formattedLogs = logs.map(log => ({
+      const formattedLogs: Entry[] = logs.map(log => ({
         id: log.id.toString(),
         studentId: log.studentId.toString().padStart(8, '0'),
         studentName: log.studentName,
@@ -102,6 +111,7 @@ const MonitorView = () => {
     }
   };
 
+  // Handle student selection from the searcher modal
   const handleStudentSelect = async (student: { userId: string, fName: string, lName: string }) => {
     const userAndLabLoaded = await fetchUserAndLabId();
     if (!userAndLabLoaded) return;
@@ -115,7 +125,8 @@ const MonitorView = () => {
     setStudentSearcherOpen(false);
   };
 
-  const validateTimes = () => {
+  // Validate times for the check-in and check-out fields
+  const validateTimes = (): boolean => {
     const now = new Date();
 
     if (checkInTime > now) {
@@ -135,6 +146,7 @@ const MonitorView = () => {
     return true;
   };
 
+  // Handle log creation and update
   const handleCheckIn = async () => {
     const userAndLabLoaded = await fetchUserAndLabId();
     if (!userAndLabLoaded) return;
@@ -160,6 +172,7 @@ const MonitorView = () => {
       };
 
       if (editingEntryId) {
+        // Update log if editing
         await LogService.updateLog(Number(editingEntryId), {
           studentId: Number(selectedStudent.id),
           timein: moment(checkInTime).toISOString(),
@@ -169,7 +182,8 @@ const MonitorView = () => {
           Scanned: false
         });
       } else {
-        const createdLog = await LogService.createLog({
+        // Create new log entry if not editing
+        const createdLog: CreatedLog = await LogService.createLog({
           studentId: Number(selectedStudent.id),
           timein: moment(checkInTime).toISOString(),
           timeout: checkOutTime ? moment(checkOutTime).toISOString() : '',
@@ -196,6 +210,7 @@ const MonitorView = () => {
     }
   };
 
+  // Handle editing of an entry
   const handleEdit = async (entry: Entry) => {
     setSelectedEntryForAction(entry);
     setEditingEntryId(entry.id);
@@ -205,12 +220,14 @@ const MonitorView = () => {
       lastName: entry.studentName.split(' ')[1],
     });
     setCheckInTime(new Date(moment(entry.timeIn, 'h:mm:ss a').toISOString()));
-    setCheckOutTime(!entry.timeOut ? undefined : new Date(moment(entry.timeOut, 'h:mm:ss a').toISOString()));
+   
+    setCheckOutTime(entry.timeOut ? new Date(moment(entry.timeOut, 'h:mm:ss a').toISOString()) : undefined);
     setFormOpen(true);
     setError(null);
     setActionsMenuVisible(false);
   };
 
+  // Handle the deletion of a log entry
   const handleDelete = async (entry: Entry) => {
     setSelectedEntryForAction(entry);
     setEntryToDelete(entry);
@@ -218,6 +235,7 @@ const MonitorView = () => {
     setActionsMenuVisible(false);
   };
 
+  // Confirm and execute deletion of an entry
   const confirmDelete = async () => {
     const userAndLabLoaded = await fetchUserAndLabId();
     if (!userAndLabLoaded) return;
@@ -225,7 +243,7 @@ const MonitorView = () => {
     if (entryToDelete) {
       try {
         await LogService.deleteLog(Number(entryToDelete.id), user?.userId ?? 0);
-        setEntries((prevEntries) => prevEntries.filter(entry => entry.id !== entryToDelete.id));
+        setEntries((prevEntries) => prevEntries.filter((entry) => entry.id !== entryToDelete.id));
       } catch (error) {
         console.error('Failed to delete log:', error);
       } finally {
@@ -235,6 +253,7 @@ const MonitorView = () => {
     }
   };
 
+  // Handle clock-out action for a log entry
   const handleClockOut = async (id: string) => {
     const userAndLabLoaded = await fetchUserAndLabId();
     if (!userAndLabLoaded) return;
@@ -247,6 +266,7 @@ const MonitorView = () => {
     }
   };
 
+  // Reset form fields to initial state
   const resetForm = () => {
     setSelectedStudent({ id: '', firstName: '', lastName: '' });
     setCheckInTime(new Date());
@@ -255,21 +275,36 @@ const MonitorView = () => {
     setError(null);
   };
 
-  const filterEntries = (entries: Entry[]) => {
+  // Filter entries based on the selected filter type
+  const filterEntries = (entries: Entry[]): Entry[] => {
     if (selectedFilter === 'Not Checked Out') {
-      return entries.filter(entry => !entry.timeOut);
+      return entries.filter((entry) => !entry.timeOut);
     } else if (selectedFilter === 'Checked Out') {
-      return entries.filter(entry => entry.timeOut);
+      return entries.filter((entry) => entry.timeOut);
     }
     return entries; // Default to 'All'
   };
 
+  // Open the actions menu for the selected entry
   const openActionsMenu = (entry: Entry) => {
     setHighlightedItemId(entry.id);
     setSelectedEntryForAction(entry);
     setActionsMenuVisible(true);
   };
 
+  // Modal to show when working outside of schedule
+  const [isConfirmationModalVisible, setConfirmationModalVisible] = useState<boolean>(false);
+
+  const handleNavigateToSchedule = () => {
+    setConfirmationModalVisible(false);
+    // Navigate to the schedule screen logic here
+  };
+
+  const handleCloseConfirmation = () => {
+    setConfirmationModalVisible(false);
+  };
+
+  // Ensure user is loaded before rendering anything
   if (!user) return null;
 
   const actionButtons = [
@@ -456,6 +491,15 @@ const MonitorView = () => {
         type="yesNoDanger"
       />
 
+      <ConfirmationModal
+        visible={isConfirmationModalVisible}
+        title={<Text>Working Outside Schedule</Text>}
+        description={<Text>Currently working outside of schedule. Logging will be disabled unless you request a schedule exemption. Would you like to go to the schedule screen?</Text>}
+        onConfirm={handleNavigateToSchedule}
+        onCancel={handleCloseConfirmation}
+        type="yesNo"
+      />
+
       <ActionsModal
         visible={isActionsMenuVisible}
         onClose={() => setActionsMenuVisible(false)}
@@ -516,16 +560,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
   },
   tableHeaderStudentId: {
-    flex: 1, // Fixed size for student ID, as it is always 8 characters
+    flex: 1,
   },
   tableHeaderStudentName: {
-    flex: 3, // More space for the student name
+    flex: 3,
   },
   tableHeaderTime: {
-    flex: 1.5, // Time columns have smaller width
+    flex: 1.5,
   },
   tableHeaderActions: {
-    flex: 1.5, // Similar width as the time columns for actions
+    flex: 1.5,
   },
   noLogsText: {
     textAlign: 'center',
@@ -580,7 +624,7 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 10,
     height: 45,
-    backgroundColor: '#aaaaaaaa',
+    backgroundColor: '#eeeeee',
   },
   iconButton: {},
   iconImage: {

@@ -97,11 +97,12 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   modalContainer: {
-    width: '75%',
+    width: '50%',
     padding: 20,
     backgroundColor: '#fff',
     borderRadius: 10,
     alignItems: 'center',
+    fontFamily: 'Inter'
   },
   textContainer: {
     marginBottom: 20,

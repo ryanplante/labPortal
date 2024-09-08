@@ -108,27 +108,49 @@ namespace LabPortal.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<int>> GetCurrentLabForUser(int userId)
         {
-            int? labId = null;
+            // Declare a variable to hold the labID
+            int labId = 0;
 
             using (var connection = _context.Database.GetDbConnection())
             {
                 await connection.OpenAsync();
                 using (var command = connection.CreateCommand())
                 {
-                    command.CommandText = "EXEC [dbo].[usp_GetCurrentLabForUser] @UserID";
-                    command.Parameters.Add(new SqlParameter("@UserID", userId));
+                    // Set up the stored procedure command
+                    command.CommandText = "[dbo].[usp_GetCurrentLabForUser]";
+                    command.CommandType = System.Data.CommandType.StoredProcedure;
 
-                    labId = (int?)await command.ExecuteScalarAsync();
+                    // Add the userId parameter
+                    command.Parameters.Add(new SqlParameter("@userID", userId));
+
+                    // Add the labId output parameter
+                    var labIdOutput = new SqlParameter("@labID", System.Data.SqlDbType.Int)
+                    {
+                        Direction = System.Data.ParameterDirection.Output
+                    };
+                    command.Parameters.Add(labIdOutput);
+
+                    // Execute the stored procedure
+                    await command.ExecuteNonQueryAsync();
+
+                    // Retrieve the value from the output parameter
+                    labId = (int)labIdOutput.Value;
                 }
             }
 
-            if (labId == null)
+            // If labId is 0, return NotFound
+            if (labId == 0)
             {
                 return NotFound($"No current lab found for user with ID {userId}.");
             }
 
+            // Return the labId
             return Ok(labId);
         }
+
+
+
+
 
         // POST: api/Schedule
         [HttpPost]
@@ -554,7 +576,7 @@ namespace LabPortal.Controllers
         {
             try
             {
-                // Delete all schedules of type 1 for the given user
+                // Delete all schedules of type 0 for the given user
                 var schedulesToDelete = await _context.Schedules
                     .Where(s => s.UserId == userId && s.FkScheduleType == 0)
                     .ToListAsync();
@@ -566,7 +588,7 @@ namespace LabPortal.Controllers
 
                 // Delete all schedule exemptions for the given user
                 var exemptionsToDelete = await _context.ScheduleExemptions
-                    .Where(se => se.FkUser == userId)
+                    .Where(se => se.FkUser == userId && !se.Verified) // Delete only the unverified exemptions
                     .ToListAsync();
 
                 if (exemptionsToDelete.Any())

@@ -11,7 +11,6 @@ const HEARTBEAT_URL = `${process.env.EXPO_PUBLIC_API}/Heartbeat`;
 
 export const checkHeartbeat = async (): Promise<boolean> => {
   try {
-      console.log(HEARTBEAT_URL)
       const response = await axios.get(HEARTBEAT_URL);
       return response.status === 200;
   } catch (error: any) {
@@ -76,6 +75,9 @@ export const logout = async () => {
 export const validateCredentials = async (username: number, password: string): Promise<any> => {
   try {
     const lastUpdated = await fetchLastUpdated(Number(username));
+    console.log(lastUpdated)
+    const tst = password + lastUpdated;
+    console.log(SHA256(tst).toString());
     const formattedLastUpdated = lastUpdated.includes('Z')
       ? lastUpdated
       : `${lastUpdated}Z`;
@@ -102,6 +104,7 @@ export const validateCredentials = async (username: number, password: string): P
 export const updatePassword = async (userId: number, newPassword: string) => {
   try {
     const currentTimestamp = Math.round(new Date().getTime());
+
     const currentDate = new Date(currentTimestamp);
     const currentDateISO = currentDate.toISOString();
 

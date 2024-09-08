@@ -10,6 +10,7 @@ const Sidebar = ({ onProfilePress, onClose }: { onProfilePress: () => void; onCl
   const navigation = useNavigation();
   const [user, setUser] = useState<any>(null);
   const [unverifiedCount, setUnverifiedCount] = useState<number>(0);
+  const [retry, setRetry] = useState<boolean>(true);
 
   const fetchUserData = async () => {
     const token = await AsyncStorage.getItem('token');
@@ -36,15 +37,18 @@ const Sidebar = ({ onProfilePress, onClose }: { onProfilePress: () => void; onCl
       const errorMessage = error.message.includes('server')
         ? 'Server is currently down. Please try again later.'
         : error.message;
+      setRetry(false);
       crossPlatformAlert('Error', errorMessage);
       await reload();
+      setRetry(true);
     }
   };
 
   useEffect(() => {
-    fetchUserData();
+    if (retry)
+      fetchUserData();
 
-    // Set up interval for polling unverified exemptions count every 15 seconds
+    // Set up interval for polling unverified exemptions count every 5 seconds
     const intervalId = setInterval(() => {
       fetchUserData();
     }, 5000); // fetch user data in the background every 5 seconds to make sure their token didn't expire, update notifications, etc.
@@ -86,7 +90,7 @@ const Sidebar = ({ onProfilePress, onClose }: { onProfilePress: () => void; onCl
         </TouchableOpacity>
       )}
       {(user?.privLvl >= 1) && (
-        <TouchableOpacity style={styles.menuItem} onPress={() => handlePress('LabSchedules', [1, 2, 3, 4, 5])}>
+        <TouchableOpacity style={styles.menuItem} onPress={() => handlePress('Schedule', [1, 2, 3, 4, 5])}>
           <View>
             <Image source={require('../../assets/schedule-icon.png')} style={styles.icon} />
             {unverifiedCount > 0 && (
