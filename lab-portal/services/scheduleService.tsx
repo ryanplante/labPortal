@@ -226,7 +226,7 @@ class ScheduleService {
         }
     }
 
-        // Check for schedule collisions
+    // Check for schedule collisions
     async checkScheduleCollision(collisionData: CollisionCheckDto): Promise<string[]> {
         try {
             const response: AxiosResponse<string[]> = await axios.post(`${this.baseUrl}/CheckCollision`, collisionData);
@@ -240,6 +240,28 @@ class ScheduleService {
                 await this.handleError(error, 'checkScheduleCollision');
                 throw error;
             }
+        }
+    }
+
+    // Clear user schedule for work (FkScheduleType = 1)
+    async clearUserSchedule(userId: number): Promise<void> {
+        try {
+            await axios.delete(`${this.baseUrl}/ClearUserSchedule/${userId}`);
+            await this.audit('delete', `Cleared all work schedules and exemptions for user ID: ${userId}`);
+        } catch (error) {
+            await this.handleError(error, 'clearUserSchedule');
+            throw error;
+        }
+    }
+
+    // Clear student schedule (FkScheduleType = 0)
+    async clearStudentSchedule(userId: number): Promise<void> {
+        try {
+            await axios.delete(`${this.baseUrl}/ClearStudentSchedule/${userId}`);
+            await this.audit('delete', `Cleared all student schedules and exemptions for user ID: ${userId}`);
+        } catch (error) {
+            await this.handleError(error, 'clearStudentSchedule');
+            throw error;
         }
     }
 }

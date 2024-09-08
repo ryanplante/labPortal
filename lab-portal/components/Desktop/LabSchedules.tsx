@@ -13,6 +13,7 @@ import PlatformSpecificDateTimePicker from '../Modals/PlatformSpecificDateTimePi
 import { User } from '../../services/userService';
 import { crossPlatformAlert, reload } from '../../services/helpers';
 import { Dimensions } from 'react-native';
+import ConfirmationModal from '../Modals/ConfirmationModal';
 
 const LabSchedules = () => {
   const [scheduleData, setScheduleData] = useState([]);
@@ -38,25 +39,48 @@ const LabSchedules = () => {
   const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
   const [selectedDays, setSelectedDays] = useState([]);
   const [isWorkWeek, setIsWorkWeek] = useState(false);
+  const [isDeleteModalVisible, setDeleteModalVisible] = useState(false); // To control the delete confirmation modal visibility
+  const [isClearScheduleModalVisible, setClearScheduleModalVisible] = useState(false); // To control clear schedule modal visibility
+  const [selectedClearUserId, setSelectedClearUserId] = useState<number | null>(null); // Store the user ID for clear schedule
+  
+  const newLine = "\n";
+  const clearUserSchedule = async (userId) => {
+    setSelectedClearUserId(userId);
+    setClearScheduleModalVisible(true); // Show the modal before clearing schedules
+  };
 
-const handleDaySelection = (index) => {
-  setSelectedDays(prevDays =>
-    prevDays.includes(index)
-      ? prevDays.filter(day => day !== index)
-      : [...prevDays, index]
-  );
-};
+  const confirmClearSchedule = async () => {
+    if (selectedClearUserId !== null) {
+      try {
+        await ScheduleService.clearUserSchedule(selectedClearUserId); // Clear user schedules
+        await fetchSchedules(); // Refresh after clearing
+      } catch (error) {
+        console.error('Error clearing user schedules:', error);
+      } finally {
+        setClearScheduleModalVisible(false); // Close the modal after clearing
+        setSelectedClearUserId(null); // Reset selected user ID
+      }
+    }
+  };
 
-const handleWorkWeekSelection = (value) => {
-  setIsWorkWeek(value);
-  if (value) {
-    // Select all days from Monday to Friday
-    setSelectedDays([0, 1, 2, 3, 4]);
-  } else {
-    // Clear all selected days
-    setSelectedDays([]);
-  }
-};
+  const handleDaySelection = (index) => {
+    setSelectedDays(prevDays =>
+      prevDays.includes(index)
+        ? prevDays.filter(day => day !== index)
+        : [...prevDays, index]
+    );
+  };
+
+  const handleWorkWeekSelection = (value) => {
+    setIsWorkWeek(value);
+    if (value) {
+      // Select all days from Monday to Friday
+      setSelectedDays([0, 1, 2, 3, 4]);
+    } else {
+      // Clear all selected days
+      setSelectedDays([]);
+    }
+  };
 
   useEffect(() => {
     fetchSchedules();
@@ -89,8 +113,13 @@ const handleWorkWeekSelection = (value) => {
   const fetchUser = async () => {
     try {
       setLoading(true);
-      const user = await getUserByToken();
-      setUser(user);
+      const fetchedUser = await getUserByToken(); // Fetch the user first
+      setUser(fetchedUser); // Set the user state
+      if (!fetchedUser || fetchedUser.privLvl === 0) { // Check privileges after the user is set
+        crossPlatformAlert('Error', 'You do not have the privilege to view this page.');
+        return false;
+      }
+      return true; // Return true if all checks pass
     } catch (error) {
       const errorMessage = error.message.includes('server')
         ? 'Server is currently down. Please try again later.'
@@ -99,12 +128,11 @@ const handleWorkWeekSelection = (value) => {
       await deleteToken();
       await reload();
       return false;
-    }
-    if (user.privLvl === 0) {
-      crossPlatformAlert('Error', 'You do not have the privilege to view this page.');
-      return false;
+    } finally {
+      setLoading(false); // Set loading to false after everything is done
     }
   };
+  
 
   const isExemption = (scheduleId) => {
     // Find matching exemption by scheduleId
@@ -170,27 +198,43 @@ const handleWorkWeekSelection = (value) => {
     }
   };
 
+  // Confirm the deletion and proceed
+  const confirmDelete = async () => {
+    try {
+      if (formMode === 'work' && selectedSchedule) {
+        await ScheduleService.deleteSchedule(selectedSchedule.scheduleId);
+      } else if (formMode === 'exemption' && selectedSchedule) {
+        await ScheduleService.deleteScheduleExemption(selectedSchedule.scheduleExemptionId);
+      }
+      handleCloseForm(); // Close form after deletion
+      await fetchSchedules(); // Refresh after deleting
+    } catch (error) {
+      console.error('Error deleting schedule or exemption:', error);
+    } finally {
+      setDeleteModalVisible(false); // Close modal after deletion
+    }
+  };
+
   const handleScheduleClick = async (scheduleId, scheduleType) => {
     try {
       let scheduleInfo;
-  
-      if (scheduleType.includes('School', 'Off') || scheduleType === undefined) {
+      if (scheduleType === 'Off' || scheduleType === 'School' || scheduleType === undefined) {
         return;
       }
-  
+
       console.log('Schedule Type:', scheduleType);
-  
+
       if (scheduleType === 'Work') {
         scheduleInfo = await ScheduleService.getScheduleById(scheduleId);
         console.log('Selected Work Schedule Info:', scheduleInfo);
-        
+
         // Log important state updates
         console.log('Before state updates - datetimeIn:', datetimeIn, 'datetimeOut:', datetimeOut);
-        
+
         setSelectedSchedule(scheduleInfo);
         setSelectedUser(scheduleInfo.userId);
         setSelectedLab(scheduleInfo.fkLab);
-  
+
         // Calculate the new date and log it
         const calculatedInDate = moment(currentWeek)
           .day(scheduleInfo.dayOfWeek + 1)
@@ -204,9 +248,9 @@ const handleWorkWeekSelection = (value) => {
             hour: moment(scheduleInfo.timeOut, 'HH:mm').hours(),
             minute: moment(scheduleInfo.timeOut, 'HH:mm').minutes(),
           });
-  
+
         console.log('Calculated In Date:', calculatedInDate, 'Calculated Out Date:', calculatedOutDate);
-        
+
         setDatetimeIn(calculatedInDate.toDate());
         setDatetimeOut(calculatedOutDate.toDate());
         setTimeIn(moment(scheduleInfo.timeIn, 'HH:mm').toDate());
@@ -218,22 +262,22 @@ const handleWorkWeekSelection = (value) => {
         scheduleInfo = await ScheduleService.getScheduleExemptionById(scheduleId);
         setSelectedSchedule(scheduleInfo);
         console.log('Selected Exemption Schedule Info:', scheduleInfo);
-  
+
         const exemptionStartDate = moment(scheduleInfo.startDate).toDate();
         const exemptionEndDate = moment(scheduleInfo.endDate).toDate();
-  
+
         console.log('Exemption Start Date:', exemptionStartDate, 'Exemption End Date:', exemptionEndDate);
-        
+
         setDatetimeIn(exemptionStartDate);
         setDatetimeOut(exemptionEndDate);
-        
+
         if (scheduleInfo.fkSchedule) {
           const parentSchedule = await ScheduleService.getScheduleById(scheduleInfo.fkSchedule);
           setTimeIn(moment(parentSchedule.timeIn, 'HH:mm').toDate());
           setTimeOut(moment(parentSchedule.timeOut, 'HH:mm').toDate());
           setDayOfWeek(parentSchedule.dayOfWeek);
         }
-  
+
         handleExemptionTypeChange(scheduleInfo.fkExemptionType);
         setVerified(scheduleInfo.verified);
         setSelectedUser(scheduleInfo.fkUser);
@@ -241,17 +285,17 @@ const handleWorkWeekSelection = (value) => {
         setFormMode('exemption');
         setLoading(false);
       }
-  
+
       console.log('State after setting datetimeIn:', datetimeIn, 'datetimeOut:', datetimeOut);
       setIsFormOpen(true);
     } catch (error) {
       console.error('Error fetching schedule details:', error);
     }
   };
-  
-  
-  
-  
+
+
+
+
 
   const checkDateBounds = () => {
     // Check to make sure the exemption is within the schedule if they're updating/creating an exemption
@@ -323,12 +367,12 @@ const handleWorkWeekSelection = (value) => {
   const handleFormSubmit = async () => {
     try {
       let check, formData, collisionResult;
-      setFormError(null);  
+      setFormError(null);
       if (checkErrors()) return;
-  
+
       // Handle 'work' schedule case
       if (formMode === 'work') {
-        
+
         // For updating an existing schedule
         if (selectedSchedule) {
           check = {
@@ -340,7 +384,7 @@ const handleWorkWeekSelection = (value) => {
             weekNumber,
             pkLog: selectedSchedule.scheduleId, // Pass scheduleId for updating
           };
-  
+
           formData = {
             userId: selectedUser,
             fkLab: selectedLab,
@@ -351,17 +395,17 @@ const handleWorkWeekSelection = (value) => {
             fkScheduleType: 1,
             location: null,
           };
-  
+
           collisionResult = await ScheduleService.checkScheduleCollision(check);
           if (collisionResult && collisionResult[0] !== 'No schedule conflicts') {
             setFormError(`Schedule conflict detected:\n${collisionResult.join('\n')}`);
             return;
           }
-  
+
           // Update the schedule
           await ScheduleService.updateSchedule(selectedSchedule.scheduleId, formData);
-        
-        // For creating a new schedule, iterate over selected days
+
+          // For creating a new schedule, iterate over selected days
         } else {
           // Ensure at least one day is selected when adding a new schedule
           if (!selectedSchedule && selectedDays.length === 0) {
@@ -378,7 +422,7 @@ const handleWorkWeekSelection = (value) => {
               weekNumber,
               pkLog: null, // New schedule creation
             };
-  
+
             formData = {
               userId: selectedUser,
               fkLab: selectedLab,
@@ -389,30 +433,30 @@ const handleWorkWeekSelection = (value) => {
               fkScheduleType: 1,
               location: null,
             };
-  
+
             // Perform the collision check for each day
             collisionResult = await ScheduleService.checkScheduleCollision(check);
             if (collisionResult && collisionResult[0] !== 'No schedule conflicts') {
               setFormError(`Schedule conflict detected for ${daysOfWeek[day]}:\n${collisionResult.join('\n')}`);
               return;
             }
-  
+
             // Create the new schedule for the selected day
             await ScheduleService.createSchedule(formData);
           }
         }
-        
+
         // Close the form and refresh schedules
         setIsFormOpen(false);
         await fetchSchedules(); // Refresh schedules
-  
-      // Handle 'exemption' case (no changes to this part)
+
+        // Handle 'exemption' case (no changes to this part)
       } else if (formMode.includes('exemption')) {
         const startDate = moment(datetimeIn).format('YYYY-MM-DDTHH:mm:ss'); // Format start date as local time
         const endDate = moment(datetimeOut).format('YYYY-MM-DDTHH:mm:ss'); // Format end date as local time
-  
+
         const fkSchedule = selectedSchedule ? (selectedSchedule.fkSchedule ? selectedSchedule.fkSchedule : selectedSchedule.scheduleId) : null;
-  
+
         const exemptionData = {
           startDate,
           endDate,
@@ -422,7 +466,7 @@ const handleWorkWeekSelection = (value) => {
           verified: verified,
           fkSchedule: fkSchedule,
         };
-  
+
         // Handle collision check for working outside of schedule
         if (exemptionType == 4) {
           check = {
@@ -434,7 +478,7 @@ const handleWorkWeekSelection = (value) => {
             weekNumber: moment(datetimeIn).week(),
             pkLog: selectedSchedule ? selectedSchedule.scheduleId : null, // Include scheduleId if updating
           };
-  
+
           collisionResult = await ScheduleService.checkScheduleCollision(check);
           if (collisionResult && collisionResult[0] !== 'No schedule conflicts') {
             setFormError(`Schedule conflict detected:\n${collisionResult.join('\n')}`);
@@ -450,7 +494,7 @@ const handleWorkWeekSelection = (value) => {
         } else {
           await ScheduleService.createScheduleExemption(exemptionData);
         }
-  
+
         // Close form and refresh schedules after submission
         setIsFormOpen(false);
         await fetchSchedules(); // Refresh schedules
@@ -460,10 +504,13 @@ const handleWorkWeekSelection = (value) => {
       console.error('Error submitting form:', error);
     }
   };
-  
+
 
   // Adding a delete action
   const handleDelete = async () => {
+    setDeleteModalVisible(true); // Open the delete confirmation modal
+    handleCloseForm();
+    /*
     try {
       if (formMode === 'work' && selectedSchedule) {
         await ScheduleService.deleteSchedule(selectedSchedule.scheduleId);
@@ -475,13 +522,14 @@ const handleWorkWeekSelection = (value) => {
     } catch (error) {
       console.error('Error deleting schedule or exemption:', error);
     }
+      */
   };
 
   const handleExemptionTypeChange = async (value) => {
     setExemptionType(value);
     // Calculate the date based on currentWeek and dayOfWeek, this is used to populate schedule exemptions with the schedule's date of the selected week
     if (formMode.includes("schedule")) {
-        const calculatedInDate = moment(currentWeek)
+      const calculatedInDate = moment(currentWeek)
         .day(dayOfWeek + 1) // Set the correct day of the week
         .set({
           hour: moment(timeIn, 'HH:mm').hours(),
@@ -524,18 +572,18 @@ const handleWorkWeekSelection = (value) => {
   const resetTimeValues = () => {
     const defaultTimeIn = moment().set({ hour: 9, minute: 0 }).toDate(); // Set to 9:00 AM
     const defaultTimeOut = moment().set({ hour: 17, minute: 0 }).toDate(); // Set to 5:00 PM
-  
+
     setTimeIn(defaultTimeIn);
     setTimeOut(defaultTimeOut);
-  };  
+  };
 
   const resetDateTimeValues = () => {
     const defaultTimeIn = moment().set({ hour: 9, minute: 0 }).toDate(); // Set to 9:00 AM
     const defaultTimeOut = moment().set({ hour: 17, minute: 0 }).toDate(); // Set to 5:00 PM
-  
+
     setDatetimeIn(defaultTimeIn);
     setDatetimeOut(defaultTimeOut);
-  };  
+  };
 
   const getFormComponents = () => {
     let components = [];
@@ -561,7 +609,7 @@ const handleWorkWeekSelection = (value) => {
     if (formMode === 'addOptions') {
       return [
         [
-          <Pressable key="addSchedule" style={styles.optionButton} onPress={() => {setFormMode('work'); setTimeIn(new Date()); setSelectedSchedule(null); resetTimeValues()}}>
+          <Pressable key="addSchedule" style={styles.optionButton} onPress={() => { setFormMode('work'); setTimeIn(new Date()); setSelectedSchedule(null); resetTimeValues() }}>
             <Text style={styles.optionText}>Add New Schedule</Text>
           </Pressable>,
           <Pressable key="addExemption" style={styles.optionButton} onPress={handleAddExemption}>
@@ -593,7 +641,7 @@ const handleWorkWeekSelection = (value) => {
           <Text>Time Out</Text>
           <PlatformSpecificTimePicker time={timeOut} onTimeChange={setTimeOut} />
         </View>,
-    
+
         // Conditional rendering based on whether selectedSchedule is null or not
         selectedSchedule ? (
           <View key="dayOfWeek">
@@ -627,12 +675,12 @@ const handleWorkWeekSelection = (value) => {
             </View>
           </View>
         ),
-    
+
         <Pressable key="submitButton" style={styles.submitButton} onPress={handleFormSubmit}>
           <Text style={styles.optionText}>{selectedSchedule ? "Update Schedule" : "Add Schedule"}</Text>
         </Pressable>
       ];
-    }    
+    }
     if (formMode.includes('exemption')) {
       if (formMode === 'exemption-schedule') { // Modified form to add exemption from a schedule
         components = [
@@ -777,8 +825,8 @@ const handleWorkWeekSelection = (value) => {
     setSelectedLab(undefined);
     setFormError(null);
   };
-  
-  
+
+
 
   const handleCloseForm = () => {
     setIsFormOpen(false);
@@ -837,7 +885,15 @@ const handleWorkWeekSelection = (value) => {
               return acc;
             }, {})).map(([userId, userEntries]) => (
               <View key={userId} style={styles.tableRow}>
-                <Text style={[styles.tableCell, styles.tableSubHeader]}>{userEntries[0].user}</Text>
+                <Text style={[styles.tableCell, styles.tableSubHeader]}>{[userEntries[0].user, newLine]}
+                  <Pressable 
+                    style={[styles.clearButton, { backgroundColor: 'red' }]} 
+                    onPress={() => clearUserSchedule(userId)}
+                  >
+                    <Text style={styles.clearButtonText}>Clear Schedule</Text>
+                  </Pressable>
+                </Text>
+
                 {daysOfWeek.map((day, index) => (
                   <View key={day} style={styles.tableCell}>
                     {groupByDay(userEntries, index).map((item, idx) => (
@@ -900,6 +956,23 @@ const handleWorkWeekSelection = (value) => {
           error={formError} // Pass the error message to DynamicForm
         />
       )}
+      {/* Confirmation Modal for Deletion */}
+      <ConfirmationModal
+        visible={isDeleteModalVisible}
+        title="Confirm Delete"
+        description="Are you sure you want to delete this schedule?"
+        onConfirm={confirmDelete} // Execute deletion on confirmation
+        onCancel={() => setDeleteModalVisible(false)} // Hide the modal on cancel
+        type="yesNoDanger" // Set the type to show Yes/No in danger style
+      />
+      <ConfirmationModal
+        visible={isClearScheduleModalVisible}
+        title="Clear Schedule"
+        description="Are you sure you want to clear this user's schedule?"
+        onConfirm={confirmClearSchedule} // Execute clear schedule on confirmation
+        onCancel={() => setClearScheduleModalVisible(false)} // Hide the modal on cancel
+        type="yesNoDanger" // Set the type to show Yes/No in danger style
+      />
     </View>
   );
 };
@@ -936,6 +1009,7 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: 'center',
     fontSize: 16,
+    minWidth: 100, 
   },
   tableHeader: {
     fontWeight: 'bold',
@@ -948,6 +1022,8 @@ const styles = StyleSheet.create({
     margin: 5,
     padding: 5,
     borderRadius: 5,
+    width: '95%', // Ensure full width of cell is used
+    minWidth: 80,
   },
   work: {
     backgroundColor: '#ccccff',
@@ -1085,6 +1161,18 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgb(255, 193, 7)', // Updated color for buttons
     padding: 10,
     borderRadius: 5,
+  },
+
+  clearButton: {
+    backgroundColor: 'red', // Red background for clear schedule button
+    marginVertical: 5,
+    padding: 10,
+    borderRadius: 5,
+  },
+  clearButtonText: {
+    color: 'white',
+    fontSize: 14,
+    textAlign: 'center',
   },
 });
 

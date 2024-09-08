@@ -67,7 +67,7 @@ const styles = StyleSheet.create({
   },
   image: {
     verticalAlign: 'middle',
-    width: '50%',
+    width: '45%',
   },
 });
 

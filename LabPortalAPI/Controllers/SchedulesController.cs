@@ -503,6 +503,87 @@ namespace LabPortal.Controllers
             {
                 return StatusCode(StatusCodes.Status500InternalServerError, new { error = ex.Message });
             }
-        }   
+        }
+
+        // DELETE: api/Schedule/ClearUserSchedule/{userId}
+        [HttpDelete("ClearUserSchedule/{userId}")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> ClearUserSchedule(int userId)
+        {
+            try
+            {
+                // Delete all schedules of type 1 for the given user
+                var schedulesToDelete = await _context.Schedules
+                    .Where(s => s.UserId == userId && s.FkScheduleType == 1)
+                    .ToListAsync();
+
+                if (schedulesToDelete.Any())
+                {
+                    _context.Schedules.RemoveRange(schedulesToDelete);
+                }
+
+                // Delete all schedule exemptions for the given user
+                var exemptionsToDelete = await _context.ScheduleExemptions
+                    .Where(se => se.FkUser == userId)
+                    .ToListAsync();
+
+                if (exemptionsToDelete.Any())
+                {
+                    _context.ScheduleExemptions.RemoveRange(exemptionsToDelete);
+                }
+
+                // Save changes to the database
+                await _context.SaveChangesAsync();
+
+                return NoContent(); // Success
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new { error = ex.Message });
+            }
+        }
+
+        // DELETE: api/Schedule/ClearStudentSchedule/{userId}
+        [HttpDelete("ClearStudentSchedule/{userId}")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> ClearStudentSchedule(int userId)
+        {
+            try
+            {
+                // Delete all schedules of type 1 for the given user
+                var schedulesToDelete = await _context.Schedules
+                    .Where(s => s.UserId == userId && s.FkScheduleType == 0)
+                    .ToListAsync();
+
+                if (schedulesToDelete.Any())
+                {
+                    _context.Schedules.RemoveRange(schedulesToDelete);
+                }
+
+                // Delete all schedule exemptions for the given user
+                var exemptionsToDelete = await _context.ScheduleExemptions
+                    .Where(se => se.FkUser == userId)
+                    .ToListAsync();
+
+                if (exemptionsToDelete.Any())
+                {
+                    _context.ScheduleExemptions.RemoveRange(exemptionsToDelete);
+                }
+
+                // Save changes to the database
+                await _context.SaveChangesAsync();
+
+                return NoContent(); // Success
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new { error = ex.Message });
+            }
+        }
+
     }
 }
