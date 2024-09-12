@@ -3,8 +3,8 @@ import { Modal, View, TouchableOpacity, StyleSheet, Text } from 'react-native';
 
 interface ConfirmationModalProps {
   visible: boolean;
-  title: React.ReactNode;
-  description: React.ReactNode;
+  title: string;
+  description: string;
   onConfirm: () => void;
   onCancel: () => void;
   type?: 'yesNo' | 'yesNoDanger' | 'okCancel' | 'ok'; // Different types of buttons
@@ -78,14 +78,19 @@ const ConfirmationModal = ({
             <Text style={styles.title}>{title}</Text>
           </View>
           <View style={styles.textContainer}>
-            {description}
+            {typeof description === 'string'
+              ? description.split('\n').map((line, index) => (
+                <Text key={index} style={styles.description}>{line}</Text>
+              ))
+              : <Text style={styles.description}>{description}</Text> // Fallback if description is not a string
+            }
           </View>
           <View style={[styles.buttonContainer, type === 'ok' && { justifyContent: 'center' }]}>
             {renderButtons()}
           </View>
         </View>
       </View>
-    </Modal>
+    </Modal >
   );
 };
 
@@ -113,6 +118,9 @@ const styles = StyleSheet.create({
     fontSize: 30,
     marginBottom: 20,
     alignItems: 'center',
+  },
+  description: {
+    fontSize: 15,
   },
   buttonContainer: {
     flexDirection: 'row',
@@ -144,7 +152,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffc700', // Yellow for ok button
     padding: 10,
     borderRadius: 5,
-    width: '100%', 
+    width: '100%',
     alignItems: 'center',
   },
   buttonText: {
@@ -152,7 +160,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   okButtonText: {
-    color: 'black', 
+    color: 'black',
     fontSize: 16,
   },
 });

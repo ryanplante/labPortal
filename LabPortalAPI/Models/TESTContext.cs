@@ -37,6 +37,7 @@ namespace LabPortal.Models
         public virtual DbSet<User> Users { get; set; } = null!;
         public virtual DbSet<UserToken> UserTokens { get; set; } = null!;
 
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<AuditLog>(entity =>
@@ -107,6 +108,8 @@ namespace LabPortal.Models
                 entity.Property(e => e.Message)
                     .HasMaxLength(255)
                     .HasColumnName("message");
+
+                entity.Property(e => e.RoomName).HasMaxLength(255);
 
                 entity.Property(e => e.Timestamp)
                     .HasColumnType("datetime")
@@ -375,13 +378,8 @@ namespace LabPortal.Models
 
                 entity.Property(e => e.UserId).HasColumnName("userID");
 
-                entity.HasOne(d => d.FkLabNavigation)
-                    .WithMany(p => p.ScheduleFkLabNavigations)
-                    .HasForeignKey(d => d.FkLab)
-                    .HasConstraintName("FK__Schedules__sched__71D1E811");
-
                 entity.HasOne(d => d.FkScheduleTypeNavigation)
-                    .WithMany(p => p.ScheduleFkScheduleTypeNavigations)
+                    .WithMany(p => p.Schedules)
                     .HasForeignKey(d => d.FkScheduleType)
                     .HasConstraintName("FK_Schedules_ScheduleTypeLookup");
 

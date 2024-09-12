@@ -497,8 +497,8 @@ const MonitorView = () => {
 
       <ConfirmationModal
         visible={isDeleteModalVisible}
-        title={<Text>Confirm Deletion</Text>}
-        description={<Text>Are you sure you want to delete this entry? This action cannot be undone.</Text>}
+        title={"Confirm Deletion"}
+        description={"Are you sure you want to delete this entry? This action cannot be undone."}
         onConfirm={confirmDelete}
         onCancel={() => setDeleteModalVisible(false)}
         type="yesNoDanger"
@@ -506,8 +506,8 @@ const MonitorView = () => {
 
       <ConfirmationModal
         visible={isConfirmationModalVisible}
-        title={<Text>Working Outside Schedule</Text>}
-        description={<Text>Currently working outside of schedule. Logging will be disabled unless you request a schedule exemption. Would you like to go to the schedule screen?</Text>}
+        title={"Working Outside Schedule"}
+        description={"Currently working outside of schedule.\nLogging will be disabled unless you request a schedule exemption. Would you like to go to the schedule screen?"}
         onConfirm={handleNavigateToSchedule}
         onCancel={handleCloseConfirmation}
         type="yesNo"

@@ -8,7 +8,7 @@ import { reload } from '../../services/helpers';
 import * as Device from "expo-device";
 
 const Login = () => {
-  const [username, setUsername] = useState(null);
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState(''); 
   const [loading, setLoading] = useState(false);  

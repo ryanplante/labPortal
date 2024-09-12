@@ -12,7 +12,6 @@ import ManageLabs from './components/Desktop/ManageLabs'; // Ensure correct impo
 import Chat from './components/Desktop/Chat';
 import ScanItem from './components/Desktop/ScanItem';
 import LogHistory from './components/Desktop/LogHistory';
-import Admin from './components/Desktop/Admin';
 import Sidebar from './components/Desktop/Sidebar';
 import ProfileSidebar from './components/Modals/ProfileSidebar';
 import { isMobile } from 'react-device-detect';
@@ -149,7 +148,7 @@ const App = () => {
                   <Stack.Screen name="Schedule" component={MobileSchedule} />
                   <Stack.Screen name="ManageLabs" component={MobileManageLabs} />
                   <Stack.Screen name="LabSchedules" component={MobileLabSchedules} />
-                  <Stack.Screen name="Chat" component={MobileChat} />
+                  <Stack.Screen name="Chat" component={Chat} />
                   <Stack.Screen name="ScanItem" component={MobileScanItem} />
                   <Stack.Screen name="LogHistory" component={MobileLogHistory} />
                   <Stack.Screen name="Admin" component={MobileAdmin} />
@@ -168,7 +167,7 @@ const App = () => {
                   <Stack.Screen name="Help" component={HelpScreen} />
                   <Stack.Screen name="ScanItem" component={ScanItem} />
                   <Stack.Screen name="LogHistory" component={LogHistory} />
-                  <Stack.Screen name="Admin" component={Admin} />
+                  {/*<Stack.Screen name="Admin" component={Admin} /> */}
                   <Stack.Screen name="Sample" component={SampleScreen} />
                   <Stack.Screen name="Example" component={ExamplePage} />
                   <Stack.Screen name="Item" component={ItemManager} />

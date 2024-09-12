@@ -19,7 +19,6 @@ namespace LabPortal.Models
         public int? FkScheduleType { get; set; }
         public string? Location { get; set; }
 
-        public virtual ScheduleTypeLookup? FkLabNavigation { get; set; }
         public virtual ScheduleTypeLookup? FkScheduleTypeNavigation { get; set; }
         public virtual User? User { get; set; }
         public virtual ICollection<ScheduleExemption> ScheduleExemptions { get; set; }

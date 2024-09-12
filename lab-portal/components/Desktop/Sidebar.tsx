@@ -1,17 +1,61 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, StyleSheet, Image, Text, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import * as SignalR from '@microsoft/signalr';
 import { checkHeartbeat, getUserByToken } from '../../services/loginService';
 import ScheduleService from '../../services/scheduleService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { crossPlatformAlert, reload } from '../../services/helpers';
+import { User } from '../../services/userService';
 
 const Sidebar = ({ onProfilePress, onClose }: { onProfilePress: () => void; onClose: () => void }) => {
   const navigation = useNavigation();
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [unverifiedCount, setUnverifiedCount] = useState<number>(0);
   const [retry, setRetry] = useState<boolean>(true);
+  const [isTutorAvailable, setIsTutorAvailable] = useState<boolean>(false);
+  const [studentCount, setStudentCount] = useState<number>(0);
+  const connectionRef = useRef<SignalR.HubConnection | null>(null); // Notification hub connection reference
 
+  // Initialize the SignalR connection once
+  const initializeSignalRConnection = async (user: User) => {
+    if (connectionRef.current) {
+      return; // If the connection already exists, return
+    }
+
+    const connection = new SignalR.HubConnectionBuilder()
+      .withUrl(process.env.EXPO_PUBLIC_NOTIFICATION_SOCKET) // Notifications hub URL
+      .configureLogging(SignalR.LogLevel.Information)
+      .build();
+
+    // Handle the statuses response from the server
+    connection.on('tutor_count', (available) => {
+      setIsTutorAvailable(available);
+    });
+
+    connection.on('student_count', (count) => {
+      setStudentCount(count);
+    });
+
+    // Start the connection
+    try {
+      await connection.start();
+      connectionRef.current = connection; // Store connection in ref
+
+      // Invoke the new method to get both statuses
+      connection.invoke('GetStatuses', user.userDept);
+
+      // Ensure cleanup if the component unmounts or connection stops
+      return () => {
+        connection.stop(); // Stop the connection when done
+        connectionRef.current = null; // Clear the connection reference
+      };
+    } catch (error) {
+      console.error('Error connecting to NotificationsHub: ', error);
+    }
+  };
+
+  // Fetch user data and check API status
   const fetchUserData = async () => {
     const token = await AsyncStorage.getItem('token');
     try {
@@ -21,15 +65,19 @@ const Sidebar = ({ onProfilePress, onClose }: { onProfilePress: () => void; onCl
       }
       if (token) {
         const user = await getUserByToken();
-        if (!user)
-          await reload();
+        if (!user) {
+          await reload(); // Reload the app if token fails
+        }
         setUser(user);
 
-        // Fetch unverified schedule exemptions count
+        // Fetch count of unverified exemptions
         if (user.privLvl > 3) {
           const count = await ScheduleService.getUnverifiedExemptionCountByDept(user.userDept);
           setUnverifiedCount(count);
         }
+
+        // Initialize the SignalR connection once
+        initializeSignalRConnection(user);
       } else {
         await reload();
       }
@@ -44,30 +92,41 @@ const Sidebar = ({ onProfilePress, onClose }: { onProfilePress: () => void; onCl
     }
   };
 
+  // Fetch user data and handle updates
   useEffect(() => {
-    if (retry)
+    if (retry) {
       fetchUserData();
+    }
 
-    // Set up interval for polling unverified exemptions count every 5 seconds
     const intervalId = setInterval(() => {
-      fetchUserData();
-    }, 5000); // fetch user data in the background every 5 seconds to make sure their token didn't expire, update notifications, etc.
+      // Reinvoke the check method every 5 seconds
+      if (connectionRef.current && user) {
+        connectionRef.current.invoke('GetStatuses', user.userDept);
+      }
+      fetchUserData(); // Fetch user data every 5 seconds
+    }, 5000);
 
-    // Cleanup interval on component unmount
-    return () => clearInterval(intervalId);
-  }, []);
+    return () => {
+      clearInterval(intervalId); // Clear the interval when the component unmounts
+      connectionRef.current?.stop(); // Clean up the connection
+    };
+  }, [retry]);
 
+  // Handle navigation and permissions
   const handlePress = async (screenName: string, permittedLevels: number[]) => {
     await fetchUserData();
     if (user && permittedLevels.includes(user.privLvl)) {
-      onClose(); // Close the profile sidebar only when navigating
+      onClose();
       navigation.navigate(screenName);
     } else {
       crossPlatformAlert('Access Denied', 'You do not have permission to access this screen.');
     }
   };
+
+  // Sidebar menu content
   const labMonitors = "   Add/Edit\nLab Monitors";
-  const deptManager = "  Department\n    Manager"
+  const deptManager = "  Department\n    Manager";
+
   return (
     <View style={styles.sidebar}>
       <TouchableOpacity style={styles.menuItem} onPress={() => handlePress('Main', [0, 1, 2, 3, 4, 5])}>
@@ -105,7 +164,15 @@ const Sidebar = ({ onProfilePress, onClose }: { onProfilePress: () => void; onCl
       {(user?.privLvl <= 3) && (
         <TouchableOpacity style={styles.menuItem} onPress={() => handlePress('Chat', [0, 1, 2, 3])}>
           <Image source={require('../../assets/chat-icon.png')} style={styles.icon} />
-          <Text style={styles.menuText}>Chat</Text>
+          {user?.privLvl < 2 && !user?.IsTeacher && (
+            <View style={[styles.chatBubble, { backgroundColor: isTutorAvailable ? 'green' : 'red' }]} />
+          )}
+          {(user?.privLvl >= 2 || user?.IsTeacher) && (
+            <Text style={styles.studentCountBubble}>{studentCount}</Text>
+          )}
+          <Text style={styles.menuText}>
+            Chat
+          </Text>
         </TouchableOpacity>
       )}
       {(user?.privLvl >= 1 && user?.privLvl <= 3) && (
@@ -153,7 +220,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 20,
     height: '100%',
-    zIndex: 1, // Ensure it is behind the profile sidebar
   },
   menuItem: {
     alignItems: 'center',
@@ -183,6 +249,24 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 10,
     fontWeight: 'bold',
+  },
+  chatBubble: {
+    position: 'absolute',
+    top: -5,
+    right: -5,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+  },
+  studentCountBubble: {
+    position: 'absolute',
+    top: -5,
+    right: -5,
+    backgroundColor: 'red',
+    borderRadius: 10,
+    paddingHorizontal: 6,
+    fontSize: 12,
+    color: 'white',
   },
 });
 

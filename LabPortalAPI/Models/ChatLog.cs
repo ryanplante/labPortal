@@ -9,6 +9,7 @@ namespace LabPortal.Models
         public int? UserId { get; set; }
         public string? Message { get; set; }
         public DateTime? Timestamp { get; set; }
+        public string? RoomName { get; set; }
 
         public virtual User? User { get; set; }
     }
