@@ -131,6 +131,19 @@ namespace LabPortal.Hubs
                     return;
                 }
 
+                var ban = await _context.Bans
+                    .Where(b => b.UserId == userId && b.ExpirationDate > DateTime.UtcNow)
+                    .FirstOrDefaultAsync();
+
+                if (ban != null)
+                {
+                    // If the user is banned, disconnect them
+                    await Clients.Caller.SendAsync("kicked", $"You are banned from using this function for {ban.Reason} until {ban.ExpirationDate?.ToLocalTime():MM/dd/yyyy hh:mm tt}");
+                    Console.WriteLine($"User {userId} is banned and was removed from the chat.");
+                    Context.Abort();
+                    return;
+                }
+
                 // Fetch full user details from the database
                 var user = await _context.Users
                     .Where(u => u.UserId == userId)
