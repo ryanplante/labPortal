@@ -20,8 +20,6 @@ import ChangePassword from './components/Desktop/ChangePassword';
 import { crossPlatformAlert, reload } from './services/helpers';
 import { CreateAuditLog } from './services/auditService';
 import HelpScreen from './components/Desktop/HelpScreen';
-import SampleScreen from './components/Desktop/Sample';
-import ExamplePage from './components/Desktop/Example';
 import ItemManager from './components/Desktop/ItemManager';
 import * as Device from "expo-device";
 import MobileMainPage from './components/Mobile/MainPage';
@@ -167,9 +165,6 @@ const App = () => {
                   <Stack.Screen name="Help" component={HelpScreen} />
                   <Stack.Screen name="ScanItem" component={ScanItem} />
                   <Stack.Screen name="LogHistory" component={LogHistory} />
-                  {/*<Stack.Screen name="Admin" component={Admin} /> */}
-                  <Stack.Screen name="Sample" component={SampleScreen} />
-                  <Stack.Screen name="Example" component={ExamplePage} />
                   <Stack.Screen name="Item" component={ItemManager} />
                 </>
               )

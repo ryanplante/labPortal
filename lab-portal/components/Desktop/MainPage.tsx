@@ -2,9 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Image, Alert, ActivityIndicator } from 'react-native';
 import ProfileSidebar from '../Modals/ProfileSidebar';
 import StudentView from './Views/StudentView';
-import MonitorView from './Views/MonitorView';
-import TutorView from './Views/TutorView';
-import TutorMonitorView from './Views/HybridView';
+import StudentWorkerView from './Views/StudentWorkerView';
 import DepartmentHeadView from './Views/DepartmentHeadView';
 import AdminView from './Views/AdminView';
 import { isMobile } from 'react-device-detect';
@@ -62,11 +60,11 @@ const MainPage = () => {
       case 'Student':
         return <StudentView />;
       case 'Monitor':
-        return <MonitorView />;
+        return <StudentWorkerView />;
       case 'Tutor':
-        return <TutorView />;
+        return <StudentWorkerView />;
       case 'Tutor/Monitor':
-        return <TutorMonitorView />;
+        return <StudentWorkerView />;
       case 'Department Head':
         return <DepartmentHeadView />;
       case 'Admin':

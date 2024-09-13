@@ -22,7 +22,7 @@ type Entry = {
   timeOut: string | null;
 };
 
-const MonitorView = () => {
+const StudentWorkerView = () => {
   const [user, setUser] = useState<User | null>(null);
   const [selectedView, setSelectedView] = useState<string>('Logs');
   const [selectedFilter, setSelectedFilter] = useState<string>('All');
@@ -657,4 +657,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default MonitorView;
+export default StudentWorkerView;
