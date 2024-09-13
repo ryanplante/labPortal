@@ -157,6 +157,44 @@ namespace LabPortal.Controllers
             return Ok();
         }
 
+        // GET: api/Items/search/{labId}/{query}
+        [HttpGet("search/{labId}/{query}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<ActionResult<IEnumerable<ItemDto>>> SearchItems(int labId, string query)
+        {
+            if (_context.Items == null)
+            {
+                return NotFound();
+            }
+
+            var lowerQuery = query.ToLower();
+            var items = await _context.Items
+                .Where(i => i.FkLab == labId &&
+                            (i.Description.ToLower().Contains(lowerQuery) ||
+                             i.SerialNum.ToLower().Contains(lowerQuery)))
+                .ToListAsync();
+
+            if (!items.Any())
+            {
+                return NotFound();
+            }
+
+            var itemDtos = items.Select(item => new ItemDto
+            {
+                ItemId = item.ItemId,
+                Description = item.Description,
+                Lab = item.FkLab,
+                Quantity = item.Quantity,
+                SerialNum = item.SerialNum,
+                Picture = item.Picture
+            }).ToList();
+
+            return Ok(itemDtos);
+        }
+
+
+
         // DELETE: api/Items/5
         [HttpDelete("{id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]

@@ -7,6 +7,7 @@ import ScheduleService from '../../services/scheduleService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { crossPlatformAlert, reload } from '../../services/helpers';
 import { User } from '../../services/userService';
+import { useCameraPermissionStatus } from './useCameraPermissionStatus';
 
 const Sidebar = ({ onProfilePress, onClose }: { onProfilePress: () => void; onClose: () => void }) => {
   const navigation = useNavigation();
@@ -16,6 +17,7 @@ const Sidebar = ({ onProfilePress, onClose }: { onProfilePress: () => void; onCl
   const [isTutorAvailable, setIsTutorAvailable] = useState<boolean>(false);
   const [studentCount, setStudentCount] = useState<number>(0);
   const connectionRef = useRef<SignalR.HubConnection | null>(null); // Notification hub connection reference
+  const { isGranted, requestCameraPermission } = useCameraPermissionStatus(); // Check if the camera is available, if so, disable scanner
 
   // Initialize the SignalR connection once
   const initializeSignalRConnection = async (user: User) => {
@@ -175,8 +177,29 @@ const Sidebar = ({ onProfilePress, onClose }: { onProfilePress: () => void; onCl
           </Text>
         </TouchableOpacity>
       )}
-      {(user?.privLvl >= 1 && user?.privLvl <= 3) && (
-        <TouchableOpacity style={styles.menuItem} onPress={() => handlePress('ScanItem', [1, 2, 3])}>
+      {/* If the scanner is not available, request permission when pressing it */}
+      {(user?.privLvl >= 1 && user?.privLvl <= 3 && !isGranted) && (
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={async () => {
+            await requestCameraPermission(); // Wait for the permission to be requested
+            if (!isGranted) {
+              // Ensure that permission is rechecked after the async call
+              // Display a message or icon showing the camera access status.
+            }
+          }}
+        >
+          <Image source={require('../../assets/scan-icon.png')} style={styles.icon} />
+          <Text style={styles.menuText}>Scanner</Text>
+          <View style={styles.badgeContainer}>
+            <Text style={styles.badgeText}>!</Text>
+          </View>
+        </TouchableOpacity>
+      )}
+
+      {/* If the scanner is available, allow scanning */}
+      {(user?.privLvl >= 1 && user?.privLvl <= 3 && isGranted) && (
+        <TouchableOpacity style={styles.menuItem} onPress={() => handlePress('Scanner', [1, 2, 3])}>
           <Image source={require('../../assets/scan-icon.png')} style={styles.icon} />
           <Text style={styles.menuText}>Scanner</Text>
         </TouchableOpacity>

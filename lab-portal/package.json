@@ -10,6 +10,7 @@
     "start:dev": "SET ENVFILE=.env.development.local && expo start"
   },
   "dependencies": {
+    "@ericblade/quagga2": "^1.8.4",
     "@expo/metro-runtime": "~3.2.1",
     "@expo/vector-icons": "^14.0.2",
     "@microsoft/signalr": "^8.0.7",
@@ -39,6 +40,7 @@
     "ionicons": "^7.4.0",
     "jsbarcode": "^3.11.6",
     "moment-timezone": "^0.5.45",
+    "quagga": "^0.12.1",
     "react": "18.2.0",
     "react-device-detect": "^2.2.3",
     "react-dom": "18.2.0",

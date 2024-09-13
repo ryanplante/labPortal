@@ -10,7 +10,7 @@ import Reports from './components/Desktop/Reports';
 import Schedule from './components/Desktop/Schedule';
 import ManageLabs from './components/Desktop/ManageLabs'; // Ensure correct import path
 import Chat from './components/Desktop/Chat';
-import ScanItem from './components/Desktop/ScanItem';
+import Scanner from './components/Desktop/Scanner';
 import LogHistory from './components/Desktop/LogHistory';
 import Sidebar from './components/Desktop/Sidebar';
 import ProfileSidebar from './components/Modals/ProfileSidebar';
@@ -163,7 +163,7 @@ const App = () => {
                   <Stack.Screen name="Chat" component={Chat} />
                   <Stack.Screen name="ManageLabs" component={ManageLabs} />
                   <Stack.Screen name="Help" component={HelpScreen} />
-                  <Stack.Screen name="ScanItem" component={ScanItem} />
+                  <Stack.Screen name="Scanner" component={Scanner} />
                   <Stack.Screen name="LogHistory" component={LogHistory} />
                   <Stack.Screen name="Item" component={ItemManager} />
                 </>
