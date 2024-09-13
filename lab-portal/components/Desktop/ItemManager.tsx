@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, TextInput, Button, Alert, ActivityIndicator, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, TextInput, Button, Alert, ActivityIndicator, Dimensions, Platform } from 'react-native';
 import ItemService from '../../services/itemService';
 import LabService from '../../services/labsService';
 import DynamicForm from '../Modals/DynamicForm';
@@ -7,6 +7,11 @@ import ConfirmationModal from '../Modals/ConfirmationModal';
 import LabPicker from '../LabPicker';
 import ActionsModal from '../Modals/ActionsModal'; // Import ActionsModal
 import * as ImagePicker from 'expo-image-picker';
+
+import * as FileSystem from 'expo-file-system';
+import * as MediaLibrary from 'expo-media-library';
+import * as Sharing from 'expo-sharing';
+
 
 interface Lab {
     lab: number;
@@ -67,6 +72,46 @@ const ItemManager = () => {
             console.error('Failed to fetch items or labs:', error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const downloadBarcode = async (itemId: number) => {
+        const barcodeUrl = `https://barcodeapi.org/api/128/${itemId}`;
+
+        try {
+            if (Platform.OS === 'web') {
+                // For Web, use fetch and create a download link
+                const response = await fetch(barcodeUrl);
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+
+                // Create a temporary download link
+                const link = document.createElement('a');
+                link.href = url;
+                link.setAttribute('download', `barcode_${itemId}.png`); // File name
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+            } else {
+                // For native platforms (iOS/Android)
+                const { uri } = await FileSystem.downloadAsync(barcodeUrl, FileSystem.documentDirectory + `barcode_${itemId}.png`);
+
+                if (Platform.OS === 'android') {
+                    const permission = await MediaLibrary.requestPermissionsAsync();
+                    if (permission.granted) {
+                        const asset = await MediaLibrary.createAssetAsync(uri);
+                        await MediaLibrary.createAlbumAsync('Download', asset, false);
+                        Alert.alert('Success', 'Barcode saved to Downloads');
+                    } else {
+                        Alert.alert('Permission denied', 'You need to allow storage permission to save the barcode');
+                    }
+                } else {
+                    await Sharing.shareAsync(uri);
+                }
+            }
+        } catch (error) {
+            console.error('Failed to download barcode:', error);
+            Alert.alert('Error', 'Failed to download barcode.');
         }
     };
 
@@ -209,6 +254,16 @@ const ItemManager = () => {
                 handleDelete(itemForAction!);
             },
         },
+        {
+            name: 'Download Barcode',
+            icon: require('../../assets/download.png'),  // Add a barcode icon
+            onPress: () => {
+                setActionsMenuVisible(false);
+                if (itemForAction) {
+                    downloadBarcode(itemForAction.itemId);
+                }
+            },
+        },
     ];
 
     const formComponents = [
@@ -309,6 +364,7 @@ const ItemManager = () => {
                     </TouchableOpacity>
 
                     <View style={styles.tableHeader}>
+                        <Text style={[styles.tableHeaderCell, styles.tableHeaderCellImage]}>ID</Text>
                         <Text style={[styles.tableHeaderCell, styles.tableHeaderCellImage]}>Image</Text>
                         <Text style={[styles.tableHeaderCell, styles.tableHeaderCellDescription]}>Description</Text>
                         <Text style={[styles.tableHeaderCell, styles.tableHeaderCellQuantity]}>Quantity</Text>
@@ -330,6 +386,9 @@ const ItemManager = () => {
                                     highlightedItemId === item.itemId && styles.highlightedRow,
                                 ]}
                             >
+                                <View style={styles.tableCellImage}>
+                                    <Text>{item.itemId}</Text>
+                                </View>
                                 <View style={styles.tableCellImage}>
                                     {item.picture ? (
                                         <Image
@@ -360,6 +419,9 @@ const ItemManager = () => {
                                         <TouchableOpacity onPress={() => handleDelete(item)} style={styles.iconButton}>
                                             <Image source={require('../../assets/trash.png')} style={styles.iconImage} />
                                         </TouchableOpacity>
+                                        <TouchableOpacity onPress={() => downloadBarcode(item.itemId)} style={styles.iconButton}>
+                                            <Image source={require('../../assets/download.png')} style={styles.iconImage} />
+                                        </TouchableOpacity>
                                     </View>
                                 )}
                             </TouchableOpacity>
@@ -373,14 +435,14 @@ const ItemManager = () => {
                             setFormOpen(false);
                             resetForm();
                         }}
-                        components={[formComponents]} 
+                        components={[formComponents]}
                         error={error}
                     />
 
                     <ConfirmationModal
                         visible={isDeleteModalVisible}
-                        title={<Text>Confirm Deletion</Text>}
-                        description={<Text>Are you sure you want to delete this item? This action cannot be undone.</Text>}
+                        title={"Confirm Deletion"}
+                        description={"Are you sure you want to delete this item? This action cannot be undone"}
                         onConfirm={confirmDelete}
                         onCancel={() => setDeleteModalVisible(false)}
                         type="yesNoDanger"

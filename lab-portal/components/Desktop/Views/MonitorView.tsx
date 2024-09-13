@@ -455,7 +455,7 @@ const MonitorView = () => {
                 {item.timeOut ? (
                   <Text style={styles.cellText}>{item.timeOut}</Text>
                 ) : (
-                  <TouchableOpacity onPress={() => handleClockOut(item.id)} style={styles.clockButton}>
+                  <TouchableOpacity onPress={() => handleClockOut(item.id)} style={styles.iconImage}>
                     <Image source={require('../../../assets/time.png')} style={styles.iconImage} />
                   </TouchableOpacity>
                 )}
