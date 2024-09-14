@@ -19,7 +19,7 @@ import LabFormModal from '../Modals/LogFormModal';
 
 
 // Main component to manage labs and employees within a department
-const ManageLabs = ({ route, navigation, department: initialDepartment }) => {
+const MobileLabManager = ({ route, navigation, department: initialDepartment }) => {
   // State management
   const [labs, setLabs] = useState([]);
   const [employees, setEmployees] = useState([]);
@@ -720,4 +720,4 @@ const styles = StyleSheet.create({
   },  
 });
 
-export default ManageLabs;
+export default MobileLabManager;

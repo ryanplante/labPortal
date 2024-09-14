@@ -3,18 +3,18 @@ import { View, Text, TextInput, Button, Modal, StyleSheet } from 'react-native';
 import RNPickerSelect from 'react-native-picker-select';
 
 const EditUserModal = ({ visible, user, onClose, onSave }) => {
-  const [selectedPosition, setSelectedPosition] = useState(user?.position?.toString() || 'NULL');
+  const [selectedPrivLvl, setSelectedPrivLvl] = useState(user?.privLvl?.toString() || 'NULL');
 
   useEffect(() => {
-    if (user && user.position !== undefined) {
-      setSelectedPosition(user.position.toString());
+    if (user && user.privLvl !== undefined) {
+      setSelectedPrivLvl(user.privLvl.toString());
     } else {
-      setSelectedPosition('NULL'); // Default to '0' if position is undefined
+      setSelectedPrivLvl('NULL'); // Default to '0' if position is undefined
     }
   }, [user]);
 
   const handleSave = () => {
-    const updatedUser = { ...user, position: parseInt(selectedPosition) };
+    const updatedUser = { ...user, privLvl: parseInt(selectedPrivLvl) };
     onSave(updatedUser);
     onClose();
   };
@@ -24,13 +24,13 @@ const EditUserModal = ({ visible, user, onClose, onSave }) => {
       <View style={styles.modalContainer}>
         <Text style={styles.modalTitle}>{user?.fName} {user?.lName}</Text>
         <RNPickerSelect
-          onValueChange={(value: any) => setSelectedPosition(value)}
+          onValueChange={(value: any) => setSelectedPrivLvl(value)}
           items={[
-            { label: 'Tutor', value: '0' },
             { label: 'Monitor', value: '1' },
-            { label: 'Tutor/Monitor', value: '2' },
+            { label: 'Tutor', value: '2' },
+            { label: 'Tutor/Monitor', value: '3' },
           ]}
-          value={selectedPosition}
+          value={selectedPrivLvl}
           style={pickerSelectStyles}
         />
         <Button title="Save" onPress={handleSave} />

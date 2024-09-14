@@ -34,6 +34,7 @@ import MobileAdmin from './components/Mobile/Admin';
 import MobileProfile from './components/Mobile/Profile';
 import MobileSidebar from './components/Mobile/Sidebar';
 import DepartmentManager from './components/Desktop/DepartmentManager'; // Ensure correct import path
+import MobileLabManager from './components/Mobile/MobileLabManager';
 
 const Stack = createStackNavigator();
 
@@ -143,7 +144,7 @@ const App = () => {
                   <Stack.Screen name="Labs" component={MobileLabs} />
                   <Stack.Screen name="Reports" component={MobileReports} />
                   <Stack.Screen name="Schedule" component={MobileSchedule} />
-                  <Stack.Screen name="ManageLabs" component={MobileManageLabs} />
+                  <Stack.Screen name="MobileLabManager" component={MobileLabManager} />
                   <Stack.Screen name="LabSchedules" component={MobileLabSchedules} />
                   <Stack.Screen name="Chat" component={Chat} />
                   <Stack.Screen name="ScanItem" component={MobileScanItem} />
