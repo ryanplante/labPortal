@@ -29,7 +29,10 @@ const LabPicker = ({ selectedLabId, onLabChange, readOnly = false }: LabPickerPr
 
         // Fetch all labs and filter by department
         const response = await LabService.getAllLabs();
-        const filteredLabs = response?.$values.filter(lab => lab.deptId === departmentId && lab.labId !== 0); // Omit labId 0
+        const filteredLabs = response?.$values.filter(lab => 
+          (loggedInUser.privLvl === 5 || lab.deptId === departmentId) && lab.labId !== 0
+      );
+      
 
         setLabs(filteredLabs);
       } catch (error) {
@@ -53,7 +56,7 @@ const LabPicker = ({ selectedLabId, onLabChange, readOnly = false }: LabPickerPr
       <Picker
         selectedValue={selectedLabId} // The currently selected lab
         style={styles.picker}
-        onValueChange={(itemValue) => onLabChange(itemValue)} // Callback when a lab is selected
+        onValueChange={(itemValue) => onLabChange(itemValue === null ? null : itemValue)}  // Callback when a lab is selected
         enabled={!readOnly}
       >
         <Picker.Item label="Choose Lab" value={null} /> {/* Placeholder */}

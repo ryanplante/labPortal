@@ -37,13 +37,18 @@ const ItemManager = () => {
     const [isFormOpen, setFormOpen] = useState(false);
     const [isDeleteModalVisible, setDeleteModalVisible] = useState(false);
     const [itemToDelete, setItemToDelete] = useState<Item | null>(null);
-    const [selectedLabId, setSelectedLabId] = useState<number | null>(null);
+    const [filterLabId, setFilterLabId] = useState<number | null>(null); // State for filtering lab
+    const [selectedLabId, setSelectedLabId] = useState<number | null>(null); // State for dynamic form lab    
     const [error, setError] = useState<string | null>(null);
     const [imageBase64, setImageBase64] = useState<string | null>(null);
     const [validationErrors, setValidationErrors] = useState<{ [key: string]: string }>({});
     const [loading, setLoading] = useState<boolean>(true);
     const [isActionsMenuVisible, setActionsMenuVisible] = useState(false); // State for ActionsModal visibility
     const [itemForAction, setItemForAction] = useState<Item | null>(null); // State for selected item
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 20;
+    const [query, setQuery] = useState<string>(''); // Add query state
+
 
     const screenWidth = Dimensions.get('window').width; // Get screen width
 
@@ -213,6 +218,8 @@ const ItemManager = () => {
         setValidationErrors({});
     };
 
+
+
     const handleImagePick = async () => {
         let result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -230,6 +237,41 @@ const ItemManager = () => {
             Alert.alert('Image selection failed', 'Please try selecting an image again.');
         }
     };
+
+    const handleLabChange = async (labId: number | null) => {
+        setFilterLabId(labId); // Set the filter lab ID
+        await filterItemsByLabAndQuery(labId, query); // Call a function to filter both lab and query
+    };
+
+    const handleSearch = async () => {
+        setLoading(true);
+        try {
+            const searchLabId = filterLabId === null ? 0 : filterLabId; // Use filterLabId for searching
+            const searchResults = await ItemService.searchItems(searchLabId, query); // Search with both lab and query
+            setItems(searchResults); // Set the items based on the search results
+        } catch (error) {
+            console.error('Failed to search items:', error);
+            setError('Failed to search items');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const filterItemsByLabAndQuery = async (labId: number | null, query: string) => {
+        setLoading(true);
+        try {
+            const searchLabId = labId === null ? 0 : labId; // Default to 0 for all labs
+            const filteredItems = await ItemService.searchItems(searchLabId, query); // Search with lab and query
+            setItems(filteredItems); // Set the items to the filtered data
+        } catch (error) {
+            console.error('Failed to filter items by lab or query:', error);
+            setError('Failed to filter items');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+
 
     const openActionsMenu = (item: Item) => {
         setItemForAction(item);
@@ -332,6 +374,14 @@ const ItemManager = () => {
             <Text style={styles.label}>
                 Picture <Text style={[styles.required, !validationErrors.picture && styles.hiddenAsterisk]}>*</Text>
             </Text>
+            {imageBase64 ? (
+                <Image
+                    source={{ uri: imageBase64.startsWith('data:image') ? imageBase64 : `data:image/jpeg;base64,${imageBase64}` }}
+                    style={styles.itemImage}
+                />
+            ) : (
+                <Text>No Image</Text>
+            )}
             <Button
                 title="Select Picture (JPG, JPEG, PNG)"
                 onPress={handleImagePick}
@@ -350,10 +400,29 @@ const ItemManager = () => {
             color="#FFC107"
         />,
     ];
+    const filteredItems = items.filter(item => !selectedLabId || item.lab?.lab === selectedLabId);
+    const paginatedItems = filteredItems.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
 
     return (
         <View style={styles.container}>
             <Text style={styles.header}>Item Management</Text>
+            <View style={styles.searchAndFilterContainer}>
+                <TextInput
+                    style={styles.searchInput}
+                    placeholder="Search items..."
+                    value={query}
+                    onChangeText={setQuery}
+                />
+                <LabPicker
+                    selectedLabId={filterLabId} // Use filterLabId here for filtering
+                    onLabChange={handleLabChange} // Filter the items on lab change
+                />
+                <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
+                    <Text style={styles.searchButtonText}>Search</Text>
+                </TouchableOpacity>
+            </View>
+
 
             {loading ? (
                 <ActivityIndicator size="large" color="#FFC107" />
@@ -376,7 +445,7 @@ const ItemManager = () => {
                     </View>
 
                     <FlatList
-                        data={items}
+                        data={paginatedItems.filter(paginatedItems => !selectedLabId || paginatedItems.lab?.lab === selectedLabId)}
                         keyExtractor={(item) => item.itemId.toString()}
                         renderItem={({ item }) => (
                             <TouchableOpacity
@@ -427,6 +496,25 @@ const ItemManager = () => {
                             </TouchableOpacity>
                         )}
                     />
+                    <View style={styles.pagination}>
+                        <TouchableOpacity
+                            style={[styles.paginationButton, currentPage === 1 && styles.disabledButton]}
+                            disabled={currentPage === 1}
+                            onPress={() => setCurrentPage(prev => prev - 1)}
+                        >
+                            <Text style={styles.paginationButtonText}>Previous</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={[styles.paginationButton, currentPage * itemsPerPage >= filteredItems.length && styles.disabledButton]}
+                            disabled={currentPage * itemsPerPage >= filteredItems.length}
+                            onPress={() => setCurrentPage(prev => prev + 1)}
+                        >
+                            <Text style={styles.paginationButtonText}>Next</Text>
+                        </TouchableOpacity>
+
+                    </View>
+
 
                     <DynamicForm
                         visible={isFormOpen}
@@ -470,10 +558,35 @@ const styles = StyleSheet.create({
         marginBottom: 20,
     },
     addButton: {
+        position: 'absolute',
+        bottom: 20,
+        right: 20,
+        backgroundColor: '#ffc107',
+        padding: 10,
+        borderRadius: 50,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    pagination: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginVertical: 20,
+    },
+    paginationButton: {
         backgroundColor: '#ffc107',
         padding: 10,
         borderRadius: 5,
-        marginBottom: 20,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginHorizontal: 10,
+    },
+    disabledButton: {
+        backgroundColor: '#d3d3d3', // Gray for disabled state
+    },
+    paginationButtonText: {
+        color: '#fff',
+        fontWeight: 'bold',
     },
     addButtonText: {
         color: '#fff',
@@ -565,6 +678,7 @@ const styles = StyleSheet.create({
         borderRadius: 5,
         marginBottom: 10,
         height: 40,
+        backgroundColor: '#ffffff',
     },
     label: {
         fontSize: 16,
@@ -591,6 +705,44 @@ const styles = StyleSheet.create({
         width: 20,
         height: 20,
     },
+    searchContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 20,
+    },
+    searchInput: {
+        flex: 1,
+        borderWidth: 1,
+        borderColor: '#ccc',
+        borderRadius: 5,
+        padding: 10,
+        height: 40,
+        backgroundColor: '#fff',
+        marginRight: 10, // Add some margin between the search input and lab picker
+    },
+    searchButton: {
+        backgroundColor: '#ffc107',
+        padding: 10,
+        borderRadius: 5,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    searchButtonText: {
+        color: '#fff',
+        fontWeight: 'bold',
+    },
+    labPickerWrapper: {
+        width: 250, // Adjust the width of the LabPicker to fit properly
+        marginRight: 10, // Add space between picker and search button
+    },
+    searchAndFilterContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 20,
+    },
+
+
 });
 
 export default ItemManager;

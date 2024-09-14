@@ -35,7 +35,10 @@ class ItemService {
                 ...item,
                 picture: item.picture ? atob(item.picture) : null, // Convert from Base64 or set to null
             }));
-        } catch (error) {
+        } catch (error: any) {
+            if (error.response?.status === 404) {
+                return []; // Return empty array on 404
+            }
             await this.handleError(error, 'getItems');
             throw error;
         }
@@ -50,7 +53,10 @@ class ItemService {
                 ...item,
                 picture: item.picture ? atob(item.picture) : null, // Convert from Base64 or set to null
             };
-        } catch (error) {
+        } catch (error: any) {
+            if (error.response?.status === 404) {
+                return {} as Item; // Return an empty object on 404
+            }
             await this.handleError(error, 'getItemById');
             throw error;
         }
@@ -64,7 +70,10 @@ class ItemService {
                 ...item,
                 picture: item.picture ? atob(item.picture) : null, // Convert from Base64 or set to null
             }));
-        } catch (error) {
+        } catch (error: any) {
+            if (error.response?.status === 404) {
+                return []; // Return empty array on 404
+            }
             await this.handleError(error, 'searchItems');
             throw error;
         }

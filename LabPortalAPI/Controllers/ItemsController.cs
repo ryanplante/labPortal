@@ -158,28 +158,38 @@ namespace LabPortal.Controllers
         }
 
         // GET: api/Items/search/{labId}/{query}
-        [HttpGet("search/{labId}/{query}")]
+        // This endpoint searches for items based on labId and query.
+        // If labId is 0, it searches across all labs, and if query is null, it returns all items in the lab.
+        [HttpGet("search/{labId}/{query?}")] // The query is optional here
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<ActionResult<IEnumerable<ItemDto>>> SearchItems(int labId, string query)
+        public async Task<ActionResult<IEnumerable<ItemDto>>> SearchItems(int labId, string? query = null)
         {
+            // Check if the Items context is null, which means no items are available.
             if (_context.Items == null)
             {
                 return NotFound();
             }
 
-            var lowerQuery = query.ToLower();
+            // If the query is null or empty, don't filter by the query.
+            var lowerQuery = string.IsNullOrEmpty(query) ? null : query.ToLower();
+
+            // Perform the search based on the labId and query.
+            // If labId is 0, it ignores the lab filtering and searches across all labs.
             var items = await _context.Items
-                .Where(i => i.FkLab == labId &&
-                            (i.Description.ToLower().Contains(lowerQuery) ||
-                             i.SerialNum.ToLower().Contains(lowerQuery)))
+                .Where(i => (labId == 0 || i.FkLab == labId) && // Skip lab filtering if labId is 0
+                            (lowerQuery == null || // If the query is null, skip query filtering
+                             i.Description.ToLower().Contains(lowerQuery) ||
+                             i.SerialNum.ToLower().Contains(lowerQuery))) // Search by description or serial number if query exists
                 .ToListAsync();
 
+            // If no items match the search criteria, return NotFound.
             if (!items.Any())
             {
                 return NotFound();
             }
 
+            // Map the search results to ItemDto objects for the response.
             var itemDtos = items.Select(item => new ItemDto
             {
                 ItemId = item.ItemId,
@@ -190,8 +200,11 @@ namespace LabPortal.Controllers
                 Picture = item.Picture
             }).ToList();
 
+            // Return the list of matching items as a 200 OK response.
             return Ok(itemDtos);
         }
+
+
 
 
 
