@@ -56,6 +56,20 @@ class ItemService {
         }
     }
 
+    async searchItems(labId: number, query: string): Promise<Item[]> {
+        try {
+            const response: AxiosResponse<{ $values: Item[] }> = await axios.get(`${this.baseUrl}/search/${labId}/${query}`);
+            await this.audit('view', `Searched items in lab ${labId} with query: "${query}"`);
+            return response.data.$values.map(item => ({
+                ...item,
+                picture: item.picture ? atob(item.picture) : null, // Convert from Base64 or set to null
+            }));
+        } catch (error) {
+            await this.handleError(error, 'searchItems');
+            throw error;
+        }
+    }
+
     async createItem(item: ItemCreate): Promise<void> {
         try {
             const newItem = {

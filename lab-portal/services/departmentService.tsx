@@ -83,13 +83,25 @@ class DepartmentService {
     // POST: /api/Departments/verify-password
     async verifyPassword(deptId: number, password: string): Promise<void> {
         try {
-            await axios.post(`${this.baseUrl}/verify-password`, { deptId, password });
+            // Send parameters in the query string, not in the body
+            const response = await axios.post(
+                `${this.baseUrl}/verify-password`,
+                null, // No request body is needed, so send null
+                {
+                    params: {
+                        deptId: deptId,
+                        password: password
+                    }
+                }
+            );
             await this.audit('view', `Verified password for department ID: ${deptId}`);
+            return response.data;
         } catch (error) {
             await this.handleError(error, 'verifyPassword');
             throw error;
         }
     }
+    
 
     // Helper method for error handling
     private async handleError(error: any, source: string): Promise<void> {

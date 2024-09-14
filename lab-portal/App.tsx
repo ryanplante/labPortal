@@ -5,7 +5,6 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import Login from './components/Desktop/Login';
 import MainPage from './components/Desktop/MainPage';
-import Labs from './components/Desktop/Labs';
 import Reports from './components/Desktop/Reports';
 import Schedule from './components/Desktop/Schedule';
 import ManageLabs from './components/Desktop/ManageLabs'; // Ensure correct import path
@@ -156,7 +155,6 @@ const App = () => {
                 <>
                   <Stack.Screen name="Main" component={MainPage} />
                   <Stack.Screen name="ChangePassword" component={ChangePassword} />
-                  <Stack.Screen name="Labs" component={Labs} />
                   <Stack.Screen name="Reports" component={Reports} />
                   <Stack.Screen name="Schedule" component={Schedule} />
                   <Stack.Screen name="DepartmentManager" component={DepartmentManager} />

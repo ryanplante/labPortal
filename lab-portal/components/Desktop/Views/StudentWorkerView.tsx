@@ -7,19 +7,25 @@ import PlatformSpecificTimePicker from '../../Modals/PlatformSpecificTimePicker'
 import { checkHeartbeat, deleteToken, getUserByToken } from '../../../services/loginService';
 import LogService, { LogEntry, CreatedLog } from '../../../services/logService';
 import ScheduleService from '../../../services/scheduleService';
+import ItemService from '../../../services/itemService';
 import { User } from '../../../services/userService';
 import ConfirmationModal from '../../Modals/ConfirmationModal';
 import ActionsModal from '../../Modals/ActionsModal';
 import { crossPlatformAlert, reload } from '../../../services/helpers';
 import { useNavigation } from '@react-navigation/native';
+import ItemSearcher from '../../Modals/ItemSearcher';
+import PasswordModal from '../../Modals/PasswordModal';
 
-// Define types for entry and any other objects used in state
+// Types for entry and any other 
 type Entry = {
   id: string;
   studentId: string;
   studentName: string;
   timeIn: string;
   timeOut: string | null;
+  itemId: string | null
+  itemDescription: string | null; // Add item description field
+  Scanned: boolean
 };
 
 const StudentWorkerView = () => {
@@ -27,8 +33,11 @@ const StudentWorkerView = () => {
   const [selectedView, setSelectedView] = useState<string>('Logs');
   const [selectedFilter, setSelectedFilter] = useState<string>('All');
   const [isFormOpen, setFormOpen] = useState<boolean>(false);
-  const [isStudentSearcherOpen, setStudentSearcherOpen] = useState<boolean>(false);
+  const [isStudentSearcherOpen, setStudentSearcherOpen] = useState(false);
+  const [isItemSearcherOpen, setItemSearcherOpen] = useState(false);
+
   const [selectedStudent, setSelectedStudent] = useState<{ id: string, firstName: string, lastName: string }>({ id: '', firstName: '', lastName: '' });
+  const [selectedItem, setSelectedItem] = useState<{ id: string, itemName: string, serialNo: string }>({ id: '', itemName: '', serialNo: '' });
   const [checkInTime, setCheckInTime] = useState<Date>(new Date());
   const [checkOutTime, setCheckOutTime] = useState<Date | undefined>(undefined);
   const [entries, setEntries] = useState<Entry[]>([]);
@@ -46,6 +55,13 @@ const StudentWorkerView = () => {
   const screenWidth = Dimensions.get('window').width;
   const [currentScreenWidth, setCurrentScreenWidth] = useState<number>(screenWidth);
   const isWideScreen = currentScreenWidth >= 700;
+  const [isPasswordModalVisible, setPasswordModalVisible] = useState(false);
+  const [isScanned, setScanned] = useState<boolean | null>(null);
+  const [selectedTypeFilter, setSelectedTypeFilter] = useState<string>('Students');
+  const [hideTab, setHideTab] = useState<boolean[]>([false, false]); // [Hide Student Tab, Hide Item Tab]
+
+
+
 
   // Fetch user and lab ID on component mount and whenever dimensions change
   useEffect(() => {
@@ -62,6 +78,14 @@ const StudentWorkerView = () => {
     };
   }, []);
 
+  // Hook to re-fetch logs when the filter changes
+  useEffect(() => {
+    if (labId) {
+      fetchLogsForToday(labId); // Re-fetch logs based on the selectedTypeFilter
+    }
+  }, [selectedTypeFilter, labId]);
+
+
   // Fetch user and lab data, and load logs for today if the lab ID is valid
   const fetchUserAndLabId = async (): Promise<boolean> => {
     try {
@@ -71,9 +95,8 @@ const StudentWorkerView = () => {
         return false;
       }
       setUser(fetchedUser);
-      const labId = await ScheduleService.getCurrentLabForUser(fetchedUser.userId);
-
-      if (labId === 0) {
+      const labId = 1//await ScheduleService.getCurrentLabForUser(fetchedUser.userId);
+      if (labId == 0) { // Don't remove this, this is hack to bypass readonly for now
         setReadOnly(true); // Enable buttons if everything is fine
         // Show a modal for handling schedule exemption if labId is 0
         setConfirmationModalVisible(true);
@@ -101,19 +124,39 @@ const StudentWorkerView = () => {
       const endDate = moment().endOf('day').utc().format();
       const logs: LogEntry[] = await LogService.getLogsByLab(labId, startDate, endDate);
 
-      const formattedLogs: Entry[] = logs.map(log => ({
-        id: log.id.toString(),
-        studentId: log.studentId.toString().padStart(8, '0'),
-        studentName: log.studentName,
-        timeIn: moment(log.timeIn).format('h:mm:ss a'),
-        timeOut: log.timeOut ? moment(log.timeOut).format('h:mm:ss a') : null,
-      }));
+      const formattedLogs: Entry[] = await Promise.all(
+        logs.map(async (log) => {
+          let itemDescription = null;
+
+          if (log.itemId) {
+            try {
+              const item = await ItemService.getItemById(Number(log.itemId));
+              itemDescription = item.description;
+            } catch (error) {
+              console.error('Error fetching item description:', error);
+            }
+          }
+
+          return {
+            id: log.id.toString(),
+            studentId: log.studentId.toString().padStart(8, '0'),
+            studentName: log.studentName,
+            timeIn: moment(log.timeIn).format('h:mm:ss a'),
+            timeOut: log.timeOut ? moment(log.timeOut).format('h:mm:ss a') : null,
+            itemId: log.itemId,
+            itemDescription, // Add item description here
+            Scanned: log.Scanned,
+          };
+        })
+      );
 
       setEntries(formattedLogs);
     } catch (error) {
       console.error('Failed to fetch logs for today:', error);
     }
   };
+
+
 
   // Handle student selection from the searcher modal
   const handleStudentSelect = async (student: { userId: string, fName: string, lName: string }) => {
@@ -128,6 +171,23 @@ const StudentWorkerView = () => {
     setError(null);
     setStudentSearcherOpen(false);
   };
+
+  const handleItemSelect = async (item: { itemId: string, description: string, serialNum: string }) => {
+    const userAndLabLoaded = await fetchUserAndLabId();
+    if (!userAndLabLoaded) return;
+
+    setSelectedItem({
+      id: item.itemId, // Correct key to match your state
+      itemName: item.description,
+      serialNo: item.serialNum,
+    });
+    setError(null);
+    setItemSearcherOpen(false);
+  };
+
+
+
+
 
   // Validate times for the check-in and check-out fields
   const validateTimes = (): boolean => {
@@ -173,6 +233,8 @@ const StudentWorkerView = () => {
         studentName: `${selectedStudent.firstName} ${selectedStudent.lastName}`,
         timeIn: moment(checkInTime).format('h:mm:ss a'),
         timeOut: checkOutTime ? moment(checkOutTime).format('h:mm:ss a') : null,
+        itemId: selectedItem.id ? selectedItem.id.toString() : null, // Add selected item to the log
+        Scanned: false
       };
 
       if (editingEntryId) {
@@ -183,6 +245,7 @@ const StudentWorkerView = () => {
           timeout: checkOutTime ? moment(checkOutTime).toISOString() : '',
           labId: labId ?? 1,
           monitorId: user?.userId ?? 0,
+          itemId: selectedItem.id ? selectedItem.id.toString() : null, // Add item to the update
           Scanned: false
         });
       } else {
@@ -193,6 +256,7 @@ const StudentWorkerView = () => {
           timeout: checkOutTime ? moment(checkOutTime).toISOString() : '',
           labId: labId ?? 1,
           monitorId: user?.userId ?? 0,
+          itemId: selectedItem.id ? selectedItem.id.toString() : null, // Add item to the creation
           Scanned: false
         });
         newEntryId = createdLog.summaryId.toString();
@@ -214,22 +278,58 @@ const StudentWorkerView = () => {
     }
   };
 
+
   // Handle editing of an entry
   const handleEdit = async (entry: Entry) => {
     setSelectedEntryForAction(entry);
     setEditingEntryId(entry.id);
+
+    // Check if the entry is a student (itemDescription is null)
+    const isStudent = entry.itemDescription === null;
+
+    // Hide the "Item Form" if it's a student and hide the "Student Form" if it's an item
+    const hideTab = user?.privLvl === 2
+      ? [false, true] // Hide the "Item Form" for privLvl 2
+      : [!isStudent, isStudent]; // Hide based on the entry type
+
+    setHideTab(hideTab);
+
+    // Set selected student details
     setSelectedStudent({
       id: entry.studentId,
       firstName: entry.studentName.split(' ')[0],
       lastName: entry.studentName.split(' ')[1],
     });
+
+    // Fetch item details if an itemId exists
+    if (entry.itemId) {
+      try {
+        const item = await ItemService.getItemById(Number(entry.itemId));
+        setSelectedItem({
+          id: item.itemId.toString(),
+          itemName: item.description,
+          serialNo: item.serialNum,
+        });
+      } catch (error) {
+        console.error('Error fetching item details:', error);
+        setError('Failed to fetch item details');
+      }
+    } else {
+      // Clear the item details if no itemId exists
+      setSelectedItem({ id: '', itemName: '', serialNo: '' });
+    }
+
+    // Set check-in and check-out times
     setCheckInTime(new Date(moment(entry.timeIn, 'h:mm:ss a').toISOString()));
-   
     setCheckOutTime(entry.timeOut ? new Date(moment(entry.timeOut, 'h:mm:ss a').toISOString()) : undefined);
+
+    // Open the form modal
     setFormOpen(true);
     setError(null);
     setActionsMenuVisible(false);
   };
+
+
 
   // Handle the deletion of a log entry
   const handleDelete = async (entry: Entry) => {
@@ -279,15 +379,28 @@ const StudentWorkerView = () => {
     setError(null);
   };
 
-  // Filter entries based on the selected filter type
+  // Filter entries based on the selected type filter and status filter
   const filterEntries = (entries: Entry[]): Entry[] => {
-    if (selectedFilter === 'Not Checked Out') {
-      return entries.filter((entry) => !entry.timeOut);
-    } else if (selectedFilter === 'Checked Out') {
-      return entries.filter((entry) => entry.timeOut);
+    let filteredEntries = entries;
+
+    // Filter by selectedTypeFilter (Students or Items)
+    console.log(filteredEntries);
+    if (selectedTypeFilter === 'Students') {
+      filteredEntries = filteredEntries.filter((entry) => entry.itemDescription === null);
+    } else if (selectedTypeFilter === 'Items') {
+      filteredEntries = filteredEntries.filter((entry) => entry.itemDescription !== null);
     }
-    return entries; // Default to 'All'
+
+    // Further filter by status (Checked Out or Not Checked Out)
+    if (selectedFilter === 'Not Checked Out') {
+      return filteredEntries.filter((entry) => !entry.timeOut);
+    } else if (selectedFilter === 'Checked Out') {
+      return filteredEntries.filter((entry) => entry.timeOut);
+    }
+
+    return filteredEntries; // Default to return all filtered entries
   };
+
 
   // Open the actions menu for the selected entry
   const openActionsMenu = (entry: Entry) => {
@@ -309,6 +422,19 @@ const StudentWorkerView = () => {
   const handleCloseConfirmation = () => {
     setConfirmationModalVisible(false);
   };
+
+
+  const handlePasswordSubmit = (isValid: boolean) => {
+    setError(null);
+    setPasswordModalVisible(false); // Close password modal
+    if (isValid) {
+      setItemSearcherOpen(true); // If password is valid, open the item search modal
+    } else {
+      setError('Password verification failed'); // Show error if invalid
+    }
+  };
+
+
 
   // Ensure user is loaded before rendering anything
   if (!user) return null;
@@ -333,7 +459,7 @@ const StudentWorkerView = () => {
   ];
 
   const studentPickerComponent = [
-    <View style={styles.inputContainer} key="inputContainer">
+    <View style={styles.inputContainer} key="studentContainer">
       <Text style={[styles.label, !selectedStudent.id && error ? styles.errorText : null]}>
         Student ID{!selectedStudent.id && error ? '*' : ''}
       </Text>
@@ -364,6 +490,73 @@ const StudentWorkerView = () => {
     />,
   ];
 
+  const itemPickerComponent = [
+    <View style={styles.inputContainer} key="itemContainer">
+      <Text style={[styles.label, !selectedItem.id && error ? styles.errorText : null]}>
+        Item ID{!selectedItem.id && error ? '*' : ''}
+      </Text>
+      <TextInput
+        key="itemId"
+        style={styles.readOnlyInput}
+        placeholder="Item ID"
+        value={selectedItem.id ? selectedItem.id.toString() : ''}
+        editable={false}
+      />
+      <TouchableOpacity
+        key="searchButton"
+        style={styles.iconButton}
+        onPress={() => setPasswordModalVisible(true)}
+      >
+        <Image source={require('../../../assets/search-button.png')} style={styles.searchIcon} />
+      </TouchableOpacity>
+    </View>,
+    <Text style={[styles.label, !selectedItem.id && error ? styles.errorText : null]}>
+      Item Description{!selectedItem.id && error ? '*' : ''}
+    </Text>,
+    <TextInput
+      key="itemDescription"
+      style={styles.readOnlyInput}
+      placeholder="Item Description"
+      value={selectedItem.itemName || ''}  // Use itemName instead of description
+      editable={false}
+    />,
+    <Text style={[styles.label, !selectedItem.id && error ? styles.errorText : null]}>
+      Serial Number{!selectedItem.id && error ? '*' : ''}
+    </Text>,
+    <TextInput
+      key="serialNumber"
+      style={styles.readOnlyInput}
+      placeholder="Serial Number"
+      value={selectedItem.serialNo || ''}  // Use serialNo instead of serialNum
+      editable={false}
+    />,
+  ];
+
+  const handleAddPressed = () => {
+    // Clear the form states
+    setSelectedStudent({ id: '', firstName: '', lastName: '' });
+    setSelectedItem({ id: '', itemName: '', serialNo: '' });
+    setCheckInTime(new Date());
+    setCheckOutTime(undefined);
+    setError(null); // Clear any errors
+    setEditingEntryId(null); // Reset the editing ID
+
+    // Update hideTab based on user's privilege level
+    if (user.privLvl === 2) {
+      // For privLvl 2, hide the Item Form
+      setHideTab([false, true]);
+    } else {
+      // For other users, show both tabs
+      setHideTab([false, false]);
+    }
+
+    // Show the DynamicForm by opening the modal
+    setFormOpen(true);
+  };
+
+
+
+
   const timePickerComponent = [
     <Text style={styles.label} key="checkInLabel">Check-In Time</Text>,
     <PlatformSpecificTimePicker
@@ -393,17 +586,17 @@ const StudentWorkerView = () => {
       <Text style={styles.addButtonText}>{editingEntryId ? "Update" : "Add"}</Text>
     </TouchableOpacity>
   ];
-  
+
 
   return (
     <View style={styles.container}>
       <Text style={styles.header}>Welcome, {user.fName}</Text>
       <View style={styles.headerRow}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.addButton, readonly && styles.disabledButton]}
-          onPress={() => setFormOpen(true)}
+          onPress={handleAddPressed}
           disabled={readonly}
-          >
+        >
           <Text style={styles.addButtonText}>Log new student</Text>
         </TouchableOpacity>
         <View style={styles.filterContainer}>
@@ -418,6 +611,23 @@ const StudentWorkerView = () => {
             <Picker.Item label="Checked Out" value="Checked Out" />
           </Picker>
         </View>
+
+        {/* Conditionally show "Filter by Type" if privLvl is not 2 */}
+        {user && user.privLvl !== 2 && (
+          <View style={styles.filterContainer}>
+            <Text style={styles.filterLabel}>Filter by Type:</Text>
+            <Picker
+              selectedValue={selectedTypeFilter}
+              style={styles.filterPicker}
+              onValueChange={(itemValue) => setSelectedTypeFilter(itemValue)}
+            >
+              <Picker.Item label="Students" value="Students" />
+              <Picker.Item label="Items" value="Items" />
+            </Picker>
+          </View>
+        )}
+
+
       </View>
 
       <View style={styles.tableHeader}>
@@ -425,8 +635,15 @@ const StudentWorkerView = () => {
         <Text style={[styles.tableHeaderText, styles.tableHeaderStudentName]}>Student Name</Text>
         <Text style={[styles.tableHeaderText, styles.tableHeaderTime]}>Time In</Text>
         <Text style={[styles.tableHeaderText, styles.tableHeaderTime]}>Time Out</Text>
+
+        {/* Conditionally render "Item Description" header based on selectedTypeFilter */}
+        {selectedTypeFilter === 'Items' && (
+          <Text style={[styles.tableHeaderText, styles.tableHeaderItem]}>Item Description</Text>
+        )}
+
         {isWideScreen && <Text style={[styles.tableHeaderText, styles.tableHeaderActions]}>Actions</Text>}
       </View>
+
 
       {entries.length === 0 ? (
         <Text style={styles.noLogsText}>No logs for today!</Text>
@@ -460,6 +677,16 @@ const StudentWorkerView = () => {
                   </TouchableOpacity>
                 )}
               </View>
+
+              {/* Conditionally show the "Item" description based on selectedTypeFilter */}
+              {selectedTypeFilter === 'Items' && (
+                <View style={[styles.tableCell, styles.tableCellItem]}>
+                  <Text style={styles.cellText}>
+                    {item.itemDescription ? item.itemDescription : 'No Item'}
+                  </Text>
+                </View>
+              )}
+
               {isWideScreen && (
                 <View style={[styles.tableCellActions, styles.tableCell]}>
                   <TouchableOpacity onPress={() => handleEdit(item)} style={styles.actionButton}>
@@ -473,6 +700,7 @@ const StudentWorkerView = () => {
             </TouchableOpacity>
           )}
         />
+
       )}
 
       <DynamicForm
@@ -482,18 +710,27 @@ const StudentWorkerView = () => {
           setFormOpen(false);
           resetForm();
         }}
-        components={
+        components={[
           [
-            isStudentSearcherOpen ? [[<UserSearcher key="searcher" onSelect={handleStudentSelect} onBackPress={() => setStudentSearcherOpen(false)} isTeacher={null} />]] : [
-              ...studentPickerComponent,
-              ...timePickerComponent,
-              ...addButtonComponent
-            ]
-          ]}
+            isStudentSearcherOpen
+              ? <UserSearcher key="studentSearcher" onSelect={handleStudentSelect} onBackPress={() => setStudentSearcherOpen(false)} isTeacher={null} />
+              : [...studentPickerComponent, ...timePickerComponent, ...addButtonComponent]
+          ],
+          [
+            isItemSearcherOpen
+              ? <ItemSearcher key="itemSearcher" onSelect={handleItemSelect} onBackPress={() => setItemSearcherOpen(false)} labId={labId} />
+              : [...itemPickerComponent, ...studentPickerComponent, ...timePickerComponent, ...addButtonComponent]
+          ]
+        ]}
+        tabs={['Student Form', 'Item Form']} // Define the tab titles
+        activeTabIndex={0} // Start with the first tab active
         error={error}
-        backgroundColor="#d6d6d6"
-        isStudentSearcherOpen={isStudentSearcherOpen}
+        isSearcherOpen={isItemSearcherOpen || isStudentSearcherOpen}
+        hideTab={hideTab} // Pass the hideTab state here
       />
+
+
+
 
       <ConfirmationModal
         visible={isDeleteModalVisible}
@@ -518,6 +755,12 @@ const StudentWorkerView = () => {
         onClose={() => setActionsMenuVisible(false)}
         actionButtons={actionButtons.filter(button => !(button.name === 'Time Out' && selectedEntryForAction?.timeOut !== null))}
       />
+
+      <PasswordModal
+        visible={isPasswordModalVisible}
+        onClose={handlePasswordSubmit} // Handle the password result
+      />
+
     </View>
   );
 };
@@ -569,7 +812,7 @@ const styles = StyleSheet.create({
   },
   tableHeaderText: {
     fontWeight: 'bold',
-    textAlign: 'left', 
+    textAlign: 'left',
     paddingHorizontal: 10,
   },
   tableHeaderStudentId: {
@@ -601,7 +844,7 @@ const styles = StyleSheet.create({
   },
   tableCell: {
     justifyContent: 'center',
-    alignItems: 'flex-start', 
+    alignItems: 'flex-start',
     paddingHorizontal: 10,
   },
   tableCellStudentId: {
@@ -623,7 +866,7 @@ const styles = StyleSheet.create({
     textAlign: 'left',
   },
   actionButton: {
-    paddingHorizontal: 5, 
+    paddingHorizontal: 5,
   },
   inputContainer: {
     flexDirection: 'row',

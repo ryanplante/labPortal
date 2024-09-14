@@ -9,9 +9,10 @@ interface DynamicFormProps {
     components: React.ReactNode[][]; // Array of arrays of components (one array per tab)
     tabs?: string[]; // Optional list of tab titles
     activeTabIndex?: number; // To manage the active tab from the parent if needed
-    isStudentSearcherOpen?: boolean; // New prop to conditionally hide tabs
+    isSearcherOpen?: boolean; // New prop to conditionally hide tabs
     onBackPress?: () => void; // Callback for the back button in the searcher
     error?: string | null; // Error message to display
+    hideTab?: boolean[] | null; // Array of booleans to hide/show tabs
 }
 
 const DynamicForm = ({
@@ -21,13 +22,56 @@ const DynamicForm = ({
     components = [[]], // Ensure components is always an array of arrays
     tabs = [''],
     activeTabIndex = 0,
-    isStudentSearcherOpen = false,
+    isSearcherOpen = false,
     onBackPress,
     error = null,
+    hideTab = null, // Default is no hiding of tabs
 }: DynamicFormProps) => {
     const [activeTab, setActiveTab] = useState(activeTabIndex);
+    const [visibleTabs, setVisibleTabs] = useState<string[]>([]); // To store visible tabs
+    const [visibleComponents, setVisibleComponents] = useState<React.ReactNode[][]>(components); // Store visible components
     const slideAnim = useRef(new Animated.Value(Dimensions.get('window').width)).current;
 
+    useEffect(() => {
+        if (hideTab) {
+            const newVisibleTabs = tabs.filter((_, index) => !hideTab[index]);
+            const newVisibleComponents = components.filter((_, index) => !hideTab[index]);
+    
+            // Compare arrays directly without JSON.stringify
+            const tabsChanged = visibleTabs.length !== newVisibleTabs.length || visibleTabs.some((tab, i) => tab !== newVisibleTabs[i]);
+            const componentsChanged = visibleComponents.length !== newVisibleComponents.length || visibleComponents.some((comp, i) => comp !== newVisibleComponents[i]);
+    
+            // Only update visibleTabs if there's a change
+            if (tabsChanged) {
+                setVisibleTabs(newVisibleTabs);
+            }
+    
+            // Only update visibleComponents if there's a change
+            if (componentsChanged) {
+                setVisibleComponents(newVisibleComponents);
+            }
+    
+            // Only update activeTab if it exceeds the number of visible tabs
+            if (newVisibleTabs.length <= activeTab) {
+                setActiveTab(0);
+            }
+        } else {
+            const tabsChanged = visibleTabs.length !== tabs.length || visibleTabs.some((tab, i) => tab !== tabs[i]);
+            const componentsChanged = visibleComponents.length !== components.length || visibleComponents.some((comp, i) => comp !== components[i]);
+    
+            // Only update tabs and components if they have changed
+            if (tabsChanged) {
+                setVisibleTabs(tabs);
+            }
+            if (componentsChanged) {
+                setVisibleComponents(components);
+            }
+        }
+    }, [tabs, components, hideTab, activeTab]); // Properly define dependencies
+    
+    
+    
+    // Ensure the slide animation only runs when "visible" changes
     useEffect(() => {
         if (visible) {
             Animated.timing(slideAnim, {
@@ -44,13 +88,14 @@ const DynamicForm = ({
                 useNativeDriver: true,
             }).start();
         }
-    }, [visible]);
+    }, [visible, slideAnim]);
+    
 
     const renderTabs = () => {
-        if (!isStudentSearcherOpen && tabs.length > 1) {
+        if (!isSearcherOpen && visibleTabs.length > 1) {
             return (
                 <View style={styles.tabsContainer}>
-                    {tabs.map((tab, index) => (
+                    {visibleTabs.map((tab, index) => (
                         <TouchableOpacity
                             key={index}
                             style={[styles.tabButton, activeTab === index ? styles.activeTab : styles.inactiveTab]}
@@ -76,7 +121,7 @@ const DynamicForm = ({
                 <TouchableOpacity style={styles.overlay} onPress={onClose} activeOpacity={1} />
                 <Animated.View style={[styles.modalContainer, { transform: [{ translateX: slideAnim }] }]}>
                     <View style={styles.header}>
-                        {isStudentSearcherOpen && onBackPress ? (
+                        {isSearcherOpen && onBackPress ? (
                             <TouchableOpacity onPress={onBackPress}>
                                 <Ionicons name="arrow-back" size={24} color="black" />
                             </TouchableOpacity>
@@ -85,7 +130,7 @@ const DynamicForm = ({
                     </View>
                     {error && <Text style={styles.errorLabel}>{error}</Text>}
                     <ScrollView style={styles.content}>
-                        {components[activeTab]?.map((Component, index) => (
+                        {visibleComponents[activeTab]?.map((Component, index) => (
                             <View key={index} style={styles.componentContainer}>
                                 {Component}
                             </View>
