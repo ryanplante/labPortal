@@ -47,6 +47,13 @@ interface LogHistory {
     isScanned: boolean;
 }
 
+interface LogSummary {
+    labId: number;
+    labName: string;
+    term: string;
+    count: number;
+}
+
 class LogService {
     private baseUrl: string;
 
@@ -131,6 +138,45 @@ class LogService {
             throw error;
         }
     }
+
+        /**
+     * Fetches the log summary based on provided filters.
+     * 
+     * @param term - The grouping term ('Y', 'M', 'W', 'D', 'H', 'T')
+     * @param startTime - The start date for filtering logs
+     * @param endTime - The end date for filtering logs
+     * @param isItem - Filter based on whether ItemId is null or not
+     * @param deptId - The department ID to filter by
+     * @returns A promise that resolves with an array of LogSummary objects
+     */
+        async getLogSummary(
+            term: string, 
+            startTime?: string, 
+            endTime?: string, 
+            isItem?: boolean, 
+            deptId?: number
+        ): Promise<LogSummary[]> {
+            try {
+                const params = {
+                    term,
+                    startTime,
+                    endTime,
+                    isItem,
+                    deptId,
+                };
+                
+                const response: AxiosResponse<any> = await axios.get(`${this.baseUrl}/Summary`, { params });
+                const summaries: LogSummary[] = response.data;
+    
+                // Create an audit log for the operation
+                await this.audit('view', `Viewed log summaries with term: ${term}`);
+                
+                return summaries.$values;
+            } catch (error) {
+                await this.handleError(error, 'getLogSummary');
+                throw error;
+            }
+        }
 
     async timeOutLog(id: number, monitorId: number, isScanned: boolean): Promise<void> {
         try {

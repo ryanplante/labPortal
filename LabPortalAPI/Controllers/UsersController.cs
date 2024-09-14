@@ -327,6 +327,16 @@ namespace LabPortal.Controllers
 
         private async Task<string> GenerateToken(User user)
         {
+            // Check and delete any expired tokens from the database
+            var expiredTokens = _context.UserTokens
+                .Where(t => t.FkUserId == user.UserId && t.Expiration < DateTime.UtcNow);
+
+            if (expiredTokens.Any())
+            {
+                _context.UserTokens.RemoveRange(expiredTokens);
+            }
+
+            // Generate the new token
             var tokenData = Encoding.UTF8.GetBytes($"{user.UserId}:{DateTime.UtcNow}");
             var token = Convert.ToBase64String(tokenData);
 
@@ -338,11 +348,15 @@ namespace LabPortal.Controllers
                 Expiration = DateTime.UtcNow.AddHours(1) // Token expires in 1 hour
             };
 
+            // Add the new token to the database
             _context.UserTokens.Add(userToken);
+
+            // Save changes to the database (deleting expired tokens and adding the new one)
             await _context.SaveChangesAsync();
 
             return token;
         }
+
 
         // GET: api/Users/GetUserByToken/{token}
         [HttpGet("GetUserByToken/{token}")]

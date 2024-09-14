@@ -109,7 +109,4 @@ const styles = StyleSheet.create({
 });
 
 export default MainPage;
-function deleteToken() {
-  throw new Error('Function not implemented.');
-}
 

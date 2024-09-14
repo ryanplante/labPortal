@@ -333,7 +333,7 @@ namespace LabPortal.Controllers
             }
         }
 
-        // Retrieves the log history for a given LogSummary ID
+        // Retrieves the transaction history for a given LogSummary ID
         [HttpGet("History/{summaryId}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -433,34 +433,91 @@ namespace LabPortal.Controllers
             return Ok(summaries);
         }
 
+        // GET: api/Logs/Summary
+        [HttpGet("Summary")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<ActionResult<IEnumerable<LogSummaryDto>>> GetLogSummary(
+            [FromQuery] string term,
+            [FromQuery] DateTime? startTime,
+            [FromQuery] DateTime? endTime,
+            [FromQuery] bool? isItem,
+            [FromQuery] int? deptID)
+        {
+            if (_context.Logs == null)
+            {
+                return NotFound("Log context is not available.");
+            }
 
-        //// GET: api/Logs/Lab/{labId}
-        //// Retrieves log summaries filtered by LabId
-        //[HttpGet("Lab/{labId}")]
-        //[ProducesResponseType(StatusCodes.Status200OK)]
-        //[ProducesResponseType(StatusCodes.Status404NotFound)]
-        //public async Task<ActionResult<IEnumerable<CheckinDto>>> GetSummariesByLabId(int labId)
-        //{
-        //    var summaries = await _context.LogSummaries
-        //        .Where(s => s.LabId == labId)
-        //        .Select(s => new CheckinDto
-        //        {
-        //            SummaryId = s.SummaryId,
-        //            StudentId = s.StudentId,
-        //            Timein = s.CheckInTime,
-        //            Timeout = s.CheckOutTime,
-        //            LabId = s.LabId,
-        //            MonitorId = s.MonitorId,
-        //            IsDeleted = s.IsDeleted
-        //        })
-        //        .ToListAsync();
+            var logSummaries = new List<LogSummaryDto>();
 
-        //    if (!summaries.Any())
-        //    {
-        //        return NotFound();
-        //    }
+            using (var connection = _context.Database.GetDbConnection())
+            {
+                await connection.OpenAsync();
+                using (var command = connection.CreateCommand())
+                {
+                    command.CommandText = "EXEC [dbo].[usp_GetLogSummaryCounts] @Term, @StartTime, @EndTime, @IsItem, @DeptID";
+                    command.Parameters.Add(new SqlParameter("@Term", term));
+                    command.Parameters.Add(new SqlParameter("@StartTime", startTime ?? (object)DBNull.Value));
+                    command.Parameters.Add(new SqlParameter("@EndTime", endTime ?? (object)DBNull.Value));
+                    command.Parameters.Add(new SqlParameter("@IsItem", isItem.HasValue ? (object)isItem.Value : DBNull.Value));
+                    command.Parameters.Add(new SqlParameter("@DeptID", deptID ?? (object)DBNull.Value));
 
-        //    return Ok(summaries);
-        //}
+                    using (var reader = await command.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            var logSummary = new LogSummaryDto
+                            {
+                                LabID = reader.GetInt32(0),  // LabID should be int
+                                LabName = reader.GetString(1), // LabName should be string
+
+                                // If Term is an integer or other type, use GetInt32 or appropriate method
+                                Term = reader.IsDBNull(2) ? null : reader[2].ToString(),  // Safely convert any type to string
+
+                                Count = reader.GetInt32(3) // Count should be int
+                            };
+                            logSummaries.Add(logSummary);
+                        }
+                    }
+                }
+            }
+
+            if (!logSummaries.Any())
+            {
+                return NotFound("No logs found for the specified filters.");
+            }
+
+            return Ok(logSummaries);
+        }
+
+
+
+
+
+
+        // GET: api/Logs/Lab/{labId}
+        // Retrieves log summaries filtered by LabId
+        [HttpGet("Lab/{labId}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<IEnumerable<CheckinDto>>> GetSummariesByLabId(int labId)
+        {
+            var summaries = await _context.LogSummaries
+                .Where(s => s.LabId == labId)
+                .Select(s => new CheckinDto
+                {
+                    SummaryId = s.SummaryId,
+                    StudentId = s.StudentId,
+                    Timein = s.CheckInTime,
+                    Timeout = s.CheckOutTime,
+                    LabId = s.LabId,
+                    MonitorId = s.MonitorId,
+                    IsDeleted = s.IsDeleted
+                })
+                .ToListAsync();
+
+            return Ok(summaries);
+        }
     }
 }
