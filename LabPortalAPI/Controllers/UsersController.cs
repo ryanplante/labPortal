@@ -202,35 +202,6 @@ namespace LabPortal.Controllers
             return (_context.Users?.Any(e => e.UserId == id)).GetValueOrDefault();
         }
 
-        // POST: api/Users/ValidateCredentials
-        [HttpPost("ValidateCredentials")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<ActionResult<string>> ValidateCredentials([FromBody] UserCredentialsDto credentials)
-        {
-            if (_context.Users == null)
-            {
-                return Problem("Entity set 'TESTContext.Users' is null.");
-            }
-
-            var user = await _context.Users.SingleOrDefaultAsync(u => u.UserId == credentials.UserId);
-            if (user == null)
-            {
-                return BadRequest("Invalid user ID.");
-            }
-
-            // Directly compare the provided encrypted password with the stored encrypted password
-            if (credentials.Password == user.Password)
-            {
-                string token = await GenerateToken(user);
-                return Ok(token);
-            }
-            else
-            {
-                return BadRequest("Invalid password.");
-            }
-        }
-
         // GET: api/Users/FuzzySearchById/{query}
         [HttpGet("FuzzySearchById/{query}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
@@ -392,54 +363,72 @@ namespace LabPortal.Controllers
 
             return Ok(userDto);
         }
-        // GET: api/Users/LastUpdated/{id}
-        [HttpGet("LastUpdated/{id}")]
+
+        // POST: api/Users/ValidateCredentials
+        [HttpPost("ValidateCredentials")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<DateTime>> GetLastUpdated(int id)
+        public async Task<ActionResult<string>> ValidateCredentials([FromBody] UserCredentialsDto credentials)
         {
             if (_context.Users == null)
             {
-                return NotFound();
+                return Problem("Entity set 'TESTContext.Users' is null.");
             }
 
-            var user = await _context.Users
-                .Where(u => u.UserId == id)
-                .Select(u => u.LastUpdated)
-                .FirstOrDefaultAsync();
-
+            var user = await _context.Users.SingleOrDefaultAsync(u => u.UserId == credentials.UserId);
             if (user == null)
             {
-                return NotFound();
+                return BadRequest("Invalid user ID.");
             }
 
-            return Ok(user);
+            // Encrypt the incoming password using the hashing algorithm
+            var hashedPassword = HashPassword(credentials.Password, user);
+
+            // Compare the hashed password with the stored hashed password
+            if (hashedPassword == user.Password)
+            {
+                string token = await GenerateToken(user);
+                return Ok(token);
+            }
+            else
+            {
+                return BadRequest("Invalid password.");
+            }
         }
 
-        // PUT: api/Users/UpdatePassword/{id}
-        [HttpPut("UpdatePassword/{id}")]
+        // PUT: api/Users/UpdatePassword
+        [HttpPut("UpdatePassword")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> UpdatePassword(int id, [FromBody] UpdatePasswordDto updatePasswordDto)
+        public async Task<IActionResult> UpdatePassword([FromHeader] string token, [FromBody] UpdatePasswordDto updatePasswordDto)
         {
-            if (_context.Users == null)
+            // Call the existing GetUserByToken endpoint
+            var response = await GetUserByToken(token);
+            if (response.Result is NotFoundObjectResult)
+            {
+                return Unauthorized("Invalid or expired token.");
+            }
+
+            var userDto = (response.Result as OkObjectResult).Value as UserDto; // hack to call Get user result
+
+            // Allow only admins to update passwords
+            if (userDto.UserId != updatePasswordDto.UserId && userDto.PrivLvl == 5)
+            {
+                return Forbid("You do not have permission to update this password.");
+            }
+
+            var targetUser = await _context.Users.FindAsync(updatePasswordDto.UserId);
+            if (targetUser == null)
             {
                 return NotFound();
             }
 
-            var user = await _context.Users.FindAsync(id);
-            if (user == null)
-            {
-                return NotFound();
-            }
+            // Update the target user's password and lastUpdated fields
+            targetUser.LastUpdated = DateTime.UtcNow; // Update the LastUpdated timestamp
+            targetUser.Password = HashPassword(updatePasswordDto.Password, targetUser); // Hash the new password
 
-            // Update the user's password and lastUpdated fields
-            user.Password = updatePasswordDto.Password;
-            user.LastUpdated = updatePasswordDto.LastUpdated;
-
-            _context.Entry(user).State = EntityState.Modified;
+            _context.Entry(targetUser).State = EntityState.Modified;
 
             try
             {
@@ -447,7 +436,7 @@ namespace LabPortal.Controllers
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!UserExists(id))
+                if (!UserExists(updatePasswordDto.UserId))
                 {
                     return NotFound();
                 }
@@ -460,28 +449,41 @@ namespace LabPortal.Controllers
             return NoContent();
         }
 
-        // PUT: api/Users/UpdatePermission/{id}
-        [HttpPut("UpdatePermission/{id}")]
+
+
+
+        // PUT: api/Users/UpdatePermission
+        [HttpPut("UpdatePermission")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> UpdatePermission(int id, [FromBody] int permission)
+        public async Task<IActionResult> UpdatePermission([FromHeader] string token, [FromBody] UpdatePermissionDto permissionDto)
         {
-            if (_context.Users == null)
+            // Call the existing GetUserByToken endpoint
+            var response = await GetUserByToken(token);
+            if (response.Result is NotFoundObjectResult)
             {
-                return NotFound("User context is not available.");
+                return Unauthorized("Invalid or expired token.");
             }
 
-            var user = await _context.Users.FindAsync(id);
-            if (user == null)
+            var userDto = (response.Result as OkObjectResult).Value as UserDto;
+
+            // Ensure that only users with permission level >= 4 can update permissions
+            if (userDto.PrivLvl < 4)
             {
-                return NotFound("User not found.");
+                return Forbid("You do not have permission to update permissions.");
             }
 
-            // Update the user's permission level
-            user.PrivLvl = permission;
+            var targetUser = await _context.Users.FindAsync(permissionDto.UserId);
+            if (targetUser == null)
+            {
+                return NotFound();
+            }
 
-            _context.Entry(user).State = EntityState.Modified;
+            // Update the target user's permission level
+            targetUser.PrivLvl = permissionDto.PermissionLevel;
+
+            _context.Entry(targetUser).State = EntityState.Modified;
 
             try
             {
@@ -489,7 +491,7 @@ namespace LabPortal.Controllers
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!UserExists(id))
+                if (!UserExists(permissionDto.UserId))
                 {
                     return NotFound();
                 }
@@ -499,8 +501,9 @@ namespace LabPortal.Controllers
                 }
             }
 
-            return Ok($"User permission level updated to {permission}.");
+            return Ok($"User permission level updated to {permissionDto.PermissionLevel}.");
         }
+
 
         // DELETE api/Users/DeleteToken/{token}
         [HttpDelete("DeleteToken/{token}")]
@@ -525,6 +528,66 @@ namespace LabPortal.Controllers
 
             return Ok("Token deleted successfully.");
         }
+        // DEVELOPER ONLY: USE THIS TO RESET ALL PASSWORDS
+        //[HttpPost("ResetAllPasswords")]
+        //[ProducesResponseType(StatusCodes.Status200OK)]
+        //[ProducesResponseType(StatusCodes.Status400BadRequest)]
+        //[ProducesResponseType(StatusCodes.Status404NotFound)]
+        //public async Task<IActionResult> ResetAllPasswords()
+        //{
+        //    var allUsers = await _context.Users.ToListAsync();
+        //    if (allUsers == null || !allUsers.Any())
+        //    {
+        //        return NotFound("No users found.");
+        //    }
+        //    foreach (var user in allUsers)
+        //    {
+        //        // Rounding down LastUpdated to the nearest second
+        //        user.LastUpdated = DateTime.UtcNow;
 
+        //        user.Password = HashPassword("password", user);
+
+        //        _context.Entry(user).State = EntityState.Modified;
+        //    }
+
+        //    try
+        //    {
+        //        await _context.SaveChangesAsync();
+        //    }
+        //    catch (DbUpdateException ex)
+        //    {
+        //        return BadRequest("Failed to reset passwords. Error: " + ex.Message);
+        //    }
+
+        //    return Ok("Passwords for all users have been reset to 'password'.");
+        //}
+
+
+        private string HashPassword(string password, User user)
+        {
+            // Rounding down LastUpdated to the nearest second
+            DateTime roundedLastUpdated = new DateTime(
+                user.LastUpdated.Year,
+                user.LastUpdated.Month,
+                user.LastUpdated.Day,
+                user.LastUpdated.Hour,
+                user.LastUpdated.Minute,
+                user.LastUpdated.Second,
+                DateTimeKind.Utc); // Ensures UTC
+
+            // Concatenate userId, fName, lName, and lastUpdated to form the salt
+            string salt = $"{user.UserId}{user.FName}{user.LName}{roundedLastUpdated:O}"; // 'O' ensures ISO 8601 format for UTC
+
+
+            // Combine password with salt
+            string concatenatedString = $"{password}{salt}";
+
+            // Hash using SHA256
+            using (SHA256 sha256 = SHA256.Create())
+            {
+                byte[] bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(concatenatedString));
+                return Convert.ToBase64String(bytes);
+            }
+        }
     }
 }

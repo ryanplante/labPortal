@@ -1,6 +1,7 @@
 import axios, { AxiosResponse } from 'axios';
 import { CreateErrorLog } from './errorLogService';
 import { CreateAuditLog, AuditLogType } from './auditService';
+import AsyncStorage from '@react-native-async-storage/async-storage'; // Assuming token is stored here
 import { getUserByToken } from './loginService';
 
 export interface User {
@@ -23,7 +24,10 @@ class UserService {
     // GET: /api/Users
     async getAllUsers(): Promise<User[]> {
         try {
-            const response: AxiosResponse<User[]> = await axios.get(this.baseUrl);
+            const token = await this.getToken();
+            const response: AxiosResponse<User[]> = await axios.get(this.baseUrl, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
             await this.audit('view', `Viewed all users`);
             return response.data;
         } catch (error) {
@@ -35,7 +39,10 @@ class UserService {
     // POST: /api/Users
     async createUser(userDto: User): Promise<User> {
         try {
-            const response: AxiosResponse<User> = await axios.post(this.baseUrl, userDto);
+            const token = await this.getToken();
+            const response: AxiosResponse<User> = await axios.post(this.baseUrl, userDto, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
             await this.audit('insert', `Created new user: ${userDto.fName} ${userDto.lName}`, userDto.userId);
             return response.data;
         } catch (error) {
@@ -47,7 +54,10 @@ class UserService {
     // GET: /api/Users/{id}
     async getUserById(userId: number): Promise<User> {
         try {
-            const response: AxiosResponse<User> = await axios.get(`${this.baseUrl}/${userId}`);
+            const token = await this.getToken();
+            const response: AxiosResponse<User> = await axios.get(`${this.baseUrl}/${userId}`, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
             await this.audit('view', `Viewed user with ID: ${userId}`, userId);
             return response.data;
         } catch (error) {
@@ -59,7 +69,10 @@ class UserService {
     // PUT: /api/Users/{id}
     async updateUser(userId: number, userDto: User): Promise<void> {
         try {
-            await axios.put(`${this.baseUrl}/${userId}`, userDto);
+            const token = await this.getToken();
+            await axios.put(`${this.baseUrl}/${userId}`, userDto, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
             await this.audit('update', `Updated user with ID: ${userId}`, userId);
         } catch (error) {
             await this.handleError(error, 'updateUser');
@@ -70,11 +83,12 @@ class UserService {
     // PUT: /api/Users/UpdatePermission/{id}
     async updatePermission(userId: number, newPermissionLevel: number): Promise<void> {
         try {
-            // Send the newPermissionLevel as JSON with the correct Content-Type header
+            const token = await this.getToken();
             await axios.put(`${this.baseUrl}/UpdatePermission/${userId}`, newPermissionLevel, {
                 headers: {
-                    'Content-Type': 'application/json'
-                }
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`,
+                },
             });
             await this.audit('update', `Updated permission level for user with ID: ${userId} to ${newPermissionLevel}`, userId);
         } catch (error) {
@@ -82,12 +96,14 @@ class UserService {
             throw error;
         }
     }
-    
 
     // GET: /api/Users/FuzzySearchById/{id}
     async fuzzySearchById(id: number): Promise<User[]> {
         try {
-            const response: AxiosResponse<User[]> = await axios.get(`${this.baseUrl}/FuzzySearchById/${id}`);
+            const token = await this.getToken();
+            const response: AxiosResponse<User[]> = await axios.get(`${this.baseUrl}/FuzzySearchById/${id}`, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
             await this.audit('view', `Fuzzy searched users by ID: ${id}`);
             return response.data;
         } catch (error) {
@@ -99,8 +115,12 @@ class UserService {
     // GET: /api/Users/FuzzySearchByName
     async fuzzySearchByName(fName?: string, lName?: string): Promise<User[]> {
         try {
+            const token = await this.getToken();
             const params = { fName, lName };
-            const response: AxiosResponse<User[]> = await axios.get(`${this.baseUrl}/FuzzySearchByName`, { params });
+            const response: AxiosResponse<User[]> = await axios.get(`${this.baseUrl}/FuzzySearchByName`, {
+                params,
+                headers: { Authorization: `Bearer ${token}` },
+            });
             await this.audit('view', `Fuzzy searched users by Name: ${fName || ''} ${lName || ''}`);
             return response.data;
         } catch (error) {
@@ -123,6 +143,11 @@ class UserService {
         } catch (error) {
             console.error('Failed to create audit log:', error);
         }
+    }
+
+    // Helper method to get the user token from AsyncStorage
+    private async getToken(): Promise<string | null> {
+        return await AsyncStorage.getItem('token');
     }
 }
 

@@ -37,7 +37,7 @@ const ChangePassword = () => {
       setErrorMessage('Failed to load user data.');
       return;
     }
-
+  
     try {
       const token = await validateCredentials(user.userId, oldPassword);
       if (!token) {
@@ -48,18 +48,23 @@ const ChangePassword = () => {
       setErrorMessage('Old password is incorrect.');
       return;
     }
-
+  
+    // Ensure the new password and confirm password match
+    if (newPassword !== confirmPassword) {
+      setErrorMessage('New passwords do not match.');
+      return;
+    }
+    if (oldPassword == newPassword) {
+      setErrorMessage('New password cannot be old password!');
+      return;
+    }
+    // regex to make sure it contains the password requirements
     const passwordRequirements = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).{8,}$/;
     if (!passwordRequirements.test(newPassword)) {
       setErrorMessage('Password must be at least 8 characters long, contain a capital letter, a number, and a special character.');
       return;
     }
-
-    if (newPassword !== confirmPassword) {
-      setErrorMessage('New passwords do not match.');
-      return;
-    }
-
+  
     try {
       await updatePassword(user.userId, newPassword);
       setAlertMessage('Password updated successfully. Please re-login to finish changing credentials.');
@@ -71,6 +76,7 @@ const ChangePassword = () => {
       setErrorMessage('Failed to change password.');
     }
   };
+  
 
   const handleAlertDismiss = async () => {
     await deleteToken();

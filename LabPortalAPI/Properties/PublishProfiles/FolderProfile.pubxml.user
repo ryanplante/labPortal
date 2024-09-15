@@ -1,0 +1,11 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!--
+https://go.microsoft.com/fwlink/?LinkID=208121.
+-->
+<Project>
+  <PropertyGroup>
+    <_PublishTargetUrl>C:\Users\Ryan\Documents\Github\labPortal\LabPortalAPI\bin\Release\net6.0\publish\</_PublishTargetUrl>
+    <History>True|2024-09-15T03:04:09.7502148Z;True|2024-09-14T22:46:09.3684098-04:00;True|2024-09-14T22:40:33.1888011-04:00;True|2024-09-14T22:40:12.9062974-04:00;True|2024-09-14T20:43:13.9515058-04:00;</History>
+    <LastFailureDetails />
+  </PropertyGroup>
+</Project>

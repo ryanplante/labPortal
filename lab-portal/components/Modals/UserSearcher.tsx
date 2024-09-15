@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, TextInput, Button, StyleSheet, FlatList, TouchableOpacity, Alert, Text } from 'react-native';
+import { View, TextInput, Button, StyleSheet, FlatList, TouchableOpacity, Alert, Text, Pressable } from 'react-native';
 import userService from '../../services/userService';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -28,14 +28,14 @@ const UserSearcher = ({ onSelect, onBackPress, isTeacher }: UserSearcherProps) =
                 Alert.alert('Error', 'Please enter an ID, first name, or last name to search.');
                 return;
             }
-    
+
             let results;
             if (searchId.trim() !== '') {
                 results = await userService.fuzzySearchById(parseInt(searchId, 10));
             } else {
                 results = await userService.fuzzySearchByName(searchFirstName, searchLastName);
             }
-    
+
             if (results?.$values) {
                 let filteredResults = results.$values;
                 if (isTeacher !== null) {
@@ -49,14 +49,14 @@ const UserSearcher = ({ onSelect, onBackPress, isTeacher }: UserSearcherProps) =
                         }
                     });
                 }
-    
+
                 const mappedResults = filteredResults.map((user: any) => ({
                     userId: parseInt(user.userId.toString().padStart(8, '0')),
                     fName: user.fName,
                     lName: user.lName,
                 }));
                 console.log(mappedResults)
-    
+
                 setUsers(mappedResults);
             } else {
                 setUsers([]);
@@ -65,7 +65,7 @@ const UserSearcher = ({ onSelect, onBackPress, isTeacher }: UserSearcherProps) =
             console.error('Error fetching users:', error);
         }
     };
-    
+
 
     const handleSelect = (user: User) => {
         onSelect(user);
@@ -101,7 +101,9 @@ const UserSearcher = ({ onSelect, onBackPress, isTeacher }: UserSearcherProps) =
                 onChangeText={setSearchLastName}
             />
 
-            <Button title="Search" onPress={handleSearch} />
+            <Pressable onPress={handleSearch} style={styles.pressableButton}>
+                <Text style={styles.buttonText}>Search</Text>
+            </Pressable>
 
             <FlatList
                 data={users}
@@ -152,6 +154,18 @@ const styles = StyleSheet.create({
         color: '#007bff',
         marginBottom: 5,
     },
+    pressableButton: {
+        backgroundColor: 'rgb(255, 193, 7)', // Sets the background color
+        padding: 10,
+        borderRadius: 5,
+        alignItems: 'center',
+        justifyContent: 'center',
+      },
+      buttonText: {
+        color: '#fff', // White text color
+        fontSize: 16,
+        fontWeight: 'bold',
+      },
 });
 
 export default UserSearcher;

@@ -364,7 +364,7 @@ const ManageLabs = ({ route, navigation, department: initialDepartment }) => {
             <TextInput
               key="user"
               placeholder="Select a user"
-              value={editingUser ? `${editingUser.fName} ${editingUser.lName}` : ''}
+              value={editingUser ? `(${editingUser.userId.toString().padStart(8, '0')}) ${editingUser.fName} ${editingUser.lName}` : ''}
               editable={false}
               style={styles.readOnlyInput}
             />
@@ -493,7 +493,7 @@ const ManageLabs = ({ route, navigation, department: initialDepartment }) => {
       )}
 
       {/* Add User button */}
-      {isAdmin && activeTab === 'Employees' && (
+      {activeTab === 'Employees' && (
         <TouchableOpacity
           style={styles.addButton}
           onPress={() => {
