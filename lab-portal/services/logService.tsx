@@ -69,10 +69,10 @@ class LogService {
         return moment.tz(localTime, timeZone).utc().format('YYYY-MM-DDTHH:mm:ss[Z]');
     }
 
-    async getLogsByLab(labId: number, startDate?: string, endDate?: string): Promise<FilteredLog[]> {
+    async getLogsByDept(deptId: number, startDate?: string, endDate?: string): Promise<FilteredLog[]> {
         try {
-            const params = { labId, startDate, endDate };
-            const response: AxiosResponse<any> = await axios.get(`${this.baseUrl}/FilteredLogs/Lab`, { params });
+            const params = { deptId, startDate, endDate };
+            const response: AxiosResponse<any> = await axios.get(`${this.baseUrl}/FilteredLogs/Department`, { params });
 
             const logs = response.data.$values;
 
@@ -87,7 +87,7 @@ class LogService {
                 monitorID: log.monitorID,
             }));
         } catch (error) {
-            await this.handleError(error, 'getLogsByLab');
+            await this.handleError(error, 'getLogsByDept');
             throw error;
         }
     }
@@ -151,8 +151,8 @@ class LogService {
      */
         async getLogSummary(
             term: string, 
-            startTime?: string, 
-            endTime?: string, 
+            startTime?: Date, 
+            endTime?: Date, 
             isItem?: boolean, 
             deptId?: number
         ): Promise<LogSummary[]> {
