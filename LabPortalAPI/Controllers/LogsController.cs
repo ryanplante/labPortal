@@ -20,10 +20,10 @@ namespace LabPortal.Controllers
         }
 
         // GET: api/Logs/FilteredLogs
-        [HttpGet("FilteredLogs/Lab")]
+        [HttpGet("FilteredLogs/Department")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<ActionResult<IEnumerable<FilteredLogDto>>> GetLogs([FromQuery] int labId, [FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate)
+        public async Task<ActionResult<IEnumerable<FilteredLogDto>>> GetLogs([FromQuery] int deptId, [FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate)
         {
             if (_context.Logs == null)
             {
@@ -37,8 +37,8 @@ namespace LabPortal.Controllers
                 await connection.OpenAsync();
                 using (var command = connection.CreateCommand())
                 {
-                    command.CommandText = "EXEC [dbo].[usp_GetLabLogs] @LabId, @StartDate, @EndDate";
-                    command.Parameters.Add(new SqlParameter("@LabId", labId));
+                    command.CommandText = "EXEC [dbo].[usp_GetLogsByDept] @DeptId, @StartDate, @EndDate";
+                    command.Parameters.Add(new SqlParameter("@DeptId", deptId));
                     command.Parameters.Add(new SqlParameter("@StartDate", startDate ?? (object)DBNull.Value));
                     command.Parameters.Add(new SqlParameter("@EndDate", endDate ?? (object)DBNull.Value));
 

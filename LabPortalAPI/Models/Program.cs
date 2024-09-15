@@ -16,21 +16,21 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
     });
 
+// Enable Swagger for API documentation in development
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-builder.Services.AddDbContext<TESTContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+// Configure DbContext to use SQL Server
+builder.Services.AddDbContext<TESTContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// CORS configuration
 var corsOrigins = builder.Configuration.GetSection("CorsSettings:AllowedOrigins").Get<string[]>();
-Console.WriteLine("Allowed CORS Origins:");
-foreach (var origin in corsOrigins)
-{
-    Console.WriteLine(origin);
-}
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAllOrigins",
         corsBuilder => corsBuilder
-            .WithOrigins(builder.Configuration.GetSection("CorsSettings:AllowedOrigins").Get<string[]>()) 
+            .WithOrigins(corsOrigins)
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials());
@@ -41,30 +41,31 @@ builder.Services.AddSignalR();
 
 var app = builder.Build();
 
-// Determine the port to use based on environment and command-line arguments
-var port = app.Environment.IsDevelopment()
-    ? (args.Length > 0 && int.TryParse(args[0], out var parsedPort) && parsedPort >= 49152 && parsedPort <= 65535 ? parsedPort : 7282)
-    : (args.Length > 0 && int.TryParse(args[0], out parsedPort) && parsedPort >= 49152 && parsedPort <= 65535 ? parsedPort : 80);
-
-
+// Enable CORS
 app.UseCors("AllowAllOrigins");
-app.MapControllers();
 
 // Map SignalR hubs
-app.MapHub<ChatHub>("/chatHub");  // For tutor chat
-app.MapHub<NotificationsHub>("/notificationsHub"); // For notifications 
-string url = $"http://0.0.0.0:{port}";
-// Set up swagger and https for development, http for production
+app.MapHub<ChatHub>("/chatHub");
+app.MapHub<NotificationsHub>("/notificationsHub");
+
+// Map Controllers
+app.MapControllers();
+
+// Configure environment-specific settings
+
+// Development Environment (Kestrel)
 if (app.Environment.IsDevelopment())
 {
+    app.UseHttpsRedirection();
     app.UseSwagger();
     app.UseSwaggerUI();
-    Console.WriteLine($"API running on https://0.0.0.0:{port}");
-    app.Run(url.Replace("http", "https")); 
+    Console.WriteLine($"API running in development on https://localhost:7282");
+    app.Run("https://localhost:7282");  // Run Kestrel on port 7282
 }
 else
 {
-    Console.WriteLine($"API running on http://0.0.0.0:{port}");
-    app.Run(url);
+    // Production Environment (IIS Integration)
+    app.UseHttpsRedirection();
+    Console.WriteLine("API running behind IIS.");
+    app.Run();  // No need to specify port, let IIS handle the port binding
 }
-

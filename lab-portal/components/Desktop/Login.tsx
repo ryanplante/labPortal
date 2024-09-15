@@ -44,6 +44,9 @@ const Login = () => {
 	const adaptiveWidth = {
 		width: isMobile ? "90%" : "30%",
 	};
+  const adaptiveMargin = {
+    paddingTop: isMobile ? 0 : 50,
+  }
 
   const handleLogin = async () => {
     setLoading(true);  
@@ -77,7 +80,7 @@ const Login = () => {
   return (
     <View style={styles.container}>
       <Image source={require('../../assets/neit-logo.png')} style={[styles.logo, adaptiveWidth]} />
-      <Text style={[styles.labelText, adaptiveWidth]}>Username</Text>
+      <Text style={[styles.labelText, adaptiveWidth, adaptiveMargin]}>Username</Text>
       <TextInput
         style={[styles.input, adaptiveWidth]}
         inputMode='numeric'
