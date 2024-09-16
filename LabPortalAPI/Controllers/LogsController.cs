@@ -19,7 +19,59 @@ namespace LabPortal.Controllers
             _context = context;
         }
 
-        // GET: api/Logs/FilteredLogs
+        // GET: api/Logs/FilteredLogs/Lab
+        [HttpGet("FilteredLogs/Lab")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<ActionResult<IEnumerable<FilteredLogDto>>> GetLogsLab([FromQuery] int labId, [FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate)
+        {
+            if (_context.Logs == null)
+            {
+                return NotFound("Log context is not available.");
+            }
+
+            var filteredLogs = new List<FilteredLogDto>();
+
+            using (var connection = _context.Database.GetDbConnection())
+            {
+                await connection.OpenAsync();
+                using (var command = connection.CreateCommand())
+                {
+                    command.CommandText = "EXEC [dbo].[usp_GetLabLogs] @LabId, @StartDate, @EndDate";
+                    command.Parameters.Add(new SqlParameter("@LabId", labId));
+                    command.Parameters.Add(new SqlParameter("@StartDate", startDate ?? (object)DBNull.Value));
+                    command.Parameters.Add(new SqlParameter("@EndDate", endDate ?? (object)DBNull.Value));
+
+                    using (var reader = await command.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            var log = new FilteredLogDto
+                            {
+                                Id = reader.GetInt32(0),
+                                StudentId = reader.GetInt32(1),
+                                ItemId = reader.IsDBNull(2) ? (int?)null : reader.GetInt32(2),
+                                ItemDescription = reader.IsDBNull(3) ? (String?)null : reader.GetString(3),
+                                StudentName = reader.GetString(4) + " " + reader.GetString(5),
+                                TimeIn = reader.GetDateTime(6),
+                                TimeOut = reader.IsDBNull(7) ? (DateTime?)null : reader.GetDateTime(7),
+                                MonitorID = reader.IsDBNull(8) ? 99999999 : reader.GetInt32(8)
+                            };
+                            filteredLogs.Add(log);
+                        }
+                    }
+                }
+            }
+
+            if (!filteredLogs.Any())
+            {
+                return NotFound("No logs found");
+            }
+
+            return Ok(filteredLogs);
+        }
+
+        // GET: api/Logs/FilteredLogs/Department
         [HttpGet("FilteredLogs/Department")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -446,50 +498,53 @@ namespace LabPortal.Controllers
         {
             if (_context.Logs == null)
             {
-                return NotFound("Log context is not available.");
+                return BadRequest("Log context is not available.");
             }
 
             var logSummaries = new List<LogSummaryDto>();
 
-            using (var connection = _context.Database.GetDbConnection())
+            try
             {
-                await connection.OpenAsync();
-                using (var command = connection.CreateCommand())
+                using (var connection = _context.Database.GetDbConnection())
                 {
-                    command.CommandText = "EXEC [dbo].[usp_GetLogSummaryCounts] @Term, @StartTime, @EndTime, @IsItem, @DeptID";
-                    command.Parameters.Add(new SqlParameter("@Term", term));
-                    command.Parameters.Add(new SqlParameter("@StartTime", startTime ?? (object)DBNull.Value));
-                    command.Parameters.Add(new SqlParameter("@EndTime", endTime ?? (object)DBNull.Value));
-                    command.Parameters.Add(new SqlParameter("@IsItem", isItem.HasValue ? (object)isItem.Value : DBNull.Value));
-                    command.Parameters.Add(new SqlParameter("@DeptID", deptID ?? (object)DBNull.Value));
-
-                    using (var reader = await command.ExecuteReaderAsync())
+                    await connection.OpenAsync();
+                    using (var command = connection.CreateCommand())
                     {
-                        while (await reader.ReadAsync())
+                        command.CommandText = "EXEC [dbo].[usp_GetLogSummaryCounts] @Term, @StartTime, @EndTime, @IsItem, @DeptID";
+                        command.Parameters.Add(new SqlParameter("@Term", term));
+                        command.Parameters.Add(new SqlParameter("@StartTime", startTime ?? (object)DBNull.Value));
+                        command.Parameters.Add(new SqlParameter("@EndTime", endTime ?? (object)DBNull.Value));
+                        command.Parameters.Add(new SqlParameter("@IsItem", isItem.HasValue ? (object)isItem.Value : DBNull.Value));
+                        command.Parameters.Add(new SqlParameter("@DeptID", deptID ?? (object)DBNull.Value));
+
+                        using (var reader = await command.ExecuteReaderAsync())
                         {
-                            var logSummary = new LogSummaryDto
+                            while (await reader.ReadAsync())
                             {
-                                LabID = reader.GetInt32(0),  // LabID should be int
-                                LabName = reader.GetString(1), // LabName should be string
+                                var logSummary = new LogSummaryDto
+                                {
+                                    LabID = reader.GetInt32(0),  // LabID should be int
+                                    LabName = reader.GetString(1), // LabName should be string
 
-                                // If Term is an integer or other type, use GetInt32 or appropriate method
-                                Term = reader.IsDBNull(2) ? null : reader[2].ToString(),  // Safely convert any type to string
+                                    // If Term is an integer or other type, use GetInt32 or appropriate method
+                                    Term = reader.IsDBNull(2) ? null : reader[2].ToString(),  // Safely convert any type to string
 
-                                Count = reader.GetInt32(3) // Count should be int
-                            };
-                            logSummaries.Add(logSummary);
+                                    Count = reader.GetInt32(3) // Count should be int
+                                };
+                                logSummaries.Add(logSummary);
+                            }
                         }
                     }
                 }
             }
-
-            if (!logSummaries.Any())
+            catch (Exception ex)
             {
-                return NotFound("No logs found for the specified filters.");
+                return Ok(new List<LogSummaryDto>()); // Return an empty list instead of throwing an error
             }
 
             return Ok(logSummaries);
         }
+
 
 
 

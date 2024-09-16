@@ -8,7 +8,7 @@ import { checkHeartbeat, deleteToken, getUserByToken } from '../../../services/l
 import LogService, { LogEntry, CreatedLog } from '../../../services/logService';
 import ScheduleService from '../../../services/scheduleService';
 import ItemService from '../../../services/itemService';
-import { User } from '../../../services/userService';
+import userService, { User } from '../../../services/userService';
 import ConfirmationModal from '../../Modals/ConfirmationModal';
 import ActionsModal from '../../Modals/ActionsModal';
 import { crossPlatformAlert, reload } from '../../../services/helpers';
@@ -56,9 +56,13 @@ const StudentWorkerView = () => {
   const [currentScreenWidth, setCurrentScreenWidth] = useState<number>(screenWidth);
   const isWideScreen = currentScreenWidth >= 700;
   const [isPasswordModalVisible, setPasswordModalVisible] = useState(false);
-  const [isScanned, setScanned] = useState<boolean | null>(null);
+  const [isScanned, setScanned] = useState<boolean>(false);
   const [selectedTypeFilter, setSelectedTypeFilter] = useState<string>('Students');
   const [hideTab, setHideTab] = useState<boolean[]>([false, false]); // [Hide Student Tab, Hide Item Tab]
+  const [banConfirmationModalVisible, setBanConfirmationModalVisible] = useState<boolean>(false);
+  const [banConfirmationModalTitle, setBanConfirmationModalTitle] = useState<string>('');
+  const [banConfirmationModalDescription, setBanConfirmationModalDescription] = useState<string>('');
+
 
 
 
@@ -163,19 +167,44 @@ const StudentWorkerView = () => {
     const userAndLabLoaded = await fetchUserAndLabId();
     if (!userAndLabLoaded) return;
 
-    setSelectedStudent({
-      id: student.userId,
-      firstName: student.fName,
-      lastName: student.lName,
-    });
-    setError(null);
-    setStudentSearcherOpen(false);
+    try {
+      // Check if the selected student is banned
+      const response = await userService.checkUserBan(Number(student.userId));
+
+      if (response) {
+        // If there's an active ban, don't allow selection and show an error
+        setError(`Student ${student.fName} ${student.lName} is banned until ${new Date(response.expirationDate).toLocaleDateString()}.`);
+        // Show confirmation modal with ban info
+        setBanConfirmationModalTitle('Student is Banned');
+        setBanConfirmationModalDescription(`Student ${student.fName} ${student.lName} is banned until ${new Date(response.expirationDate).toLocaleDateString()} for the reason: ${response.reason}.`);
+        setBanConfirmationModalVisible(true); // Show modal
+        return;  // Don't select the student if they are banned
+      }
+
+      // If no ban, proceed with setting the selected student
+      setSelectedStudent({
+        id: student.userId,
+        firstName: student.fName,
+        lastName: student.lName,
+      });
+      setError(null);
+      setStudentSearcherOpen(false);
+
+    } catch (error) {
+      // Handle any errors (such as network issues or API errors)
+      setError('Failed to check ban status. Please try again.');
+    }
   };
 
-  const handleItemSelect = async (item: { itemId: string, description: string, serialNum: string }) => {
+
+  const handleItemSelect = async (item: { itemId: string, description: string, serialNum: string, quantity: number}) => {
     const userAndLabLoaded = await fetchUserAndLabId();
     if (!userAndLabLoaded) return;
-
+    if (item.quantity == 0) {
+      setError("This item is out of stock! Please have an admin update the inventory");
+      return;
+    }
+      
     setSelectedItem({
       id: item.itemId, // Correct key to match your state
       itemName: item.description,
@@ -363,7 +392,7 @@ const StudentWorkerView = () => {
     if (!userAndLabLoaded) return;
 
     try {
-      await LogService.timeOutLog(Number(id), user?.userId ?? 0);
+      await LogService.timeOutLog(Number(id), user?.userId ?? 0, isScanned);
       await fetchLogsForToday(labId ?? 1);
     } catch (error) {
       console.error('Failed to clock out log:', error);
@@ -719,6 +748,7 @@ const StudentWorkerView = () => {
           [
             isItemSearcherOpen
               ? <ItemSearcher key="itemSearcher" onSelect={handleItemSelect} onBackPress={() => setItemSearcherOpen(false)} labId={labId} />
+              : isStudentSearcherOpen ? <UserSearcher key="studentSearcher" onSelect={handleStudentSelect} onBackPress={() => setStudentSearcherOpen(false)} isTeacher={null} /> 
               : [...itemPickerComponent, ...studentPickerComponent, ...timePickerComponent, ...addButtonComponent]
           ]
         ]}
@@ -748,6 +778,15 @@ const StudentWorkerView = () => {
         onConfirm={handleNavigateToSchedule}
         onCancel={handleCloseConfirmation}
         type="yesNo"
+      />
+
+      <ConfirmationModal
+        visible={banConfirmationModalVisible}
+        title={banConfirmationModalTitle}
+        description={banConfirmationModalDescription}
+        onConfirm={() => setBanConfirmationModalVisible(false)}  // Close modal on confirm
+        onCancel={() => setBanConfirmationModalVisible(false)}  // Close modal on confirm
+        type="ok"
       />
 
       <ActionsModal

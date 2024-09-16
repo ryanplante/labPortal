@@ -91,6 +91,29 @@ class LogService {
         }
     }
 
+    async getLogsByLab(labId: number, startDate?: string, endDate?: string): Promise<FilteredLog[]> {
+        try {
+            const params = { labId, startDate, endDate };
+            const response: AxiosResponse<any> = await axios.get(`${this.baseUrl}/FilteredLogs/Lab`, { params });
+
+            const logs = response.data.$values;
+
+            return logs.map((log: any) => ({
+                id: log.id,
+                studentId: log.studentId,
+                studentName: log.studentName,
+                itemId: log.itemId,
+                itemDescription: log.itemDescription,
+                timeIn: this.convertToLocalTime(log.timeIn),
+                timeOut: log.timeOut ? this.convertToLocalTime(log.timeOut) : undefined,
+                monitorID: log.monitorID,
+            }));
+        } catch (error) {
+            await this.handleError(error, 'getLogsByLab');
+            throw error;
+        }
+    }
+
     async getLogsFilteredByDate(startDate?: string, endDate?: string): Promise<FilteredLog[]> {
         try {
             const params = { startDate, endDate };

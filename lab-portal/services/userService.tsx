@@ -14,11 +14,25 @@ export interface User {
     isTeacher: boolean;
 }
 
+export interface Ban {
+    banId: number;
+    userId: number;
+    reason: string;
+    expirationDate: Date;
+}
+
+export interface BanCreateDto {
+    userId: number;
+    reason: string;
+    expirationDate: Date;
+}
+
 class UserService {
     private baseUrl: string;
-
+    private bansBaseUrl: string;
     constructor() {
         this.baseUrl = `${process.env.EXPO_PUBLIC_API}/Users`;
+        this.bansBaseUrl = `${process.env.EXPO_PUBLIC_API}/Bans`;
     }
 
     // GET: /api/Users
@@ -111,7 +125,32 @@ class UserService {
             throw error;
         }
     }
+    async createBan(banDto: BanCreateDto): Promise<void> {
+        try {
+            const token = await this.getToken();
+            await axios.post(this.bansBaseUrl, banDto, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            await this.audit('insert', `Created new ban for User ID: ${banDto.userId}`);
+        } catch (error) {
+            await this.handleError(error, 'createBan');
+            throw error;
+        }
+    }
 
+    // PUT: /api/Bans/{id}
+    async updateBan(banId: number, banDto: BanCreateDto): Promise<void> {
+        try {
+            const token = await this.getToken();
+            await axios.put(`${this.bansBaseUrl}/${banId}`, banDto, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            await this.audit('update', `Updated ban with ID: ${banId}`);
+        } catch (error) {
+            await this.handleError(error, 'updateBan');
+            throw error;
+        }
+    }
     // GET: /api/Users/FuzzySearchByName
     async fuzzySearchByName(fName?: string, lName?: string): Promise<User[]> {
         try {
@@ -128,6 +167,38 @@ class UserService {
             throw error;
         }
     }
+
+        // DELETE: /api/Bans/{id}
+        async deleteBan(banId: number): Promise<void> {
+            try {
+                const token = await this.getToken();
+                await axios.delete(`${this.bansBaseUrl}/${banId}`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+                await this.audit('delete', `Deleted ban with ID: ${banId}`);
+            } catch (error) {
+                await this.handleError(error, 'deleteBan');
+                throw error;
+            }
+        }
+    
+        // GET: /api/Bans/CheckBan/{userId}
+        async checkUserBan(userId: number): Promise<Ban | null> {
+            try {
+                const token = await this.getToken();
+                const response: AxiosResponse<Ban> = await axios.get(`${this.bansBaseUrl}/CheckBan/${userId}`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+                await this.audit('view', `Checked ban for User ID: ${userId}`);
+                return response.data;
+            } catch (error) {
+                if (error.response && error.response.status === 404) {
+                    return null; // No active ban found
+                }
+                await this.handleError(error, 'checkUserBan');
+                throw error;
+            }
+        }
 
     // Helper method for error handling
     private async handleError(error: any, source: string): Promise<void> {
