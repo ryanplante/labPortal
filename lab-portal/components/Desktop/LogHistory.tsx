@@ -9,6 +9,7 @@ import userService from '../../services/userService';
 import PlatformSpecificDatePicker from '../Modals/PlatformSpecificDatePicker';
 import itemService from '../../services/itemService';
 import labsService from '../../services/labsService';
+import { getUserByToken } from '../../services/loginService';
 
 // Map auditLogTypeId to human-readable audit log types
 const auditLogTypeMap: Record<number, AuditLogType> = {
@@ -36,8 +37,20 @@ const LogsHistory = () => {
     const [auditLogsPage, setAuditLogsPage] = useState(1); // State to keep track of page number
     const [expandedLogId, setExpandedLogId] = useState<number | null>(null);
     const [logHistory, setLogHistory] = useState<any[]>([]);
+    const [userPrivLevel, setUserPrivLevel] = useState<number>(0);
 
-
+    // Fetch user data 
+    useEffect(() => {
+        const fetchUserPrivileges = async () => {
+            try {
+                const user = await getUserByToken();  // Fetch user data
+                setUserPrivLevel(user.privLvl);
+            } catch (error) {
+                console.error("Failed to fetch user privileges", error);
+            }
+        };
+        fetchUserPrivileges();
+    }, []);
 
 
     useEffect(() => {
@@ -325,15 +338,22 @@ const LogsHistory = () => {
                 <TouchableOpacity onPress={() => setActiveTab('Student Logs')} style={[styles.tabButton, activeTab === 'Student Logs' && styles.activeTab]}>
                     <Text style={styles.tabText}>Student Logs</Text>
                 </TouchableOpacity>
-                <TouchableOpacity onPress={() => setActiveTab('Item Logs')} style={[styles.tabButton, activeTab === 'Item Logs' && styles.activeTab]}>
-                    <Text style={styles.tabText}>Item Logs</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => setActiveTab('Chat Logs')} style={[styles.tabButton, activeTab === 'Chat Logs' && styles.activeTab]}>
-                    <Text style={styles.tabText}>Chat Logs</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => setActiveTab('Audit Logs')} style={[styles.tabButton, activeTab === 'Audit Logs' && styles.activeTab]}>
-                    <Text style={styles.tabText}>Audit Logs</Text>
-                </TouchableOpacity>
+                {Number(userPrivLevel) != 2 && (  // Render items tab only if they're not a tutor
+                    <TouchableOpacity onPress={() => setActiveTab('Item Logs')} style={[styles.tabButton, activeTab === 'Item Logs' && styles.activeTab]}>
+                        <Text style={styles.tabText}>Item Logs</Text>
+                    </TouchableOpacity>
+                )}
+                {userPrivLevel >= 2 && (  // Only render Chat Logs for tutors
+                    <TouchableOpacity onPress={() => setActiveTab('Chat Logs')} style={[styles.tabButton, activeTab === 'Chat Logs' && styles.activeTab]}>
+                        <Text style={styles.tabText}>Chat Logs</Text>
+                    </TouchableOpacity>
+                )}
+
+                {userPrivLevel === 5 && (  // Only render Audit Logs for admin
+                    <TouchableOpacity onPress={() => setActiveTab('Audit Logs')} style={[styles.tabButton, activeTab === 'Audit Logs' && styles.activeTab]}>
+                        <Text style={styles.tabText}>Audit Logs</Text>
+                    </TouchableOpacity>
+                )}
             </View>
 
             <View style={styles.logsContainer}>
