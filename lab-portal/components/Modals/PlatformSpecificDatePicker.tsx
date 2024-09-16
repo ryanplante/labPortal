@@ -62,6 +62,7 @@ const PlatformSpecificDatePicker = ({
               date={dateTime} // Use the parent-provided date
               onChange={handleDateChange}
               format="MM/DD/YYYY"
+              maxDate={new Date()}
               style={{ width: 250, padding: 10 }}
             />
 

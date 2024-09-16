@@ -1,5 +1,4 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Platform, Alert } from 'react-native';
 import axios from 'axios';
 import { CreateAuditLog } from './auditService';
 import { CreateErrorLog } from './errorLogService';

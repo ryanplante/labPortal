@@ -7,6 +7,8 @@ import PlatformSpecificDateTimePicker from '../Modals/PlatformSpecificDateTimePi
 import { convertDateToUTC, convertToLocalTime } from '../../services/helpers';
 import userService from '../../services/userService';
 import PlatformSpecificDatePicker from '../Modals/PlatformSpecificDatePicker';
+import itemService from '../../services/itemService';
+import labsService from '../../services/labsService';
 
 // Map auditLogTypeId to human-readable audit log types
 const auditLogTypeMap: Record<number, AuditLogType> = {
@@ -32,6 +34,9 @@ const LogsHistory = () => {
     const [error, setError] = useState<string | null>(null);
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [auditLogsPage, setAuditLogsPage] = useState(1); // State to keep track of page number
+    const [expandedLogId, setExpandedLogId] = useState<number | null>(null);
+    const [logHistory, setLogHistory] = useState<any[]>([]);
+
 
 
 
@@ -46,15 +51,9 @@ const LogsHistory = () => {
                 setItemLogs([]);
                 setStudentLogs([]);
 
-                // Convert selectedDate to a moment object in the local timezone (Eastern Time)
                 const localDate = moment.tz(selectedDate, 'America/New_York').startOf('day');
-                // Now convert the localDate to UTC for start of the day
                 const startOfDay = moment.utc(localDate).toISOString();
-
-                // Convert the end of the day in the same way
                 const endOfDay = moment.utc(localDate).endOf('day').toISOString();
-
-
 
                 const [summaries, audits, chats] = await Promise.all([
                     logService.getAllSummaries(),
@@ -62,7 +61,6 @@ const LogsHistory = () => {
                     getAllChatLogs(),
                 ]);
 
-                // Process logs
                 const filteredSummaries = summaries.filter(log =>
                     moment(log.timein).isBetween(startOfDay, endOfDay)
                 );
@@ -73,7 +71,8 @@ const LogsHistory = () => {
                     filteredStudentLogs.map(async (log) => {
                         const studentName = await userService.getNameById(log.studentId);
                         const monitorName = await userService.getNameById(log.monitorId);
-                        return { ...log, studentName, monitorName };
+                        const lab = await labsService.getLabById(log.labId);  // Fetch lab name
+                        return { ...log, studentName, monitorName, labName: lab.name };  // Add labName to log
                     })
                 );
 
@@ -81,12 +80,14 @@ const LogsHistory = () => {
                     filteredItemLogs.map(async (log) => {
                         const studentName = await userService.getNameById(log.studentId);
                         const monitorName = await userService.getNameById(log.monitorId);
-                        return { ...log, studentName, monitorName };
+                        const itemName = await itemService.getNameById(log.itemId);  // Fetch item name
+                        const lab = await labsService.getLabById(log.labId);  // Fetch lab name
+                        return { ...log, studentName, monitorName, itemName, labName: lab.name };  // Add itemName and labName to log
                     })
                 );
 
                 const filteredChatLogs = chats.filter(log =>
-                    moment(log.timestamp).isBetween(startOfDay, endOfDay)
+                    moment(log.timestamp).isBetween(startOfDay, endOfDay) // Filter chats by selected date
                 );
 
                 const updatedChatLogs = await Promise.all(
@@ -98,19 +99,17 @@ const LogsHistory = () => {
 
                 const updatedAuditLogs = await Promise.all(
                     audits.map(async (log) => {
-                        const userName = await userService.getNameById(log.userID);
+                        const userName = await userService.getNameById(log.userID); // Fetch user name
                         return { ...log, userName };
                     })
                 );
 
-                // Update state for all logs
+                setAuditLogs(updatedAuditLogs);
                 setStudentLogs(updatedStudentLogs);
                 setItemLogs(updatedItemLogs);
                 setChatLogs(updatedChatLogs);
-                setAuditLogs(updatedAuditLogs);
             } catch (err) {
-                console.error('Error fetching logs:', err);
-                setError('Failed to fetch logs. Please try again later.');
+                setError('Failed to fetch logs.');
             } finally {
                 setLoading(false);
             }
@@ -118,6 +117,47 @@ const LogsHistory = () => {
 
         fetchLogs();
     }, [selectedDate, auditLogsPage]);
+
+
+
+    const fetchLogHistory = async (logId) => {
+        try {
+            const history = await logService.getLogHistory(logId);
+
+            const updatedHistory = await Promise.all(
+                history.map(async (log) => {
+                    const itemName = log.itemId ? await itemService.getNameById(log.itemId) : null;
+                    const studentName = log.studentId ? await userService.getNameById(log.studentId) : null;
+                    const lab = log.labId ? await labsService.getLabById(log.labId) : null;
+                    const monitorName = log.monitorId ? await userService.getNameById(log.monitorId) : null;
+
+                    return {
+                        ...log,
+                        itemName,
+                        studentName,
+                        labName: lab ? lab.name : null,
+                        monitorName
+                    };
+                })
+            );
+
+            setLogHistory(updatedHistory);
+        } catch (error) {
+            console.error("Error fetching log history:", error);
+        }
+    };
+
+
+    const handleLogToggle = async (logId) => {
+        if (expandedLogId === logId) {
+            // If the log is already expanded, collapse it by setting expandedLogId to null
+            setExpandedLogId(null);
+        } else {
+            // If the log is not expanded, fetch the log history and expand
+            await fetchLogHistory(logId);
+            setExpandedLogId(logId);
+        }
+    };
 
 
     const renderAuditPagination = () => (
@@ -139,28 +179,6 @@ const LogsHistory = () => {
         </View>
     );
 
-    const renderStudentLog = ({ item }) => (
-        <View style={styles.logItem}>
-            <View style={styles.logRow}>
-                <Text style={styles.logText}>
-                    Student: {item.studentName} ({item.studentId}), Lab ID: {item.labId}, Time In: {convertToLocalTime(item.timein)}, Time Out: {item.timeout ? convertToLocalTime(item.timeout) : 'N/A'}
-                </Text>
-            </View>
-            <Text style={styles.timestamp}>Monitor: {item.monitorName} ({item.monitorId})</Text>
-        </View>
-    );
-
-    const renderItemLog = ({ item }) => (
-        <View style={styles.logItem}>
-            <View style={styles.logRow}>
-                <Text style={styles.logText}>
-                    Item ID: {item.itemId}, Student: {item.studentName} ({item.studentId}), Lab ID: {item.labId}, Time In: {convertToLocalTime(item.timein)}, Time Out: {item.timeout ? convertToLocalTime(item.timeout) : 'N/A'}
-                </Text>
-            </View>
-            <Text style={styles.timestamp}>Monitor: {item.monitorName} ({item.monitorId})</Text>
-        </View>
-    );
-
     const renderChatLog = ({ item }) => (
         <View style={styles.logItem}>
             <View style={styles.logRow}>
@@ -169,6 +187,75 @@ const LogsHistory = () => {
             <Text style={styles.timestamp}>Time: {convertToLocalTime(item.timestamp)}</Text>
         </View>
     );
+
+    const renderStudentLog = ({ item }) => (
+        <View style={styles.logItem}>
+            <View style={styles.logRow}>
+                <Text style={styles.logText}>
+                    Student: {item.studentName} ({String(item.studentId).padStart(8, '0')}), Lab: {item.labName} ({item.labId}), Time In: {convertToLocalTime(item.timein)}, Time Out: {item.timeout ? convertToLocalTime(item.timeout) : 'N/A'}
+                </Text>
+            </View>
+            <Text style={styles.timestamp}>Monitor: {item.monitorName} ({item.monitorId})</Text>
+
+            <TouchableOpacity onPress={() => handleLogToggle(item.summaryId)}>
+                <Text style={{ color: 'blue', textDecorationLine: 'underline' }}>
+                    {expandedLogId === item.summaryId ? 'Collapse History' : 'View History'}
+                </Text>
+            </TouchableOpacity>
+
+            {expandedLogId === item.summaryId && (
+                <View style={styles.expandedLogContainer}>
+                    {logHistory.map((historyItem, index) => (
+                        <View key={index} style={styles.historyItem}>
+                            <Text style={styles.logText}>Transaction Type: {historyItem.transactionType}</Text>
+                            <Text style={styles.logText}>Timestamp: {moment(historyItem.timestamp).format('MM/DD/YYYY, h:mm A')}</Text>
+                            <Text style={styles.logText}>Lab: {historyItem.labName} ({historyItem.labId})</Text>
+                            <Text style={styles.logText}>Monitor: {historyItem.monitorName} ({historyItem.monitorId})</Text>
+                            <Text style={styles.logText}>Student: {historyItem.studentName} ({historyItem.studentId})</Text>
+                            <Text style={styles.logText}>Is Scanned: {historyItem.isScanned ? 'Yes' : 'No'}</Text>
+                            {historyItem.itemId && <Text style={styles.logText}>Item Borrowed: {historyItem.itemName}</Text>}
+                        </View>
+                    ))}
+                </View>
+            )}
+        </View>
+    );
+
+
+
+    const renderItemLog = ({ item }) => (
+        <View style={styles.logItem}>
+            <View style={styles.logRow}>
+                <Text style={styles.logText}>
+                    Item Borrowed: {item.itemName}, Student: {item.studentName} ({String(item.studentId).padStart(8, '0')}), Lab: {item.labName} ({item.labId}), Time In: {convertToLocalTime(item.timein)}, Time Out: {item.timeout ? convertToLocalTime(item.timeout) : 'N/A'}
+                </Text>
+            </View>
+            <Text style={styles.timestamp}>Monitor: {item.monitorName} ({item.monitorId})</Text>
+
+            <TouchableOpacity onPress={() => handleLogToggle(item.summaryId)}>
+                <Text style={{ color: 'blue', textDecorationLine: 'underline' }}>
+                    {expandedLogId === item.summaryId ? 'Collapse History' : 'View History'}
+                </Text>
+            </TouchableOpacity>
+
+            {expandedLogId === item.summaryId && (
+                <View style={styles.expandedLogContainer}>
+                    {logHistory.map((historyItem, index) => (
+                        <View key={index} style={styles.historyItem}>
+                            <Text style={styles.logText}>Transaction Type: {historyItem.transactionType}</Text>
+                            <Text style={styles.logText}>Timestamp: {moment(historyItem.timestamp).format('MM/DD/YYYY, h:mm A')}</Text>
+                            <Text style={styles.logText}>Lab: {historyItem.labName} ({historyItem.labId})</Text>
+                            <Text style={styles.logText}>Monitor: {historyItem.monitorName} ({historyItem.monitorId})</Text>
+                            <Text style={styles.logText}>Student: {historyItem.studentName} ({historyItem.studentId})</Text>
+                            <Text style={styles.logText}>Is Scanned: {historyItem.isScanned ? 'Yes' : 'No'}</Text>
+                            {historyItem.itemId && <Text style={styles.logText}>Item Borrowed: {historyItem.itemName}</Text>}
+                        </View>
+                    ))}
+                </View>
+            )}
+        </View>
+    );
+
 
     const renderAuditLog = ({ item }) => {
         const auditLogTypeName = auditLogTypeMap[item.auditLogTypeId];
@@ -194,9 +281,17 @@ const LogsHistory = () => {
 
         switch (activeTab) {
             case 'Student Logs':
-                return <FlatList data={studentLogs} renderItem={renderStudentLog} keyExtractor={(item) => item.summaryId.toString()} />;
+                return (
+                    <>
+                        <FlatList data={studentLogs} renderItem={renderStudentLog} keyExtractor={(item) => item.summaryId.toString()} />
+                    </>
+                );
             case 'Item Logs':
-                return <FlatList data={itemLogs} renderItem={renderItemLog} keyExtractor={(item) => item.summaryId.toString()} />;
+                return (
+                    <>
+                        <FlatList data={itemLogs} renderItem={renderItemLog} keyExtractor={(item) => item.summaryId.toString()} />
+                    </>
+                )
             case 'Chat Logs':
                 return <FlatList data={chatLogs} renderItem={renderChatLog} keyExtractor={(item) => item.timestamp} />;
             case 'Audit Logs':
@@ -297,8 +392,23 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
     },
+    expandedLogContainer: {
+        paddingLeft: 10,
+        marginTop: 10,
+        backgroundColor: '#f9f9f9',  // Optional: light background for contrast
+        borderRadius: 5,             // Optional: rounded corners for the entire expanded section
+    },
+    historyItem: {
+        padding: 10,
+        borderBottomWidth: 1,        // Add a separator between history items
+        borderBottomColor: '#ddd',   // Light gray border color
+        marginBottom: 10,            // Space between items
+        backgroundColor: '#fff',     // White background for each history item
+        borderRadius: 5,             // Rounded corners for each individual item (optional)
+    },
     logText: {
-        fontSize: 16,
+        fontSize: 14,
+        color: '#333',
     },
     timestamp: {
         fontSize: 12,

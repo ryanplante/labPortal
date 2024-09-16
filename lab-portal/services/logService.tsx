@@ -225,7 +225,7 @@ class LogService {
         try {
             const response: AxiosResponse<LogHistory[]> = await axios.get(`${this.baseUrl}/History/${summaryId}`);
             await this.audit('view', `Viewed log history for summary ID: ${summaryId}`);
-            return response.data.map(log => ({
+            return response.data.$values.map(log => ({
                 ...log,
                 timestamp: this.convertToLocalTime(log.timestamp),
             }));

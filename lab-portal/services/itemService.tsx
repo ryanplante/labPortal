@@ -62,6 +62,19 @@ class ItemService {
         }
     }
 
+    async getNameById(Id: number): Promise<string> {
+        try {
+          if (Id) {
+            const item = await this.getItemById(Id);
+            return `${item.description}`;
+          }
+          return 'Unknown'; // Return 'Unknown' if monitorID is null or invalid
+        } catch (error) {
+          console.error('Error fetching monitor name:', error);
+          return 'Unknown'; // Handle errors gracefully
+        }
+      };
+
     async searchItems(labId: number, query: string): Promise<Item[]> {
         try {
             const response: AxiosResponse<{ $values: Item[] }> = await axios.get(`${this.baseUrl}/search/${labId}/${query}`);
