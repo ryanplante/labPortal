@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import logService from '../../services/logService';
-import { AuditLogType, getAllChatLogs, getAuditLogsByDate } from '../../services/auditService'; // Import updated function
+import { AuditLogType, getAllChatLogs, fetchFilteredAuditLogs } from '../../services/auditService'; // Import updated function
 import moment from 'moment';
 import PlatformSpecificDateTimePicker from '../Modals/PlatformSpecificDateTimePicker';
-import { convertDateToUTC, convertToLocalTime } from '../../services/helpers';
+import { convertToLocalTime } from '../../services/helpers';
 import userService from '../../services/userService';
 import PlatformSpecificDatePicker from '../Modals/PlatformSpecificDatePicker';
 import itemService from '../../services/itemService';
 import labsService from '../../services/labsService';
 import { getUserByToken } from '../../services/loginService';
+import { Picker } from '@react-native-picker/picker';
 
 // Map auditLogTypeId to human-readable audit log types
 const auditLogTypeMap: Record<number, AuditLogType> = {
@@ -25,6 +26,7 @@ const auditLogTypeMap: Record<number, AuditLogType> = {
     10: 'information',
 };
 
+
 const LogsHistory = () => {
     const [activeTab, setActiveTab] = useState('Student Logs');
     const [loading, setLoading] = useState(true);
@@ -38,6 +40,7 @@ const LogsHistory = () => {
     const [expandedLogId, setExpandedLogId] = useState<number | null>(null);
     const [logHistory, setLogHistory] = useState<any[]>([]);
     const [userPrivLevel, setUserPrivLevel] = useState<number>(0);
+    const [selectedAuditLogType, setSelectedAuditLogType] = useState<number>(0);
 
     // Fetch user data 
     useEffect(() => {
@@ -67,10 +70,9 @@ const LogsHistory = () => {
                 const localDate = moment.tz(selectedDate, 'America/New_York').startOf('day');
                 const startOfDay = moment.utc(localDate).toISOString();
                 const endOfDay = moment.utc(localDate).endOf('day').toISOString();
-
                 const [summaries, audits, chats] = await Promise.all([
                     logService.getAllSummaries(),
-                    getAuditLogsByDate(selectedDate, auditLogsPage),
+                    fetchFilteredAuditLogs(selectedDate, selectedAuditLogType, auditLogsPage),
                     getAllChatLogs(),
                 ]);
 
@@ -84,8 +86,8 @@ const LogsHistory = () => {
                     filteredStudentLogs.map(async (log) => {
                         const studentName = await userService.getNameById(log.studentId);
                         const monitorName = await userService.getNameById(log.monitorId);
-                        const lab = await labsService.getLabById(log.labId);  // Fetch lab name
-                        return { ...log, studentName, monitorName, labName: lab.name };  // Add labName to log
+                        const lab = await labsService.getLabById(log.labId);
+                        return { ...log, studentName, monitorName, labName: lab.name };
                     })
                 );
 
@@ -93,14 +95,14 @@ const LogsHistory = () => {
                     filteredItemLogs.map(async (log) => {
                         const studentName = await userService.getNameById(log.studentId);
                         const monitorName = await userService.getNameById(log.monitorId);
-                        const itemName = await itemService.getNameById(log.itemId);  // Fetch item name
-                        const lab = await labsService.getLabById(log.labId);  // Fetch lab name
-                        return { ...log, studentName, monitorName, itemName, labName: lab.name };  // Add itemName and labName to log
+                        const itemName = await itemService.getNameById(log.itemId);
+                        const lab = await labsService.getLabById(log.labId);
+                        return { ...log, studentName, monitorName, itemName, labName: lab.name };
                     })
                 );
 
                 const filteredChatLogs = chats.filter(log =>
-                    moment(log.timestamp).isBetween(startOfDay, endOfDay) // Filter chats by selected date
+                    moment(log.timestamp).isBetween(startOfDay, endOfDay)
                 );
 
                 const updatedChatLogs = await Promise.all(
@@ -112,7 +114,7 @@ const LogsHistory = () => {
 
                 const updatedAuditLogs = await Promise.all(
                     audits.map(async (log) => {
-                        const userName = await userService.getNameById(log.userID); // Fetch user name
+                        const userName = await userService.getNameById(log.userID);
                         return { ...log, userName };
                     })
                 );
@@ -122,6 +124,7 @@ const LogsHistory = () => {
                 setItemLogs(updatedItemLogs);
                 setChatLogs(updatedChatLogs);
             } catch (err) {
+                console.error(err);
                 setError('Failed to fetch logs.');
             } finally {
                 setLoading(false);
@@ -129,7 +132,8 @@ const LogsHistory = () => {
         };
 
         fetchLogs();
-    }, [selectedDate, auditLogsPage]);
+    }, [selectedDate, auditLogsPage, selectedAuditLogType]); // Add selectedAuditLogType to the dependency array
+
 
 
 
@@ -326,13 +330,40 @@ const LogsHistory = () => {
 
     return (
         <View style={styles.container}>
-            <View style={styles.datePickerContainer}>
-                <Text style={styles.datePickerLabel}>Filter by Date:</Text>
-                <PlatformSpecificDatePicker
-                    dateTime={selectedDate}
-                    onDateTimeChange={(date) => setSelectedDate(date.$d)}
-                />
+            <View style={styles.filterContainer}>
+                <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
+                    <Text style={styles.datePickerLabel}>Filter by Date:</Text>
+                    <PlatformSpecificDatePicker
+                        dateTime={selectedDate}
+                        onDateTimeChange={(date) => setSelectedDate(date.$d)}
+                    />
+                </View>
+                {activeTab === 'Audit Logs' && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <Text style={styles.filterLabel}>Filter by Type:</Text>
+                        <Picker
+                            selectedValue={selectedAuditLogType}
+                            onValueChange={(itemValue) => setSelectedAuditLogType(itemValue)}
+                            style={styles.picker}
+                        >
+                            <Picker.Item label="All" value={0} />
+                            <Picker.Item label="Insert" value={1} />
+                            <Picker.Item label="Update" value={2} />
+                            <Picker.Item label="Delete" value={3} />
+                            <Picker.Item label="Login" value={4} />
+                            <Picker.Item label="Logout" value={5} />
+                            <Picker.Item label="View" value={6} />
+                            <Picker.Item label="Access" value={7} />
+                            <Picker.Item label="Permission Change" value={8} />
+                            <Picker.Item label="Data Export" value={9} />
+                            <Picker.Item label="Information" value={10} />
+                        </Picker>
+                    </View>
+                )}
             </View>
+
+
+
 
             <View style={styles.tabBar}>
                 <TouchableOpacity onPress={() => setActiveTab('Student Logs')} style={[styles.tabButton, activeTab === 'Student Logs' && styles.activeTab]}>
@@ -453,6 +484,21 @@ const styles = StyleSheet.create({
     paginationText: {
         color: '#fff',
         fontWeight: 'bold',
+    },
+    filterContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between', // Ensures the date picker is on the left and the filter on the right
+        alignItems: 'center',
+        marginBottom: 20,
+    },
+    filterLabel: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        marginRight: 10,
+    },
+    picker: {
+        height: 50,
+        width: 200,
     },
 });
 

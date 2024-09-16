@@ -46,12 +46,12 @@ namespace LabPortal.Controllers
             return Ok(auditLogs);
         }
 
-        // GET: api/AuditLogs/Date/date?page=1
-        [HttpGet("Date/{date}")]
+        // GET: api/AuditLogs/Date/date/Type/type?page=1
+        [HttpGet("Date/{date}/Type/{auditLogTypeId?}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<IEnumerable<AuditLogDto>>> GetAuditLogsByDate(DateTime date, int page = 1, int pageSize = 50)
+        public async Task<ActionResult<IEnumerable<AuditLogDto>>> GetAuditLogsByDateAndType(DateTime date, int auditLogTypeId = 0, int page = 1, int pageSize = 50)
         {
             if (_context.AuditLogs == null)
             {
@@ -69,9 +69,18 @@ namespace LabPortal.Controllers
             // Set the end of the day to 11:59:59 PM
             var endOfDay = startOfDay.AddDays(1).AddTicks(-1);
 
-            // Fetch audit logs for the given day with pagination
-            var auditLogs = await _context.AuditLogs
-                                    .Where(a => a.Timestamp >= startOfDay && a.Timestamp <= endOfDay)
+            // Query to fetch audit logs within the date range
+            var query = _context.AuditLogs
+                                .Where(a => a.Timestamp >= startOfDay && a.Timestamp <= endOfDay);
+
+            // Apply filter by AuditLogTypeId only if auditLogTypeId is not 0
+            if (auditLogTypeId != 0)
+            {
+                query = query.Where(a => a.AuditLogTypeId == auditLogTypeId);
+            }
+
+            // Pagination and fetching logs
+            var auditLogs = await query
                                     .OrderBy(a => a.Timestamp)
                                     .Skip((page - 1) * pageSize)
                                     .Take(pageSize)
@@ -86,11 +95,14 @@ namespace LabPortal.Controllers
 
             if (auditLogs.Count == 0)
             {
-                return NotFound("No audit logs found for the given date.");
+                return NotFound("No audit logs found for the given criteria.");
             }
 
             return Ok(auditLogs);
         }
+
+
+
 
 
 

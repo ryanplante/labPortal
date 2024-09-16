@@ -48,22 +48,24 @@ export const getAllAuditLogs = async (): Promise<AuditLog[]> => {
   }
 };
 
-// Function to fetch audit logs for a specific date with pagination
-export const getAuditLogsByDate = async (date: Date, page: number = 1): Promise<AuditLog[]> => {
+export const fetchFilteredAuditLogs = async (date: Date, auditLogTypeId: number, page: number): Promise<AuditLog[]> => {
   try {
     // Format the date to YYYY-MM-DD
     const formattedDate = date.toISOString().split('T')[0]; 
-
-    // Send GET request to the API endpoint with the date and page number as parameters
-    const response: AxiosResponse<AuditLog[]> = await axios.get(`${API_BASE_URL}/AuditLogs/Date/${formattedDate}?page=${page}`);
-
-    // Return the audit logs
+    const response = await axios.get(`${API_BASE_URL}/AuditLogs/Date/${formattedDate}/Type/${auditLogTypeId}?page=${page}`);
     return response.data.$values;
   } catch (error) {
-    console.error('Error fetching audit logs for date:', error);
-    throw error;
+    // Handle 404 error specifically
+    if (error.response && error.response.status === 404) {
+      console.warn('No audit logs found for the specified criteria.');
+      return []; // Return an empty list
+    }
+
+    console.error('Error fetching filtered audit logs:', error);
+    throw error; // Throw the error for other status codes
   }
 };
+
 
 
 // Function to create the audit log by sending it to the API
