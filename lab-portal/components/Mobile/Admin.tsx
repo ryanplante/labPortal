@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { useEffect } from "react";
 import AdminUsersView from "./Views/AdminUsersView";
-import DepartmentHeadView from "../Desktop/Views/DepartmentHeadView";
+import DepartmentHeadView from "../Desktop/Views/FacultyView";
 import AdminDeptView from "./Views/AdminDeptView";
 import AdminLabView from "./Views/AdminLabView";
 import AdminItemsView from "./Views/AdminItemsView";

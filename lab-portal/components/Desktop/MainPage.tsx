@@ -3,11 +3,9 @@ import { View, StyleSheet, Image, Alert, ActivityIndicator } from 'react-native'
 import ProfileSidebar from '../Modals/ProfileSidebar';
 import StudentView from './Views/StudentView';
 import StudentWorkerView from './Views/StudentWorkerView';
-import DepartmentHeadView from './Views/DepartmentHeadView';
-import AdminView from './Views/AdminView';
 import { isMobile } from 'react-device-detect';
-import { getUserByToken } from '../../services/loginService';
-import { crossPlatformAlert } from '../../services/helpers';
+import { deleteToken, getUserByToken } from '../../services/loginService';
+import FacultyView from './Views/FacultyView';
 
 const MainPage = () => {
   const [isProfileSidebarVisible, setIsProfileSidebarVisible] = useState(false);
@@ -22,7 +20,6 @@ const MainPage = () => {
         setSelectedView(getViewByPrivLvl(user.privLvl));
       } catch (error) {
         await deleteToken();
-        crossPlatformAlert('Error', error);
       }
     };
 
@@ -65,11 +62,8 @@ const MainPage = () => {
         return <StudentWorkerView />;
       case 'Tutor/Monitor':
         return <StudentWorkerView />;
-      case 'Department Head':
-        return <DepartmentHeadView />;
-      case 'Admin':
       default:
-        return <AdminView />;
+        return <FacultyView/>;
     }
   };
 
