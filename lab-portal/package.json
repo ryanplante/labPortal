@@ -39,9 +39,12 @@
     "expo-sharing": "^12.0.1",
     "expo-status-bar": "~1.12.1",
     "expo-updates": "^0.25.22",
+    "file-saver": "^2.0.5",
     "ionicons": "^7.4.0",
     "jsbarcode": "^3.11.6",
+    "json2csv": "^6.0.0-alpha.2",
     "moment-timezone": "^0.5.45",
+    "pdf-lib": "^1.17.1",
     "quagga": "^0.12.1",
     "react": "18.2.0",
     "react-device-detect": "^2.2.3",
@@ -61,7 +64,8 @@
     "react-native-share": "^11.0.2",
     "react-native-svg": "^15.6.0",
     "react-native-view-shot": "^3.8.0",
-    "react-native-web": "~0.19.10"
+    "react-native-web": "~0.19.10",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",

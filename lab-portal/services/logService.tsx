@@ -69,13 +69,12 @@ class LogService {
         return moment.tz(localTime, timeZone).utc().format('YYYY-MM-DDTHH:mm:ss[Z]');
     }
 
-    async getLogsByDept(deptId: number, startDate?: string, endDate?: string): Promise<FilteredLog[]> {
+    async getLogsByDept(deptId: number, startDate?: Date, endDate?: Date): Promise<FilteredLog[]> {
         try {
             const params = { deptId, startDate, endDate };
             const response: AxiosResponse<any> = await axios.get(`${this.baseUrl}/FilteredLogs/Department`, { params });
 
             const logs = response.data.$values;
-
             return logs.map((log: any) => ({
                 id: log.id,
                 studentId: log.studentId,
@@ -170,7 +169,6 @@ class LogService {
     
                 // Create an audit log for the operation
                 await this.audit('view', `Viewed log summaries with term: ${term}`);
-                
                 return summaries.$values;
             } catch (error) {
                 await this.handleError(error, 'getLogSummary');

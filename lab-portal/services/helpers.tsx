@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Alert, Platform } from 'react-native';
 import * as Updates from 'expo-updates';
 import { CreateErrorLog } from './errorLogService';
+import moment from 'moment';
 
 export const crossPlatformAlert = (title: string, message: string) => {
     if (Platform.OS === 'web') {
@@ -34,3 +35,10 @@ export const crossPlatformAlert = (title: string, message: string) => {
       throw new Error('An error occurred. Please contact the administrator.');
     }
   };
+
+  export const convertToLocalTime = (utcTime) => {
+    if (!utcTime) return ''; // Handle null or undefined time
+    console.log(moment(utcTime).local().format('MM/DD/YYYY hh:mm A'));
+    return moment(utcTime).local().format('MM/DD/YYYY hh:mm A'); // Convert to local and 12-hour format
+  };
+  
