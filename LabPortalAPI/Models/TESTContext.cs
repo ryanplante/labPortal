@@ -475,6 +475,8 @@ namespace LabPortal.Models
 
                 entity.Property(e => e.PrivLvl).HasColumnName("privLvl");
 
+                entity.Property(e => e.Retries).HasColumnName("retries");
+
                 entity.Property(e => e.UserDept).HasColumnName("userDept");
 
                 entity.HasOne(d => d.PrivLvlNavigation)

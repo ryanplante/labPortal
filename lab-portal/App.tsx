@@ -19,6 +19,7 @@ import ChangePassword from './components/Desktop/ChangePassword';
 import { crossPlatformAlert, reload } from './services/helpers';
 import { CreateAuditLog } from './services/auditService';
 import HelpScreen from './components/Desktop/HelpScreen';
+import UserManagement from './components/Desktop/UserManager';
 import ItemManager from './components/Desktop/ItemManager';
 import * as Device from "expo-device";
 import MobileMainPage from './components/Mobile/MainPage';
@@ -107,12 +108,10 @@ const App = () => {
   }, []);
 
   const toggleProfileSidebar = () => {
-    console.log('Toggling Profile Sidebar visibility');
     setIsProfileSidebarVisible((prev) => !prev);
   };
 
   const handleCloseSidebar = () => {
-    console.log('Closing Profile Sidebar');
     setIsProfileSidebarVisible(false);
   };
 
@@ -165,6 +164,7 @@ const App = () => {
                   <Stack.Screen name="Scanner" component={Scanner} />
                   <Stack.Screen name="LogHistory" component={LogHistory} />
                   <Stack.Screen name="Item" component={ItemManager} />
+                  <Stack.Screen name="UserManager" component={UserManagement} />
                 </>
               )
             ) : (

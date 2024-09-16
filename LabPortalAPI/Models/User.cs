@@ -26,6 +26,7 @@ namespace LabPortal.Models
         public int? PrivLvl { get; set; }
         public bool? IsTeacher { get; set; }
         public DateTime LastUpdated { get; set; }
+        public int? Retries { get; set; }
 
         public virtual PermissionLookup? PrivLvlNavigation { get; set; }
         public virtual Department? UserDeptNavigation { get; set; }

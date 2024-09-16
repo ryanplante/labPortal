@@ -28,8 +28,13 @@ namespace LabPortal.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<IEnumerable<UserDto>>> GetUsers()
+        public async Task<ActionResult<IEnumerable<UserDto>>> GetUsers([FromHeader] string token)
         {
+            if (!await ValidatePrivilege(token, 1))
+            {
+                return Forbid("Insufficient privileges.");
+            }
+
             if (_context.Users == null)
             {
                 return NotFound();
@@ -54,11 +59,11 @@ namespace LabPortal.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<UserDto>> GetUser(int id)
+        public async Task<ActionResult<UserDto>> GetUser([FromHeader] string token, int id)
         {
-            if (_context.Users == null)
+            if (!await ValidatePrivilege(token, 1))
             {
-                return NotFound();
+                return Forbid("Insufficient privileges.");
             }
 
             var user = await _context.Users.FindAsync(id);
@@ -80,50 +85,61 @@ namespace LabPortal.Controllers
             return Ok(userDto);
         }
 
+
         // PUT: api/Users/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
+        // PUT: api/Users/5
         [HttpPut("{id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> PutUser(int id, UserDto userDto)
+        public async Task<IActionResult> PutUser([FromHeader] string token, int id, UserDto userDto)
         {
+            if (!await ValidatePrivilege(token, 4))
+            {
+                return Forbid("Insufficient privileges.");
+            }
+
             if (id != userDto.UserId)
             {
-                return BadRequest();
+                return BadRequest("The user ID in the URL does not match the ID in the payload.");
             }
-
-            var user = await _context.Users.FindAsync(id);
-            if (user == null)
-            {
-                return NotFound();
-            }
-
-            user.FName = userDto.FName;
-            user.LName = userDto.LName;
-            user.UserDept = userDto.UserDept;
-            user.PrivLvl = userDto.PrivLvl;
-            user.IsTeacher = userDto.IsTeacher;
-
-            _context.Entry(user).State = EntityState.Modified;
 
             try
             {
+                var user = await _context.Users.FindAsync(id);
+                if (user == null)
+                {
+                    return NotFound($"User with ID {id} not found.");
+                }
+
+                // Update user details
+                user.FName = userDto.FName;
+                user.LName = userDto.LName;
+                user.UserDept = userDto.UserDept;
+                user.PrivLvl = userDto.PrivLvl;
+                user.IsTeacher = userDto.IsTeacher;
+
+                _context.Entry(user).State = EntityState.Modified;
                 await _context.SaveChangesAsync();
+
+                return NoContent();
             }
             catch (DbUpdateConcurrencyException)
             {
                 if (!UserExists(id))
                 {
-                    return NotFound();
+                    return NotFound($"User with ID {id} not found.");
                 }
-                else
-                {
-                    throw;
-                }
+                return StatusCode(StatusCodes.Status500InternalServerError, "A concurrency error occurred while updating the user.");
             }
-
-            return NoContent();
+            catch (Exception ex)
+            {
+                // Log the error here if necessary
+                return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while updating the user.");
+            }
         }
+
+
 
 
         // POST: api/Users
@@ -174,11 +190,11 @@ namespace LabPortal.Controllers
         [HttpDelete("{id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> DeleteUser(int id)
+        public async Task<IActionResult> DeleteUser([FromHeader] string token, int id)
         {
-            if (_context.Users == null)
+            if (!await ValidatePrivilege(token, 4))
             {
-                return NotFound();
+                return Forbid("Insufficient privileges.");
             }
 
             var user = await _context.Users.FindAsync(id);
@@ -193,6 +209,7 @@ namespace LabPortal.Controllers
             return NoContent();
         }
 
+
         private bool UserExists(int id)
         {
             return (_context.Users?.Any(e => e.UserId == id)).GetValueOrDefault();
@@ -203,8 +220,13 @@ namespace LabPortal.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<IEnumerable<UserDto>>> FuzzySearchById(string query)
+        public async Task<ActionResult<IEnumerable<UserDto>>> FuzzySearchById([FromHeader] string token, string query)
         {
+            if (!await ValidatePrivilege(token, 1))
+            {
+                return Forbid("Insufficient privileges.");
+            }
+
             if (_context.Users == null)
             {
                 return NotFound();
@@ -214,38 +236,53 @@ namespace LabPortal.Controllers
             {
                 return BadRequest("Query cannot be null or empty.");
             }
-            var matchingUsers = await _context.Users
-                .ToListAsync(); // Fetch all users into memory
 
-            matchingUsers = matchingUsers
-                .Where(u => u.UserId.ToString().PadLeft(8, '0').Contains(query)) // Apply the padding and filtering in memory
-                .ToList();
-
-            if (!matchingUsers.Any())
+            try
             {
-                return NotFound("No users found matching the query.");
+                var matchingUsers = await _context.Users
+                    .ToListAsync(); // Fetch all users into memory
+
+                matchingUsers = matchingUsers
+                    .Where(u => u.UserId.ToString().PadLeft(8, '0').Contains(query)) // Apply the padding and filtering in memory
+                    .ToList();
+
+                if (!matchingUsers.Any())
+                {
+                    return NotFound("No users found matching the query.");
+                }
+
+                var userDtos = matchingUsers.Select(user => new UserDto
+                {
+                    UserId = user.UserId,
+                    FName = user.FName,
+                    LName = user.LName,
+                    UserDept = user.UserDept,
+                    PrivLvl = user.PrivLvl,
+                    IsTeacher = user.IsTeacher
+                }).ToList();
+
+                return Ok(userDtos);
             }
-
-            var userDtos = matchingUsers.Select(user => new UserDto
+            catch (Exception ex)
             {
-                UserId = user.UserId,
-                FName = user.FName,
-                LName = user.LName,
-                UserDept = user.UserDept,
-                PrivLvl = user.PrivLvl,
-                IsTeacher = user.IsTeacher
-            }).ToList();
-
-            return Ok(userDtos);
+                // Log the error if necessary
+                return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while performing the search.");
+            }
         }
+
 
         // GET: api/Users/FuzzySearchByName?fname={fname}&lname={lname}
         [HttpGet("FuzzySearchByName")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<IEnumerable<UserDto>>> FuzzySearchByName(string? fname, string? lname)
+        public async Task<ActionResult<IEnumerable<UserDto>>> FuzzySearchByName([FromHeader] string token, string? fname, string? lname)
         {
+            if (!await ValidatePrivilege(token, 1))
+            {
+                return Forbid("Insufficient privileges.");
+            }
+
             if (_context.Users == null)
             {
                 return NotFound();
@@ -256,39 +293,115 @@ namespace LabPortal.Controllers
                 return BadRequest("At least one of fname or lname must be provided.");
             }
 
-            var query = _context.Users.AsQueryable();
-
-            if (!string.IsNullOrEmpty(fname))
+            try
             {
-                query = query.Where(u => EF.Functions.Like(u.FName, $"%{fname}%")); // Fuzzy search on First Name
+                var query = _context.Users.AsQueryable();
+
+                if (!string.IsNullOrEmpty(fname))
+                {
+                    query = query.Where(u => EF.Functions.Like(u.FName, $"%{fname}%")); // Fuzzy search on First Name
+                }
+
+                if (!string.IsNullOrEmpty(lname))
+                {
+                    query = query.Where(u => EF.Functions.Like(u.LName, $"%{lname}%")); // Fuzzy search on Last Name
+                }
+
+                var matchingUsers = await query.ToListAsync();
+
+                if (!matchingUsers.Any())
+                {
+                    return NotFound("No users found matching the query.");
+                }
+
+                var userDtos = matchingUsers.Select(user => new UserDto
+                {
+                    UserId = user.UserId,
+                    FName = user.FName,
+                    LName = user.LName,
+                    UserDept = user.UserDept,
+                    PrivLvl = user.PrivLvl,
+                    IsTeacher = user.IsTeacher
+                }).ToList();
+
+                return Ok(userDtos);
+            }
+            catch (Exception ex)
+            {
+                // Log the error if necessary
+                return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while performing the search.");
+            }
+        }
+        // GET: api/Users/LockedOut
+        [HttpGet("LockedOut")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<ActionResult<IEnumerable<UserDto>>> GetLockedOutUsers([FromHeader] string token)
+        {
+            if (!await ValidatePrivilege(token, 5))
+            {
+                return Forbid("Insufficient privileges.");
             }
 
-            if (!string.IsNullOrEmpty(lname))
+            var lockedOutUsers = await _context.Users
+                .Where(user => user.Retries >= 5)  // 5 is the lockout threshold
+                .ToListAsync();
+
+            if (!lockedOutUsers.Any())
             {
-                query = query.Where(u => EF.Functions.Like(u.LName, $"%{lname}%")); // Fuzzy search on Last Name
+                return NotFound("No locked-out users found.");
             }
 
-            var matchingUsers = await query.ToListAsync();
-
-            if (!matchingUsers.Any())
-            {
-                return NotFound("No users found matching the query.");
-            }
-
-            var userDtos = matchingUsers.Select(user => new UserDto
+            var userDtos = lockedOutUsers.Select(user => new UserDto
             {
                 UserId = user.UserId,
                 FName = user.FName,
                 LName = user.LName,
                 UserDept = user.UserDept,
                 PrivLvl = user.PrivLvl,
-                IsTeacher = user.IsTeacher
+                IsTeacher = user.IsTeacher,
             }).ToList();
 
             return Ok(userDtos);
         }
 
+        // GET: api/Users/LockedOut/{id}
+        [HttpGet("LockedOut/{id}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<ActionResult<UserDto>> CheckIfUserIsLockedOut([FromHeader] string token, int id)
+        {
+            if (!await ValidatePrivilege(token, 5))
+            {
+                return Forbid("Insufficient privileges.");
+            }
 
+            var user = await _context.Users.FindAsync(id);
+
+            if (user == null)
+            {
+                return NotFound("User not found.");
+            }
+
+            if (user.Retries < 5)
+            {
+                return Ok(new { isLockedOut = false, message = "User is not locked out." });
+            }
+
+            var userDto = new UserDto
+            {
+                UserId = user.UserId,
+                FName = user.FName,
+                LName = user.LName,
+                UserDept = user.UserDept,
+                PrivLvl = user.PrivLvl,
+                IsTeacher = user.IsTeacher,
+            };
+
+            return Ok(new { isLockedOut = true, user = userDto });
+        }
 
         private async Task<string> GenerateToken(User user)
         {
@@ -361,6 +474,7 @@ namespace LabPortal.Controllers
         [HttpPost("ValidateCredentials")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)] // Added for locked accounts
         public async Task<ActionResult<string>> ValidateCredentials([FromBody] UserCredentialsDto credentials)
         {
             if (_context.Users == null)
@@ -371,7 +485,14 @@ namespace LabPortal.Controllers
             var user = await _context.Users.SingleOrDefaultAsync(u => u.UserId == credentials.UserId);
             if (user == null)
             {
-                return BadRequest("Invalid user ID.");
+                // Generalize the message for security purposes
+                return BadRequest(new { message = "Invalid ID or password." });
+            }
+
+            // Check if the account is locked due to too many retries
+            if (user.Retries >= 5)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new { message = "Account is locked due to too many failed attempts. Please contact an administrator." });
             }
 
             // Encrypt the incoming password using the hashing algorithm
@@ -380,14 +501,28 @@ namespace LabPortal.Controllers
             // Compare the hashed password with the stored hashed password
             if (hashedPassword == user.Password)
             {
+                // If the password is correct, reset the retries count
+                user.Retries = 0;
+                _context.Entry(user).State = EntityState.Modified;
+                await _context.SaveChangesAsync();
+
+                // Generate and return the token
                 string token = await GenerateToken(user);
                 return Ok(token);
             }
             else
             {
-                return BadRequest("Invalid password.");
+                // If the password is incorrect, increment the retries count
+                user.Retries += 1;
+                _context.Entry(user).State = EntityState.Modified;
+                await _context.SaveChangesAsync();
+
+                // Generalize the message to prevent exposing whether it's the ID or password that's wrong
+                return BadRequest(new { message = $"Invalid ID or password. Attempt {user.Retries} of 5." });
             }
         }
+
+
 
         // PUT: api/Users/UpdatePassword
         [HttpPut("UpdatePassword")]
@@ -420,7 +555,7 @@ namespace LabPortal.Controllers
             // Update the target user's password and lastUpdated fields
             targetUser.LastUpdated = DateTime.UtcNow; // Update the LastUpdated timestamp
             targetUser.Password = HashPassword(updatePasswordDto.Password, targetUser); // Hash the new password
-
+            targetUser.Retries = 0; // Reset password retries
             _context.Entry(targetUser).State = EntityState.Modified;
 
             try
@@ -582,5 +717,80 @@ namespace LabPortal.Controllers
                 return Convert.ToBase64String(bytes);
             }
         }
+
+        // PUT: api/Users/UnlockAccount/{userId}
+        [HttpPut("UnlockAccount/{userId}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> UnlockAccount([FromHeader] string token, int userId)
+        {
+            // Call the existing GetUserByToken endpoint to authenticate the token
+            var response = await GetUserByToken(token);
+            if (response.Result is NotFoundObjectResult)
+            {
+                return Unauthorized("Invalid or expired token.");
+            }
+
+            var userDto = (response.Result as OkObjectResult).Value as UserDto;
+
+            // Ensure that only the account owner or an admin (PrivLvl >= 4) can unlock the account
+            if (userDto.UserId != userId && userDto.PrivLvl < 4)
+            {
+                return Forbid("You do not have permission to unlock this account.");
+            }
+
+            var targetUser = await _context.Users.FindAsync(userId);
+            if (targetUser == null)
+            {
+                return NotFound("User not found.");
+            }
+
+            // Reset the retries count to 0
+            targetUser.Retries = 0;
+
+            // Update the user in the database
+            _context.Entry(targetUser).State = EntityState.Modified;
+
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!UserExists(userId))
+                {
+                    return NotFound();
+                }
+                else
+                {
+                    throw;
+                }
+            }
+
+            return Ok("Account unlocked successfully.");
+        }
+
+        private async Task<bool> ValidatePrivilege(string token, int requiredPrivLvl)
+        {
+            var response = await GetUserByToken(token);
+            if (response.Result is NotFoundObjectResult)
+            {
+                return false; // Token is invalid or expired.
+            }
+
+            var userDto = (response.Result as OkObjectResult).Value as UserDto;
+
+            // Check if the user has the required privilege level
+            if (userDto.PrivLvl < requiredPrivLvl)
+            {
+                return false; // User does not have enough privilege
+            }
+
+            return true;
+        }
+
+
+
     }
 }

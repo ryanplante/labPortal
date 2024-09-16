@@ -55,23 +55,33 @@ const Login = () => {
       if (!isApiHealthy) {
         throw new Error('The server is currently unavailable.');
       }
-
-      const success = await validateCredentials(username, password);
-      if (success) {
-        await reload();
+  
+      const result = await validateCredentials(username, password);
+      
+      if (result.success) {
+        await reload(); // Successful login
+      } else if (result.locked) {
+        setErrorMessage(result.message); // Display the account lock message
+      } else if (result.retries !== undefined) {
+        setErrorMessage(result.message); // Display retries remaining message
+      } else {
+        setErrorMessage(result.message || 'Invalid username or password');
       }
     } catch (error: any) {
-      console.log(error)
+      console.log(error);
       const errorMessage = error.message.includes('server')
         ? 'Server is currently down. Please try again later.'
         : error.message.includes('Invalid')
         ? 'Invalid username or password'
         : 'An unexpected error occurred. Please try again later.';
+        
       setErrorMessage(errorMessage);
     } finally {
       setLoading(false);  
     }
   };
+  
+  
 
   const handleHelpPress = () => {
     navigation.navigate('Help');

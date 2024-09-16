@@ -27,8 +27,13 @@ namespace LabPortal.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<IEnumerable<BanDto>>> GetBans()
+        public async Task<ActionResult<IEnumerable<BanDto>>> GetBans([FromHeader] string token)
         {
+            if (!await ValidatePrivilege(token, 1))
+            {
+                return Forbid("Insufficient privileges.");
+            }
+
             if (_context.Bans == null)
             {
                 return NotFound();
@@ -51,8 +56,13 @@ namespace LabPortal.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<BanDto>> GetBan(int id)
+        public async Task<ActionResult<BanDto>> GetBan([FromHeader] string token, int id)
         {
+            if (!await ValidatePrivilege(token, 1))
+            {
+                return Forbid("Insufficient privileges.");
+            }
+
             if (_context.Bans == null)
             {
                 return NotFound();
@@ -80,8 +90,12 @@ namespace LabPortal.Controllers
         [HttpPut("{id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> PutBan(int id, BanCreateDto banDto)
+        public async Task<IActionResult> PutBan([FromHeader] string token, int id, BanCreateDto banDto)
         {
+            if (!await ValidatePrivilege(token, 5))
+            {
+                return Forbid("Insufficient privileges.");
+            }
 
             var ban = await _context.Bans.FindAsync(id);
             if (ban == null)
@@ -107,7 +121,7 @@ namespace LabPortal.Controllers
                 }
                 else
                 {
-                    throw;
+                    return StatusCode(StatusCodes.Status500InternalServerError, "A concurrency error occurred while updating the ban.");
                 }
             }
 
@@ -118,8 +132,13 @@ namespace LabPortal.Controllers
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<ActionResult<BanDto>> PostBan(BanCreateDto banDto)
+        public async Task<ActionResult<BanDto>> PostBan([FromHeader] string token, BanCreateDto banDto)
         {
+            if (!await ValidatePrivilege(token, 5))
+            {
+                return Forbid("Insufficient privileges.");
+            }
+
             if (_context.Bans == null)
             {
                 return Problem("Entity set 'TESTContext.Bans' is null.");
@@ -145,7 +164,7 @@ namespace LabPortal.Controllers
             }
             catch (DbUpdateException)
             {
-                return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while creating ban.");
+                return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while creating the ban.");
             }
 
             return Ok();
@@ -155,8 +174,13 @@ namespace LabPortal.Controllers
         [HttpDelete("{id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> DeleteBan(int id)
+        public async Task<IActionResult> DeleteBan([FromHeader] string token, int id)
         {
+            if (!await ValidatePrivilege(token, 5))
+            {
+                return Forbid("Insufficient privileges.");
+            }
+
             if (_context.Bans == null)
             {
                 return NotFound();
@@ -184,8 +208,13 @@ namespace LabPortal.Controllers
         [HttpGet("CheckBan/{userId}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<BanDto>> CheckBan(int userId)
+        public async Task<ActionResult<BanDto>> CheckBan([FromHeader] string token, int userId)
         {
+            if (!await ValidatePrivilege(token, 1))
+            {
+                return Forbid("Insufficient privileges.");
+            }
+
             if (_context.Bans == null)
             {
                 return NotFound();
@@ -209,6 +238,23 @@ namespace LabPortal.Controllers
             };
 
             return Ok(banDto);
+        }
+
+        private async Task<bool> ValidatePrivilege(string token, int requiredPrivLvl)
+        {
+            // This method should be implemented to verify the user's token and privilege level.
+            // You can reuse this from your UsersController or wherever token validation is handled.
+            var userController = new UsersController(_context);
+            var response = await userController.GetUserByToken(token);
+            if (response.Result is NotFoundObjectResult)
+            {
+                return false; // Token is invalid or expired.
+            }
+
+            var userDto = (response.Result as OkObjectResult).Value as UserDto;
+
+            // Check if the user has the required privilege level
+            return userDto != null && userDto.PrivLvl >= requiredPrivLvl;
         }
     }
 }

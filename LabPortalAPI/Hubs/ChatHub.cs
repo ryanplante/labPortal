@@ -34,7 +34,7 @@ namespace LabPortal.Hubs
             // Setup inactivity check timer (check every minute)
             if (_inactivityCheckTimer == null)
             {
-                _inactivityCheckTimer = new System.Timers.Timer(15000); // 15 second time out to give user a chance to connect back in case of network issues, app crash, etc.
+                _inactivityCheckTimer = new System.Timers.Timer(30000); // 30 second time out to give user a chance to connect back in case of network issues, app crash, etc.
                 _inactivityCheckTimer.Elapsed += (sender, e) => CheckForInactiveUsers();
                 _inactivityCheckTimer.Start();
             }
@@ -177,9 +177,9 @@ namespace LabPortal.Hubs
 
         private async Task CheckForInactiveUsers()
         {
-            var timeoutDuration = TimeSpan.FromSeconds(15);
+            var timeoutDuration = TimeSpan.FromMinutes(1);
 
-            // Checks the dictionary of users who haven't pinged the server every 15 seconds
+            // Checks the dictionary of users who haven't pinged the server every minute
             var inactiveUsers = _lastPingTimes
                 .Where(kv => DateTime.UtcNow - kv.Value > timeoutDuration)
                 .Select(kv => kv.Key)
@@ -229,7 +229,7 @@ namespace LabPortal.Hubs
                 if (waitingStudents.TryDequeue(out var student))
                 {
                     // If a match is found, create a chat room
-                    await CreateChatRoom(user, student);
+                    await CreateChatRoom(student, user);
 
                 }
                 else
@@ -237,8 +237,6 @@ namespace LabPortal.Hubs
                     // No students found, enqueue the tutor and inform them they're waiting
                     waitingTutors.Enqueue(user);
                     await Clients.Caller.SendAsync("waitingForMatch", "No students available!");
-                    
-
                 }
             }
             else

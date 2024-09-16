@@ -222,6 +222,12 @@ const Sidebar = ({ onProfilePress, onClose }: { onProfilePress: () => void; onCl
           <Text style={styles.menuText}>Item Manager</Text>
         </TouchableOpacity>
       )}
+      {(user?.privLvl == 5) && (
+        <TouchableOpacity style={styles.menuItem} onPress={() => handlePress('UserManager', [5])}>
+          <Image source={require('../../assets/admin-icon.png')} style={styles.icon} />
+          <Text style={styles.menuText}>User Manager</Text>
+        </TouchableOpacity>
+      )}
       <TouchableOpacity style={styles.menuItem} onPress={() => handlePress('Help', [0, 1, 2, 3, 4, 5])}>
         <Image source={require('../../assets/help-icon.png')} style={styles.icon} />
         <Text style={styles.menuText}>Help</Text>

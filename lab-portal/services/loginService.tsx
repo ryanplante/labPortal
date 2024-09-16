@@ -40,21 +40,6 @@ export const getUserByToken = async (): Promise<User> => {
   }
 };
 
-export const fetchLastUpdated = async (userid: number) => {
-  try {
-    const response = await axios.get(`${API_URL}/LastUpdated/${userid}`);
-
-    if (response.status !== 200) {
-      throw new Error('Failed to fetch lastUpdated value');
-    }
-
-    return response.data;
-  } catch (error) {
-    await CreateErrorLog(error, 'fetchLastUpdated', userid, 'error');
-    throw new Error('An error occurred. Please contact the administrator.');
-  }
-};
-
 export const logout = async () => {
   try {
     const user = await getUserByToken();
@@ -73,18 +58,35 @@ export const validateCredentials = async (username: number, password: string): P
   try {
     const response = await axios.post(`${API_URL}/ValidateCredentials`, {
       userId: username,
-      password: password, // Send the raw password directly, server-side hashing will handle it
+      password: password,
     });
 
     await CreateAuditLog('Login succeeded', Number(username), 'login');
     await AsyncStorage.setItem('token', response.data);
-    return true;
-  } catch (error) {
-    await CreateAuditLog('Login attempt failed!', Number(username), 'login');
+    return { success: true }; // Return success status
+  } catch (error: any) {
+    await CreateAuditLog('Login attempt failed', Number(username), 'login');
     await CreateErrorLog(error, 'validateCredentials', Number(username), 'error');
+    // Check for retries and account lock messages
+    if (error.response?.data?.message) {
+      const errorMessage = error.response.data.message;
+      // Check if the message indicates account lock
+      if (errorMessage.includes('Account is locked')) {
+        return { success: false, locked: true, message: 'Your account is locked due to too many failed attempts. Please contact the administrator or unlock your account.' };
+      }
+
+      // Check for retry attempts
+      const retriesMatch = errorMessage.match(/Attempt (\d) of 5/);
+      if (retriesMatch) {
+        const retries = retriesMatch[1]; // Extract retries count from the message
+        return { success: false, retries: Number(retries), message: `Invalid password. You have ${5 - retries} more attempt(s) before your account is locked.` };
+      }
+    }
+
     throw new Error('Invalid credentials.');
   }
 };
+
 
 export const updatePassword = async (userId: number, newPassword: string) => {
   try {
