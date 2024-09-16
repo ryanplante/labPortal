@@ -24,11 +24,9 @@ namespace LabPortal.Models
         public string? Password { get; set; }
         public int? UserDept { get; set; }
         public int? PrivLvl { get; set; }
-        public int? Position { get; set; }
         public bool? IsTeacher { get; set; }
         public DateTime LastUpdated { get; set; }
 
-        public virtual PositionLookup? PositionNavigation { get; set; }
         public virtual PermissionLookup? PrivLvlNavigation { get; set; }
         public virtual Department? UserDeptNavigation { get; set; }
         public virtual ICollection<AuditLog> AuditLogs { get; set; }

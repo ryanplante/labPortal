@@ -154,7 +154,6 @@ namespace LabPortal.Hubs
                         LName = u.LName,
                         UserDept = u.UserDept,
                         PrivLvl = u.PrivLvl,
-                        Position = u.Position,
                         IsTeacher = u.IsTeacher
                     })
                     .FirstOrDefaultAsync();

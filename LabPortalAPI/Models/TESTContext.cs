@@ -29,14 +29,12 @@ namespace LabPortal.Models
         public virtual DbSet<Log> Logs { get; set; } = null!;
         public virtual DbSet<LogSummary> LogSummaries { get; set; } = null!;
         public virtual DbSet<PermissionLookup> PermissionLookups { get; set; } = null!;
-        public virtual DbSet<PositionLookup> PositionLookups { get; set; } = null!;
         public virtual DbSet<Schedule> Schedules { get; set; } = null!;
         public virtual DbSet<ScheduleExemption> ScheduleExemptions { get; set; } = null!;
         public virtual DbSet<ScheduleTypeLookup> ScheduleTypeLookups { get; set; } = null!;
         public virtual DbSet<TransactionTypeLookup> TransactionTypeLookups { get; set; } = null!;
         public virtual DbSet<User> Users { get; set; } = null!;
         public virtual DbSet<UserToken> UserTokens { get; set; } = null!;
-
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -338,22 +336,6 @@ namespace LabPortal.Models
                     .HasColumnName("name");
             });
 
-            modelBuilder.Entity<PositionLookup>(entity =>
-            {
-                entity.HasKey(e => e.PositionId)
-                    .HasName("PK__Position__B07CF58E42BFD936");
-
-                entity.ToTable("PositionLookup");
-
-                entity.Property(e => e.PositionId)
-                    .ValueGeneratedNever()
-                    .HasColumnName("positionID");
-
-                entity.Property(e => e.Details)
-                    .HasMaxLength(13)
-                    .HasColumnName("details");
-            });
-
             modelBuilder.Entity<Schedule>(entity =>
             {
                 entity.Property(e => e.ScheduleId).HasColumnName("scheduleID");
@@ -491,16 +473,9 @@ namespace LabPortal.Models
                     .HasMaxLength(255)
                     .HasColumnName("password");
 
-                entity.Property(e => e.Position).HasColumnName("position");
-
                 entity.Property(e => e.PrivLvl).HasColumnName("privLvl");
 
                 entity.Property(e => e.UserDept).HasColumnName("userDept");
-
-                entity.HasOne(d => d.PositionNavigation)
-                    .WithMany(p => p.Users)
-                    .HasForeignKey(d => d.Position)
-                    .HasConstraintName("FK__Users__position__5535A963");
 
                 entity.HasOne(d => d.PrivLvlNavigation)
                     .WithMany(p => p.Users)

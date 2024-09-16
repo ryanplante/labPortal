@@ -43,7 +43,6 @@ namespace LabPortal.Controllers
                 LName = user.LName,
                 UserDept = user.UserDept,
                 PrivLvl = user.PrivLvl,
-                Position = user.Position,
                 IsTeacher = user.IsTeacher
             }).ToList();
 
@@ -75,7 +74,6 @@ namespace LabPortal.Controllers
                 LName = user.LName,
                 UserDept = user.UserDept,
                 PrivLvl = user.PrivLvl,
-                Position = user.Position,
                 IsTeacher = user.IsTeacher
             };
 
@@ -104,7 +102,6 @@ namespace LabPortal.Controllers
             user.LName = userDto.LName;
             user.UserDept = userDto.UserDept;
             user.PrivLvl = userDto.PrivLvl;
-            user.Position = userDto.Position;
             user.IsTeacher = userDto.IsTeacher;
 
             _context.Entry(user).State = EntityState.Modified;
@@ -148,7 +145,6 @@ namespace LabPortal.Controllers
                 LName = userDto.LName,
                 UserDept = userDto.UserDept,
                 PrivLvl = userDto.PrivLvl,
-                Position = userDto.Position,
                 IsTeacher = userDto.IsTeacher
             };
 
@@ -237,7 +233,6 @@ namespace LabPortal.Controllers
                 LName = user.LName,
                 UserDept = user.UserDept,
                 PrivLvl = user.PrivLvl,
-                Position = user.Position,
                 IsTeacher = user.IsTeacher
             }).ToList();
 
@@ -287,7 +282,6 @@ namespace LabPortal.Controllers
                 LName = user.LName,
                 UserDept = user.UserDept,
                 PrivLvl = user.PrivLvl,
-                Position = user.Position,
                 IsTeacher = user.IsTeacher
             }).ToList();
 
@@ -357,7 +351,6 @@ namespace LabPortal.Controllers
                 LName = userToken.FkUser.LName,
                 UserDept = userToken.FkUser.UserDept,
                 PrivLvl = userToken.FkUser.PrivLvl,
-                Position = userToken.FkUser.Position,
                 IsTeacher = userToken.FkUser.IsTeacher
             };
 
