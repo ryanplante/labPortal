@@ -50,6 +50,19 @@ class UserService {
         }
     }
 
+    async getNameById(Id: number): Promise<string> {
+        try {
+          if (Id) {
+            const monitor = await this.getUserById(Id);
+            return `${monitor.fName} ${monitor.lName}`;
+          }
+          return 'Unknown'; // Return 'Unknown' if monitorID is null or invalid
+        } catch (error) {
+          console.error('Error fetching monitor name:', error);
+          return 'Unknown'; // Handle errors gracefully
+        }
+      };
+
     // POST: /api/Users
     async createUser(userDto: User): Promise<User> {
         try {
@@ -72,7 +85,7 @@ class UserService {
             const response: AxiosResponse<User> = await axios.get(`${this.baseUrl}/${userId}`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
-            await this.audit('view', `Viewed user with ID: ${userId}`, userId);
+            //await this.audit('view', `Viewed user with ID: ${userId}`, userId);
             return response.data;
         } catch (error) {
             await this.handleError(error, 'getUserById');

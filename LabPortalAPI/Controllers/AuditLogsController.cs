@@ -46,6 +46,54 @@ namespace LabPortal.Controllers
             return Ok(auditLogs);
         }
 
+        // GET: api/AuditLogs/Date/date?page=1
+        [HttpGet("Date/{date}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<IEnumerable<AuditLogDto>>> GetAuditLogsByDate(DateTime date, int page = 1, int pageSize = 50)
+        {
+            if (_context.AuditLogs == null)
+            {
+                return NotFound();
+            }
+
+            // Validate page number and pageSize
+            if (page <= 0 || pageSize <= 0)
+            {
+                return BadRequest("Page number and page size must be greater than zero.");
+            }
+
+            // Set the time to 12:00 AM for the start of the day
+            var startOfDay = date.Date;
+            // Set the end of the day to 11:59:59 PM
+            var endOfDay = startOfDay.AddDays(1).AddTicks(-1);
+
+            // Fetch audit logs for the given day with pagination
+            var auditLogs = await _context.AuditLogs
+                                    .Where(a => a.Timestamp >= startOfDay && a.Timestamp <= endOfDay)
+                                    .OrderBy(a => a.Timestamp)
+                                    .Skip((page - 1) * pageSize)
+                                    .Take(pageSize)
+                                    .Select(a => new AuditLogDto
+                                    {
+                                        Description = a.Description,
+                                        Timestamp = a.Timestamp,
+                                        userID = a.UserId,
+                                        AuditLogTypeId = a.AuditLogTypeId
+                                    })
+                                    .ToListAsync();
+
+            if (auditLogs.Count == 0)
+            {
+                return NotFound("No audit logs found for the given date.");
+            }
+
+            return Ok(auditLogs);
+        }
+
+
+
         // GET: api/AuditLogs/5
         [HttpGet("{id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]

@@ -253,9 +253,13 @@ class LogService {
 
     async getAllSummaries(): Promise<Checkin[]> {
         try {
-            const response: AxiosResponse<Checkin[]> = await axios.get(this.baseUrl);
+            const response: AxiosResponse<any> = await axios.get(this.baseUrl);
             await this.audit('view', `Viewed all log summaries`);
-            return response.data.map(log => ({
+    
+            // Check if the response contains the $values key and map the data accordingly
+            const logs = response.data?.$values || []; // Fallback to an empty array if $values is not present
+    
+            return logs.map((log: any) => ({
                 ...log,
                 timein: this.convertToLocalTime(log.timein),
                 timeout: log.timeout ? this.convertToLocalTime(log.timeout) : undefined,
@@ -264,7 +268,7 @@ class LogService {
             await this.handleError(error, 'getAllSummaries');
             throw error;
         }
-    }
+    }    
 
     private async handleError(error: any, source: string): Promise<void> {
         await CreateErrorLog(error as Error, source, null, 'error');

@@ -27,6 +27,7 @@
     "chartjs-to-image": "^1.2.2",
     "crypto-js": "^4.2.0",
     "datetimepicker": "^0.1.39",
+    "dayjs": "^1.11.13",
     "expo": "~51.0.22",
     "expo-barcode-generator": "^3.0.2",
     "expo-camera": "~15.0.15",
@@ -63,6 +64,7 @@
     "react-native-screens": "3.31.1",
     "react-native-share": "^11.0.2",
     "react-native-svg": "^15.6.0",
+    "react-native-ui-datepicker": "^2.0.4",
     "react-native-view-shot": "^3.8.0",
     "react-native-web": "~0.19.10",
     "xlsx": "^0.18.5"

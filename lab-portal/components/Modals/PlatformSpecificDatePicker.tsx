@@ -1,61 +1,90 @@
-import React, { useState } from 'react';
-import { Button, Platform, View, TextInput } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import { createElement } from 'react';
+import React, { useEffect, useState } from 'react';
+import { View, TextInput, TouchableOpacity, Modal, StyleSheet, Text } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker from 'react-native-ui-datepicker';
 import moment from 'moment';
 
-interface PlatformSpecificDateTimePickerProps {
+interface PlatformSpecificDatePickerProps {
   dateTime: Date;
   onDateTimeChange: (dateTime: Date) => void;
-  readOnly?: boolean; 
+  readOnly?: boolean;
 }
 
-const PlatformSpecificDateTimePicker = ({ dateTime, onDateTimeChange, readOnly=false }: PlatformSpecificDateTimePickerProps) => {
-  const [isPickerVisible, setPickerVisible] = useState(false);
+const PlatformSpecificDatePicker = ({
+  dateTime,
+  onDateTimeChange,
+  readOnly = false,
+}: PlatformSpecificDatePickerProps) => {
+  const [isModalVisible, setModalVisible] = useState(false);
 
-  const showPicker = () => !readOnly && setPickerVisible(true); // Only allow showing picker if not read-only
-  const hidePicker = () => setPickerVisible(false);
+  // No need for local `selectedDate`, rely on the `dateTime` prop.
+  const formattedDate = moment(dateTime).format('MM/DD/YYYY'); // Format the parent-provided date
+  const handleDateChange = (params: { date: Date }) => {
+    onDateTimeChange(params.date); // Sync with parent state
+    setModalVisible(false); // Close modal after selection
+  };
 
-  const handleDateChange = (event: any, selectedDate: Date | undefined) => {
-    hidePicker();
-    if (selectedDate) {
-      onDateTimeChange(selectedDate);
+  const openModal = () => {
+    if (!readOnly) {
+      setModalVisible(true); // Open modal when date picker is clicked
     }
   };
 
-  const formattedDate = moment(dateTime).format('MM/DD/YYYY'); // Format for display
-  console.log(readOnly);
-  if (readOnly) {
-    return <TextInput value={formattedDate} readOnly={readOnly} style={{ height: 30, padding: 5, borderColor: '#ccc', borderWidth: 1, borderRadius: 5 }} />;
-  }
+  const closeModal = () => {
+    setModalVisible(false); // Close modal
+  };
 
-  if (Platform.OS === 'web') {
-    const localDateTime = moment(dateTime).local().format('YYYY-MM-DD'); // Ensure local time format
-    return createElement('input', {
-      type: 'date',
-      value: localDateTime,
-      onChange: (event) => {
-        const localDate = moment(event.target.value).toDate();
-        onDateTimeChange(localDate);
-      },
-      disabled: readOnly, 
-      style: { height: 30, padding: 5, border: "2px solid #677788", borderRadius: 5, width: 250 }
-    });
-  } else {
-    return (
-      <View>
-        {isPickerVisible && (
-          <DateTimePicker
-            value={dateTime}
-            mode="date"
-            display="default"
-            onChange={handleDateChange}
-          />
-        )}
-        <Button title="Select Date & Time" onPress={showPicker} />
+  return (
+    <View style={styles.container}>
+      <View style={styles.inputContainer}>
+        <TextInput
+          value={formattedDate} // Display the formatted date from props
+          editable={false} // Make text input read-only
+          style={styles.dateInput}
+        />
+        <TouchableOpacity onPress={openModal} style={styles.iconContainer}>
+          <Ionicons name="calendar" size={24} color="black" />
+        </TouchableOpacity>
       </View>
-    );
-  }
+
+      <Modal
+        transparent={true}
+        visible={isModalVisible}
+        animationType="slide"
+        onRequestClose={closeModal}
+      >
+        <View style={styles.modalBackground}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Pick a Date</Text>
+
+            <DateTimePicker
+              mode="single"
+              date={dateTime} // Use the parent-provided date
+              onChange={handleDateChange}
+              format="MM/DD/YYYY"
+              style={{ width: 250, padding: 10 }}
+            />
+
+            <TouchableOpacity onPress={closeModal} style={styles.closeButton}>
+              <Text style={styles.closeButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    </View>
+  );
 };
 
-export default PlatformSpecificDateTimePicker;
+const styles = StyleSheet.create({
+  container: { flexDirection: 'row', alignItems: 'center' },
+  inputContainer: { flexDirection: 'row', alignItems: 'center', borderColor: '#ccc', borderWidth: 1, borderRadius: 5, paddingHorizontal: 5, width: 200 },
+  dateInput: { flex: 1, height: 40, paddingLeft: 5, borderRadius: 5, color: '#333' },
+  iconContainer: { paddingHorizontal: 5 },
+  modalBackground: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.5)' },
+  modalContent: { width: 300, padding: 20, backgroundColor: '#fff', borderRadius: 10, alignItems: 'center' },
+  modalTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 20 },
+  closeButton: { marginTop: 20, padding: 10, backgroundColor: '#ff5a5f', borderRadius: 5 },
+  closeButtonText: { color: '#fff', fontWeight: 'bold' },
+});
+
+export default PlatformSpecificDatePicker;
