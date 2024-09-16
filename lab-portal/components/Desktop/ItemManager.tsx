@@ -11,6 +11,8 @@ import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import * as MediaLibrary from 'expo-media-library';
 import * as Sharing from 'expo-sharing';
+import { getUserByToken } from '../../services/loginService';
+import { User } from '../../services/userService';
 
 
 interface Lab {
@@ -60,8 +62,9 @@ const ItemManager = () => {
         setLoading(true);
         try {
             // Fetch items and labs concurrently
+            const user: User = await getUserByToken();
             const [fetchedItems, fetchedLabs] = await Promise.all([
-                ItemService.getItems(),
+                ItemService.getItems(user.privLvl < 5 ? user.userDept : undefined),
                 LabService.getAllLabs(),
             ]);
 

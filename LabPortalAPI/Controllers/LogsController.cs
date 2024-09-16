@@ -466,9 +466,22 @@ namespace LabPortal.Controllers
         // GET: api/Logs/
         [HttpGet]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<ActionResult<IEnumerable<CheckinDto>>> GetAllSummaries()
+        public async Task<ActionResult<IEnumerable<CheckinDto>>> GetAllSummaries([FromQuery] int? departmentId = null)
         {
-            var summaries = await _context.LogSummaries
+            // Start with the base query
+            var query = _context.LogSummaries
+                                .Include(s => s.Lab) // Include the Lab navigation property
+                                .ThenInclude(l => l.Dept) // Then include the Department navigation property
+                                .AsQueryable();
+
+            // Apply filtering by departmentId if provided
+            if (departmentId.HasValue)
+            {
+                query = query.Where(s => s.Lab.DeptId == departmentId.Value);
+            }
+
+            // Select the data into the DTO
+            var summaries = await query
                 .Select(s => new CheckinDto
                 {
                     SummaryId = s.SummaryId,
@@ -484,6 +497,7 @@ namespace LabPortal.Controllers
 
             return Ok(summaries);
         }
+
 
         // GET: api/Logs/Summary
         [HttpGet("Summary")]

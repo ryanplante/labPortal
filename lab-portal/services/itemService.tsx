@@ -27,10 +27,14 @@ class ItemService {
         this.baseUrl = `${process.env.EXPO_PUBLIC_API}/Items`;
     }
 
-    async getItems(): Promise<Item[]> {
+    async getItems(departmentId?: number): Promise<Item[]> {
         try {
-            const response: AxiosResponse<{ $values: Item[] }> = await axios.get(this.baseUrl);
-            await this.audit('view', 'Viewed all items');
+            // Build URL with optional departmentId query parameter
+            const url = departmentId ? `${this.baseUrl}?departmentId=${departmentId}` : this.baseUrl;
+    
+            const response: AxiosResponse<{ $values: Item[] }> = await axios.get(url);
+            await this.audit('view', departmentId ? `Viewed items for department ${departmentId}` : 'Viewed all items');
+    
             return response.data.$values.map(item => ({
                 ...item,
                 picture: item.picture ? atob(item.picture) : null, // Convert from Base64 or set to null
@@ -42,7 +46,7 @@ class ItemService {
             await this.handleError(error, 'getItems');
             throw error;
         }
-    }
+    }    
 
     async getItemById(id: number): Promise<Item> {
         try {

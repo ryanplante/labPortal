@@ -3,6 +3,7 @@ import axios from 'axios';
 import { CreateAuditLog } from './auditService';
 import { CreateErrorLog } from './errorLogService';
 import { reload } from './helpers';
+import { User } from './userService';
 
 const API_URL = `${process.env.EXPO_PUBLIC_API}/Users`;
 const HEARTBEAT_URL = `${process.env.EXPO_PUBLIC_API}/Heartbeat`;
@@ -23,7 +24,7 @@ export const checkHeartbeat = async (): Promise<boolean> => {
   }
 };
 
-export const getUserByToken = async () => {
+export const getUserByToken = async (): Promise<User> => {
   try {
     const token = await AsyncStorage.getItem('token');
     const response = await axios.get(`${API_URL}/GetUserByToken/${token}`);

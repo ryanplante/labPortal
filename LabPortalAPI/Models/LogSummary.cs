@@ -16,5 +16,6 @@ namespace LabPortal.Models
         public int? ItemId { get; set; }
 
         public virtual Item? Item { get; set; }
+        public virtual Lab? Lab { get; set; }
     }
 }

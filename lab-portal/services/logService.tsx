@@ -251,14 +251,24 @@ class LogService {
         }
     }
 
-    async getAllSummaries(): Promise<Checkin[]> {
+    async getAllSummaries(departmentId?: number): Promise<Checkin[]> {
         try {
-            const response: AxiosResponse<any> = await axios.get(this.baseUrl);
+            // Construct the base URL
+            let url = this.baseUrl;
+    
+            // Append departmentId as a query parameter if provided
+            if (departmentId) {
+                url += `?departmentId=${departmentId}`;
+            }
+    
+            // Perform the GET request
+            const response: AxiosResponse<any> = await axios.get(url);
             await this.audit('view', `Viewed all log summaries`);
     
             // Check if the response contains the $values key and map the data accordingly
             const logs = response.data?.$values || []; // Fallback to an empty array if $values is not present
     
+            // Return the transformed logs
             return logs.map((log: any) => ({
                 ...log,
                 timein: this.convertToLocalTime(log.timein),
@@ -268,7 +278,8 @@ class LogService {
             await this.handleError(error, 'getAllSummaries');
             throw error;
         }
-    }    
+    }
+    
 
     private async handleError(error: any, source: string): Promise<void> {
         await CreateErrorLog(error as Error, source, null, 'error');

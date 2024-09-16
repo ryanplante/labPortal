@@ -29,14 +29,28 @@ namespace LabPortal.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<IEnumerable<ItemDto>>> GetItems()
+        public async Task<ActionResult<IEnumerable<ItemDto>>> GetItems([FromQuery] int? departmentId = null)
         {
             if (_context.Items == null)
             {
                 return NotFound();
             }
 
-            var items = await _context.Items.ToListAsync();
+            // Fetch items, optionally filtering by department ID
+            var query = _context.Items.AsQueryable();
+
+            if (departmentId.HasValue)
+            {
+                query = query.Where(item => item.FkLabNavigation.DeptId == departmentId.Value);
+            }
+
+            var items = await query.ToListAsync();
+
+            if (!items.Any())
+            {
+                return NotFound("No items found for the given department.");
+            }
+
             var itemDtos = items.Select(Item => new ItemDto
             {
                 ItemId = Item.ItemId,
@@ -50,6 +64,7 @@ namespace LabPortal.Controllers
 
             return Ok(itemDtos);
         }
+
 
         // GET: api/Items/5
         [HttpGet("{id}")]

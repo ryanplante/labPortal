@@ -5,7 +5,7 @@ import { AuditLogType, getAllChatLogs, fetchFilteredAuditLogs } from '../../serv
 import moment from 'moment';
 import PlatformSpecificDateTimePicker from '../Modals/PlatformSpecificDateTimePicker';
 import { convertToLocalTime } from '../../services/helpers';
-import userService from '../../services/userService';
+import userService, { User } from '../../services/userService';
 import PlatformSpecificDatePicker from '../Modals/PlatformSpecificDatePicker';
 import itemService from '../../services/itemService';
 import labsService from '../../services/labsService';
@@ -39,20 +39,20 @@ const LogsHistory = () => {
     const [auditLogsPage, setAuditLogsPage] = useState(1); // State to keep track of page number
     const [expandedLogId, setExpandedLogId] = useState<number | null>(null);
     const [logHistory, setLogHistory] = useState<any[]>([]);
-    const [userPrivLevel, setUserPrivLevel] = useState<number>(0);
+    const [user, setUser] = useState<User | null>(null);
     const [selectedAuditLogType, setSelectedAuditLogType] = useState<number>(0);
 
     // Fetch user data 
     useEffect(() => {
-        const fetchUserPrivileges = async () => {
+        const fetchUser = async () => {
             try {
                 const user = await getUserByToken();  // Fetch user data
-                setUserPrivLevel(user.privLvl);
+                setUser(user);
             } catch (error) {
                 console.error("Failed to fetch user privileges", error);
             }
         };
-        fetchUserPrivileges();
+        fetchUser();
     }, []);
 
 
@@ -66,12 +66,13 @@ const LogsHistory = () => {
                 setChatLogs([]);
                 setItemLogs([]);
                 setStudentLogs([]);
-
+                const user = await getUserByToken();  // Fetch user data
+                setUser(user);
                 const localDate = moment.tz(selectedDate, 'America/New_York').startOf('day');
                 const startOfDay = moment.utc(localDate).toISOString();
                 const endOfDay = moment.utc(localDate).endOf('day').toISOString();
                 const [summaries, audits, chats] = await Promise.all([
-                    logService.getAllSummaries(),
+                    logService.getAllSummaries(user && user?.privLvl < 5 ? user.userDept : undefined),
                     fetchFilteredAuditLogs(selectedDate, selectedAuditLogType, auditLogsPage),
                     getAllChatLogs(),
                 ]);
@@ -343,7 +344,10 @@ const LogsHistory = () => {
                         <Text style={styles.filterLabel}>Filter by Type:</Text>
                         <Picker
                             selectedValue={selectedAuditLogType}
-                            onValueChange={(itemValue) => setSelectedAuditLogType(itemValue)}
+                            onValueChange={(itemValue) => {
+                                setSelectedAuditLogType(itemValue);
+                                setAuditLogsPage(1); // Reset the page to 1 when audit log type changes
+                            }}
                             style={styles.picker}
                         >
                             <Picker.Item label="All" value={0} />
@@ -358,6 +362,7 @@ const LogsHistory = () => {
                             <Picker.Item label="Data Export" value={9} />
                             <Picker.Item label="Information" value={10} />
                         </Picker>
+
                     </View>
                 )}
             </View>
@@ -369,18 +374,18 @@ const LogsHistory = () => {
                 <TouchableOpacity onPress={() => setActiveTab('Student Logs')} style={[styles.tabButton, activeTab === 'Student Logs' && styles.activeTab]}>
                     <Text style={styles.tabText}>Student Logs</Text>
                 </TouchableOpacity>
-                {Number(userPrivLevel) != 2 && (  // Render items tab only if they're not a tutor
+                {user && user?.privLvl != 2 && (  // Render items tab only if they're not a tutor
                     <TouchableOpacity onPress={() => setActiveTab('Item Logs')} style={[styles.tabButton, activeTab === 'Item Logs' && styles.activeTab]}>
                         <Text style={styles.tabText}>Item Logs</Text>
                     </TouchableOpacity>
                 )}
-                {userPrivLevel >= 2 && (  // Only render Chat Logs for tutors
+                {user && user?.privLvl >= 2 && (  // Only render Chat Logs for tutors
                     <TouchableOpacity onPress={() => setActiveTab('Chat Logs')} style={[styles.tabButton, activeTab === 'Chat Logs' && styles.activeTab]}>
                         <Text style={styles.tabText}>Chat Logs</Text>
                     </TouchableOpacity>
                 )}
 
-                {userPrivLevel === 5 && (  // Only render Audit Logs for admin
+                {user && user?.privLvl === 5 && (  // Only render Audit Logs for admin
                     <TouchableOpacity onPress={() => setActiveTab('Audit Logs')} style={[styles.tabButton, activeTab === 'Audit Logs' && styles.activeTab]}>
                         <Text style={styles.tabText}>Audit Logs</Text>
                     </TouchableOpacity>
