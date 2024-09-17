@@ -26,7 +26,6 @@ class DepartmentService {
     async getAllDepartments(): Promise<Department[]> {
         try {
             const response: AxiosResponse<{ $id: string; $values: Department[] }> = await axios.get(this.baseUrl);
-            await this.audit('view', `Viewed all departments`);
             return response.data.$values;  // Extracting the array of departments from $values
         } catch (error) {
             await this.handleError(error, 'getAllDepartments');
@@ -38,7 +37,6 @@ class DepartmentService {
     async getDepartmentById(deptId: number): Promise<Department> {
         try {
             const response: AxiosResponse<Department> = await axios.get(`${this.baseUrl}/${deptId}`);
-            await this.audit('view', `Viewed department with ID: ${deptId}`);
             return response.data;
         } catch (error) {
             await this.handleError(error, 'getDepartmentById');

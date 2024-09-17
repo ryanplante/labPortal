@@ -35,7 +35,7 @@ class UserService {
         this.bansBaseUrl = `${process.env.EXPO_PUBLIC_API}/Bans`;
     }
 
-    
+
 
     // GET: /api/Users
     async getAllUsers(): Promise<User[]> {
@@ -165,6 +165,59 @@ class UserService {
         }
     }
 
+    // PUT: /api/Bans/Pardon/{banId}
+    async pardonBan(banId: number): Promise<void> {
+        try {
+            const token = await this.getToken();
+            const pardonDate = new Date().toISOString(); // Set expiration date to now
+            await axios.put(`${this.bansBaseUrl}/Pardon/${banId}`, { expirationDate: pardonDate }, {
+                headers: { token: token, 'Content-Type': 'application/json' }
+            });
+            await this.audit('update', `Pardoned ban with ID: ${banId}`);
+        } catch (error) {
+            await this.handleError(error, 'pardonBan');
+            throw error;
+        }
+    }
+
+    /**
+ * Deletes a user by ID.
+ * 
+ * @param {number} userId - The ID of the user to delete.
+ * @throws {Error} - Throws an error if the request fails.
+ */
+    async deleteUser(userId: number): Promise<void> {
+        try {
+            const token = await AsyncStorage.getItem('token');
+
+            if (!token) {
+                throw new Error('Token is missing. Please log in again.');
+            }
+
+            const response = await axios.delete(
+                `${this.baseUrl}/${userId}`,
+                {
+                    headers: {
+                        token: token, // Send token in the 'token' header as expected by the backend
+                        'Content-Type': 'application/json',
+                    },
+                }
+            );
+
+            if (response.status === 400) {
+                throw new Error('Invalid request or insufficient privileges.');
+            }
+
+            if (response.status !== 204) {
+                throw new Error('Failed to delete the user.');
+            }
+        } catch (error) {
+            await CreateErrorLog(error, 'deleteUser', userId, 'error');
+            throw new Error(error.message || 'An error occurred. Please contact the administrator.');
+        }
+    };
+
+
     // GET: /api/Users/FuzzySearchByName
     async fuzzySearchByName(fName?: string, lName?: string): Promise<User[]> {
         try {
@@ -203,7 +256,6 @@ class UserService {
             const response: AxiosResponse<Ban> = await axios.get(`${this.bansBaseUrl}/CheckBan/${userId}`, {
                 headers: { token: token, 'Content-Type': 'application/json' }
             });
-            await this.audit('view', `Checked ban for User ID: ${userId}`);
             return response.data;
         } catch (error: any) {
             if (error.response && error.response.status === 404) {
@@ -214,15 +266,33 @@ class UserService {
         }
     }
 
-    async getLockedOutUsers(): Promise<User[]> {
+    async getAllBans(): Promise<Ban[] | null> {
+        try {
+            const token = await this.getToken();
+            const response: AxiosResponse<Ban[]> = await axios.get(`${this.bansBaseUrl}`, {
+                headers: { token: token, 'Content-Type': 'application/json' }
+            });
+            return response.data.$values;
+        } catch (error: any) {
+            if (error.response && error.response.status === 404) {
+                return null; // No active ban found
+            }
+            await this.handleError(error, 'checkUserBan');
+            throw error;
+        }
+    }
+
+    async getLockedOutUsers(): Promise<User[] | null> {
         try {
             const token = await this.getToken();
             const response: AxiosResponse<User[]> = await axios.get(`${this.baseUrl}/LockedOut`, {
                 headers: { token: token, 'Content-Type': 'application/json' }
             });
-            await this.audit('view', `Viewed all locked-out users`);
-            return response.data;
-        } catch (error) {
+            return response.data.$values;
+        } catch (error: any) {
+            if (error.response && error.response.status === 404) {
+                return null; // No active ban found
+            }
             await this.handleError(error, 'getLockedOutUsers');
             throw error;
         }
@@ -235,13 +305,42 @@ class UserService {
             const response: AxiosResponse<{ isLockedOut: boolean, user?: User }> = await axios.get(`${this.baseUrl}/LockedOut/${userId}`, {
                 headers: { token: token, 'Content-Type': 'application/json' }
             });
-            await this.audit('view', `Checked lockout status for user with ID: ${userId}`);
             return response.data;
         } catch (error) {
             await this.handleError(error, 'checkIfUserIsLockedOut');
             throw error;
         }
     }
+
+    // PUT: /api/Users/LockAccount/{id}
+    async lockUser(userId: number): Promise<void> {
+        try {
+            const token = await this.getToken();
+            await axios.put(`${this.baseUrl}/LockAccount/${userId}`, null, {
+                headers: { token: token, 'Content-Type': 'application/json' }
+            });
+            await this.audit('update', `Locked user account with ID: ${userId}`, userId);
+        } catch (error) {
+            await this.handleError(error, 'lockUser');
+            throw error;
+        }
+    }
+
+    // PUT: /api/Users/UnlockAccount/{id}
+    async unlockUser(userId: number): Promise<void> {
+        try {
+            const token = await this.getToken();
+            await axios.put(`${this.baseUrl}/UnlockAccount/${userId}`, null, {
+                headers: { token: token, 'Content-Type': 'application/json' }
+            });
+            await this.audit('update', `Unlocked user account with ID: ${userId}`, userId);
+        } catch (error) {
+            await this.handleError(error, 'unlockUser');
+            throw error;
+        }
+    }
+
+
 
     // Helper method for error handling
     private async handleError(error: any, source: string): Promise<void> {

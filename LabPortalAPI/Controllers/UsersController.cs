@@ -210,6 +210,7 @@ namespace LabPortal.Controllers
         }
 
 
+
         private bool UserExists(int id)
         {
             return (_context.Users?.Any(e => e.UserId == id)).GetValueOrDefault();
@@ -657,38 +658,38 @@ namespace LabPortal.Controllers
             return Ok("Token deleted successfully.");
         }
         // DEVELOPER ONLY: USE THIS TO RESET ALL PASSWORDS
-        //[HttpPost("ResetAllPasswords")]
-        //[ProducesResponseType(StatusCodes.Status200OK)]
-        //[ProducesResponseType(StatusCodes.Status400BadRequest)]
-        //[ProducesResponseType(StatusCodes.Status404NotFound)]
-        //public async Task<IActionResult> ResetAllPasswords()
-        //{
-        //    var allUsers = await _context.Users.ToListAsync();
-        //    if (allUsers == null || !allUsers.Any())
-        //    {
-        //        return NotFound("No users found.");
-        //    }
-        //    foreach (var user in allUsers)
-        //    {
-        //        // Rounding down LastUpdated to the nearest second
-        //        user.LastUpdated = DateTime.UtcNow;
+        [HttpPost("ResetAllPasswords")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> ResetAllPasswords()
+        {
+            var allUsers = await _context.Users.ToListAsync();
+            if (allUsers == null || !allUsers.Any())
+            {
+                return NotFound("No users found.");
+            }
+            foreach (var user in allUsers)
+            {
+                // Rounding down LastUpdated to the nearest second
+                user.LastUpdated = DateTime.UtcNow;
 
-        //        user.Password = HashPassword("password", user);
+                user.Password = HashPassword("password", user);
 
-        //        _context.Entry(user).State = EntityState.Modified;
-        //    }
+                _context.Entry(user).State = EntityState.Modified;
+            }
 
-        //    try
-        //    {
-        //        await _context.SaveChangesAsync();
-        //    }
-        //    catch (DbUpdateException ex)
-        //    {
-        //        return BadRequest("Failed to reset passwords. Error: " + ex.Message);
-        //    }
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException ex)
+            {
+                return BadRequest("Failed to reset passwords. Error: " + ex.Message);
+            }
 
-        //    return Ok("Passwords for all users have been reset to 'password'.");
-        //}
+            return Ok("Passwords for all users have been reset to 'password'.");
+        }
 
 
         private string HashPassword(string password, User user)
@@ -770,6 +771,60 @@ namespace LabPortal.Controllers
 
             return Ok("Account unlocked successfully.");
         }
+
+        // PUT: api/Users/LockAccount/{userId}
+        [HttpPut("LockAccount/{userId}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> LockAccount([FromHeader] string token, int userId)
+        {
+            // Call the existing GetUserByToken endpoint to authenticate the token
+            var response = await GetUserByToken(token);
+            if (response.Result is NotFoundObjectResult)
+            {
+                return Unauthorized("Invalid or expired token.");
+            }
+
+            var userDto = (response.Result as OkObjectResult).Value as UserDto;
+
+            // Ensure that only the account owner or an admin (PrivLvl >= 4) can lock the account
+            if (userDto.UserId != userId && userDto.PrivLvl < 4)
+            {
+                return Forbid("You do not have permission to lock this account.");
+            }
+
+            var targetUser = await _context.Users.FindAsync(userId);
+            if (targetUser == null)
+            {
+                return NotFound("User not found.");
+            }
+
+            // Set the retries count to 5 to lock the account
+            targetUser.Retries = 5;
+
+            // Update the user in the database
+            _context.Entry(targetUser).State = EntityState.Modified;
+
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!UserExists(userId))
+                {
+                    return NotFound();
+                }
+                else
+                {
+                    throw;
+                }
+            }
+
+            return Ok("Account locked successfully.");
+        }
+
 
         private async Task<bool> ValidatePrivilege(string token, int requiredPrivLvl)
         {

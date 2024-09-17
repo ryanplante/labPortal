@@ -36,7 +36,7 @@ export const reload = async () => {
   }
 };
 
-export const convertToLocalTime = (utcTime) => {
+export const convertToLocalTime = (utcTime: moment.MomentInput) => {
   if (!utcTime) return ''; // Handle null or undefined time
   return moment(utcTime).local().format('MM/DD/YYYY hh:mm A'); // Convert to local and 12-hour format
 };

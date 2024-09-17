@@ -240,6 +240,43 @@ namespace LabPortal.Controllers
             return Ok(banDto);
         }
 
+        // PUT: /api/Bans/Pardon/{banId}
+        [HttpPut("Pardon/{banId}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> PardonBan([FromHeader] string token, int banId)
+        {
+            // Verify if the user has sufficient privileges (privilege level 4 or above)
+            if (!await ValidatePrivilege(token, 4))
+            {
+                return Forbid("Insufficient privileges.");
+            }
+
+            // Find the ban by ID
+            var ban = await _context.Bans.FindAsync(banId);
+            if (ban == null)
+            {
+                return NotFound($"Ban with ID {banId} not found.");
+            }
+
+            // Set the pardonDate to the current time
+            ban.ExpirationDate = DateTime.Now;
+
+            // Update the ban in the database
+            try
+            {
+                _context.Bans.Update(ban);
+                await _context.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"Failed to pardon the ban: {ex.Message}");
+            }
+
+            return Ok($"Ban with ID {banId} has been pardoned successfully.");
+        }
+
         private async Task<bool> ValidatePrivilege(string token, int requiredPrivLvl)
         {
             // This method should be implemented to verify the user's token and privilege level.
