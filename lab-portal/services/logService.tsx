@@ -4,7 +4,7 @@ import { CreateAuditLog, AuditLogType } from './auditService';
 import { getUserByToken } from './loginService';
 import moment from 'moment-timezone';
 
-interface FilteredLog {
+interface LogEntry {
     id: number;
     studentId: number;
     studentName: string;
@@ -13,19 +13,20 @@ interface FilteredLog {
     timeIn: string;
     timeOut?: string;
     monitorID: number;
+    isScanned: boolean;
 }
 
-interface LogCreate {
+export interface LogCreate {
     studentId: number;
     timein: string;
     timeout: string;
     labId: number;
     monitorId: number;
     itemId?: number;
-    Scanned: boolean;
+    isScanned: boolean;
 }
 
-interface Checkin {
+export interface Checkin {
     summaryId: number;
     studentId: number;
     timein: string;
@@ -34,7 +35,7 @@ interface Checkin {
     monitorId: number;
     itemId?: number;
     isDeleted: boolean;
-    Scanned: boolean;
+    isScanned: boolean;
 }
 
 interface LogHistory {
@@ -95,9 +96,9 @@ class LogService {
         try {
             const params = { labId, startDate, endDate };
             const response: AxiosResponse<any> = await axios.get(`${this.baseUrl}/FilteredLogs/Lab`, { params });
-
+    
             const logs = response.data.$values;
-
+    
             return logs.map((log: any) => ({
                 id: log.id,
                 studentId: log.studentId,
@@ -109,10 +110,16 @@ class LogService {
                 monitorID: log.monitorID,
             }));
         } catch (error) {
-            await this.handleError(error, 'getLogsByLab');
-            throw error;
+            if (axios.isAxiosError(error) && error.response?.status === 404) {
+                // Return an empty array when a 404 error occurs
+                return [];
+            } else {
+                await this.handleError(error, 'getLogsByLab');
+                throw error;
+            }
         }
     }
+    
 
     async getLogsFilteredByDate(startDate?: string, endDate?: string): Promise<FilteredLog[]> {
         try {
@@ -152,6 +159,7 @@ class LogService {
                 timein: this.convertToUTCTime(log.timein),
                 timeout: null,
             };
+            console.log(newLog);
             const response: AxiosResponse<Checkin> = await axios.post(this.baseUrl, newLog);
             await this.audit('insert', `Created new log for student ID: ${log.studentId}`, log.monitorId);
             return response.data;

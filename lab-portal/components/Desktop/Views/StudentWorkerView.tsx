@@ -5,7 +5,6 @@ import UserSearcher from '../../Modals/UserSearcher';
 import DynamicForm from '../../Modals/DynamicForm';
 import PlatformSpecificTimePicker from '../../Modals/PlatformSpecificTimePicker';
 import { checkHeartbeat, deleteToken, getUserByToken } from '../../../services/loginService';
-import LogService, { LogEntry, CreatedLog } from '../../../services/logService';
 import ScheduleService from '../../../services/scheduleService';
 import ItemService from '../../../services/itemService';
 import userService, { User } from '../../../services/userService';
@@ -15,6 +14,8 @@ import { crossPlatformAlert, reload } from '../../../services/helpers';
 import { useNavigation } from '@react-navigation/native';
 import ItemSearcher from '../../Modals/ItemSearcher';
 import PasswordModal from '../../Modals/PasswordModal';
+import { useCameraPermissionStatus } from '../useCameraPermissionStatus';
+import logService from '../../../services/logService';
 
 // Types for entry and any other 
 type Entry = {
@@ -28,7 +29,13 @@ type Entry = {
   Scanned: boolean
 };
 
-const StudentWorkerView = () => {
+
+type Props = {
+  scannedStudent: { userId: string, fName: string, lName: string } | null;
+  scannedItem: { itemId: string, description: string, serialNum: string } | null;
+};
+
+const StudentWorkerView = ({ scannedStudent, scannedItem }: Props) => {
   const [user, setUser] = useState<User | null>(null);
   const [selectedView, setSelectedView] = useState<string>('Logs');
   const [selectedFilter, setSelectedFilter] = useState<string>('All');
@@ -62,8 +69,45 @@ const StudentWorkerView = () => {
   const [banConfirmationModalVisible, setBanConfirmationModalVisible] = useState<boolean>(false);
   const [banConfirmationModalTitle, setBanConfirmationModalTitle] = useState<string>('');
   const [banConfirmationModalDescription, setBanConfirmationModalDescription] = useState<string>('');
+  const { isGranted, isLoading, requestCameraPermission } = useCameraPermissionStatus();
+  const [activeTabIndex, setActiveTabIndex] = useState(0);
 
 
+  useEffect(() => {
+    if (scannedStudent || scannedItem) {
+      // If scannedStudent is passed, set selectedStudent and open the form
+      if (scannedStudent) {
+        
+        setSelectedStudent({
+          id: scannedStudent.userId,
+          firstName: scannedStudent.fName,
+          lastName: scannedStudent.lName,
+        });
+      }
+      // If scannedItem is passed, set selectedItem and open the form
+      if (scannedItem) {
+        setSelectedItem({
+          id: scannedItem.itemId.toString(),  // Correct property name for itemId
+          itemName: scannedItem.description,  // Correct property name for description
+          serialNo: scannedItem.serialNum,    // Correct property name for serial number
+        });
+      }
+  
+      setScanned(true); // Set the scanned state to true
+      setFormOpen(true); // Open the form modal
+      if (scannedItem) {
+        setActiveTabIndex(1); // Set the active tab to Item form if an item is scanned
+      }
+    } else {
+      // Clear states when no scanned data is passed
+      setSelectedStudent({ id: '', firstName: '', lastName: '' });
+      setSelectedItem({ id: '', itemName: '', serialNo: '' });
+      setScanned(false);
+    }
+  }, [scannedStudent, scannedItem]);
+  
+  
+  
 
 
 
@@ -99,8 +143,8 @@ const StudentWorkerView = () => {
         return false;
       }
       setUser(fetchedUser);
-      const labId = 1//await ScheduleService.getCurrentLabForUser(fetchedUser.userId);
-      if (labId == 0) { // Don't remove this, this is hack to bypass readonly for now
+      const labId = await ScheduleService.getCurrentLabForUser(fetchedUser.userId);
+      if (labId == 0) { 
         setReadOnly(true); // Enable buttons if everything is fine
         // Show a modal for handling schedule exemption if labId is 0
         setConfirmationModalVisible(true);
@@ -126,7 +170,7 @@ const StudentWorkerView = () => {
     try {
       const startDate = moment().startOf('day').utc().format();
       const endDate = moment().endOf('day').utc().format();
-      const logs: LogEntry[] = await LogService.getLogsByLab(labId, startDate, endDate);
+      const logs: Entry[] = await logService.getLogsByLab(labId, startDate, endDate);
 
       const formattedLogs: Entry[] = await Promise.all(
         logs.map(async (log) => {
@@ -197,16 +241,16 @@ const StudentWorkerView = () => {
   };
 
 
-  const handleItemSelect = async (item: { itemId: string, description: string, serialNum: string, quantity: number}) => {
+  const handleItemSelect = async (item: { itemId: string, description: string, serialNum: string, quantity: number }) => {
     const userAndLabLoaded = await fetchUserAndLabId();
     if (!userAndLabLoaded) return;
     if (item.quantity == 0) {
       setError("This item is out of stock! Please have an admin update the inventory");
       return;
     }
-      
+
     setSelectedItem({
-      id: item.itemId, // Correct key to match your state
+      id: item.itemId, 
       itemName: item.description,
       serialNo: item.serialNum,
     });
@@ -263,30 +307,30 @@ const StudentWorkerView = () => {
         timeIn: moment(checkInTime).format('h:mm:ss a'),
         timeOut: checkOutTime ? moment(checkOutTime).format('h:mm:ss a') : null,
         itemId: selectedItem.id ? selectedItem.id.toString() : null, // Add selected item to the log
-        Scanned: false
+        Scanned: isScanned
       };
 
       if (editingEntryId) {
         // Update log if editing
-        await LogService.updateLog(Number(editingEntryId), {
+        await logService.updateLog(Number(editingEntryId), {
           studentId: Number(selectedStudent.id),
           timein: moment(checkInTime).toISOString(),
           timeout: checkOutTime ? moment(checkOutTime).toISOString() : '',
           labId: labId ?? 1,
           monitorId: user?.userId ?? 0,
           itemId: selectedItem.id ? selectedItem.id.toString() : null, // Add item to the update
-          Scanned: false
+          Scanned: isScanned
         });
       } else {
         // Create new log entry if not editing
-        const createdLog: CreatedLog = await LogService.createLog({
+        const createdLog: CreatedLog = await logService.createLog({
           studentId: Number(selectedStudent.id),
           timein: moment(checkInTime).toISOString(),
           timeout: checkOutTime ? moment(checkOutTime).toISOString() : '',
           labId: labId ?? 1,
           monitorId: user?.userId ?? 0,
           itemId: selectedItem.id ? selectedItem.id.toString() : null, // Add item to the creation
-          Scanned: false
+          isScanned: isScanned
         });
         newEntryId = createdLog.summaryId.toString();
         newEntry.id = newEntryId;
@@ -301,6 +345,7 @@ const StudentWorkerView = () => {
       setEditingEntryId(newEntryId);
       resetForm();
       setFormOpen(false);
+      await fetchLogsForToday(labId);
     } catch (error) {
       setError('Failed to save the log. Please try again.');
       console.error('Error saving log:', error);
@@ -375,7 +420,7 @@ const StudentWorkerView = () => {
 
     if (entryToDelete) {
       try {
-        await LogService.deleteLog(Number(entryToDelete.id), user?.userId ?? 0);
+        await logService.deleteLog(Number(entryToDelete.id), user?.userId ?? 0);
         setEntries((prevEntries) => prevEntries.filter((entry) => entry.id !== entryToDelete.id));
       } catch (error) {
         console.error('Failed to delete log:', error);
@@ -392,7 +437,7 @@ const StudentWorkerView = () => {
     if (!userAndLabLoaded) return;
 
     try {
-      await LogService.timeOutLog(Number(id), user?.userId ?? 0, isScanned);
+      await logService.timeOutLog(Number(id), user?.userId ?? 0, isScanned);
       await fetchLogsForToday(labId ?? 1);
     } catch (error) {
       console.error('Failed to clock out log:', error);
@@ -406,6 +451,8 @@ const StudentWorkerView = () => {
     setCheckOutTime(undefined);
     setEditingEntryId(null);
     setError(null);
+    setActiveTabIndex(0);
+    setScanned(false);
   };
 
   // Filter entries based on the selected type filter and status filter
@@ -500,6 +547,25 @@ const StudentWorkerView = () => {
         readOnly={true}
       />
       <TouchableOpacity
+        key="scannerButton"
+        style={styles.scannerButton}
+        onPress={() => {
+          if (!isGranted) {
+            console.log('Requesting camera permission');
+            requestCameraPermission(); // Request permission when pressed
+          } else {
+            console.log('Scanner pressed');
+          }
+        }}
+      >
+        {isGranted === false ? (
+          <Text style={styles.warningIcon}>!</Text>  // Show red exclamation if no permission
+        ) : (
+          <Image source={require('../../../assets/scanner.png')} style={styles.scannerIcon} />
+        )}
+      </TouchableOpacity>
+
+      <TouchableOpacity
         key="searchButton"
         style={styles.iconButton}
         onPress={() => setStudentSearcherOpen(true)}
@@ -531,6 +597,25 @@ const StudentWorkerView = () => {
         value={selectedItem.id ? selectedItem.id.toString() : ''}
         editable={false}
       />
+      <TouchableOpacity
+        key="scannerButton"
+        style={styles.scannerButton}
+        onPress={() => {
+          if (!isGranted) {
+            console.log('Requesting camera permission');
+            requestCameraPermission(); // Request permission when pressed
+          } else {
+            console.log('Scanner pressed');
+          }
+        }}
+      >
+        {isGranted === false ? (
+          <Text style={styles.warningIcon}>!</Text>  // Show red exclamation if no permission
+        ) : (
+          <Image source={require('../../../assets/scanner.png')} style={styles.scannerIcon} />
+        )}
+      </TouchableOpacity>
+
       <TouchableOpacity
         key="searchButton"
         style={styles.iconButton}
@@ -748,15 +833,15 @@ const StudentWorkerView = () => {
           [
             isItemSearcherOpen
               ? <ItemSearcher key="itemSearcher" onSelect={handleItemSelect} onBackPress={() => setItemSearcherOpen(false)} labId={labId} />
-              : isStudentSearcherOpen ? <UserSearcher key="studentSearcher" onSelect={handleStudentSelect} onBackPress={() => setStudentSearcherOpen(false)} isTeacher={null} /> 
-              : [...itemPickerComponent, ...studentPickerComponent, ...timePickerComponent, ...addButtonComponent]
+              : isStudentSearcherOpen ? <UserSearcher key="studentSearcher" onSelect={handleStudentSelect} onBackPress={() => setStudentSearcherOpen(false)} isTeacher={null} />
+                : [...itemPickerComponent, ...studentPickerComponent, ...timePickerComponent, ...addButtonComponent]
           ]
         ]}
         tabs={['Student Form', 'Item Form']} // Define the tab titles
-        activeTabIndex={0} // Start with the first tab active
+        activeTabIndex={activeTabIndex} 
         error={error}
         isSearcherOpen={isItemSearcherOpen || isStudentSearcherOpen}
-        hideTab={hideTab} // Pass the hideTab state here
+        hideTab={hideTab} 
       />
 
 
@@ -937,6 +1022,21 @@ const styles = StyleSheet.create({
   disabledButton: {
     backgroundColor: '#cccccc',  // Gray out the button when disabled
   },
+
+  scannerButton: {
+    backgroundColor: '#bdbdbd',
+    width: 45,  // Keeping it square
+    height: 45,  // Keeping it square
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 0,
+    marginRight: 5,
+  },
+  scannerIcon: {
+    width: 35,
+    height: 35,  // Adjust to fit within the button
+  },
+
 });
 
 export default StudentWorkerView;

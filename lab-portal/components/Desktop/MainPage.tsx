@@ -57,11 +57,11 @@ const MainPage = () => {
       case 'Student':
         return <StudentView />;
       case 'Monitor':
-        return <StudentWorkerView />;
+        return <StudentWorkerView scannedStudent={null} scannedItem={null} />;
       case 'Tutor':
-        return <StudentWorkerView />;
+        return <StudentWorkerView scannedStudent={null} scannedItem={null} />;
       case 'Tutor/Monitor':
-        return <StudentWorkerView />;
+        return <StudentWorkerView scannedStudent={null} scannedItem={null} />;
       default:
         return <FacultyView/>;
     }

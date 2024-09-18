@@ -1,57 +1,141 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { getUserByToken } from '../../services/loginService';
+import StudentWorkerView from './Views/StudentWorkerView';
 import BarcodeScannerModal from '../Modals/BarCodeScannerModal';
+import { useCameraPermissions } from 'expo-camera';
+import itemService from '../../services/itemService';
+import userService from '../../services/userService';
+import ConfirmationModal from '../Modals/ConfirmationModal';
 
-const ScannerScreen = () => {
-  const [isModalVisible, setModalVisible] = useState(false);
+const ScannerScreen = ({ reset }) => {
+  const [scannedItem, setScannedItem] = useState(null);
+  const [scannedStudent, setScannedStudent] = useState(null);
+  const [isScannerVisible, setIsScannerVisible] = useState(false);
+  const [privLvl, setPrivLvl] = useState(null);
   const [scanType, setScanType] = useState(null);
-  const navigation = useNavigation();
+  const [permission, requestPermission] = useCameraPermissions();
+  const [isConfirmationVisible, setIsConfirmationVisible] = useState(false);
+  const [confirmationTitle, setConfirmationTitle] = useState('');
+  const [confirmationDescription, setConfirmationDescription] = useState('');
+  const [isScanningAgain, setIsScanningAgain] = useState(true);
 
-  const handleBarCodeScanned = (scannedData, detectedType) => {
-    // Navigate to the appropriate screen based on the detectedType
-    if (detectedType === 'Item') {
-      alert(`Scanned item id: ${scannedData}`);
-      //navigation.navigate('ItemScreen', { scannedData });
-    } else if (detectedType === 'Student') {
-      alert(`Scanned student id: ${scannedData}`);
+  const fetchUserPrivilege = async () => {
+    const user = await getUserByToken();
+    setPrivLvl(user.privLvl);
+
+    if (user.privLvl === 2) {
+      setScanType('student');
     } else {
-      alert(`Unknown barcode type detected. Data: ${scannedData}`);
+      setScanType('all');
     }
-    setModalVisible(false); // Close the scanner modal
   };
 
-  const openScanner = (type) => {
-    setScanType(type); // 'item' for Code128, 'student' for Code39, or null for both
-    setModalVisible(true); // Show the modal
+  const handleScanResult = async (scannedData) => {
+    const { type, itemId, userId } = scannedData;
+  
+    if (type === 'Item') {
+      const item = await itemService.getItemById(itemId);
+      setScannedItem({
+        itemId: item.itemId,
+        description: item.description,
+        serialNum: item.serialNum,
+      });
+      setIsScanningAgain(true);
+      setScanType('student');
+      // Show the confirmation modal, but don't trigger any action yet
+      setConfirmationTitle('Scan Student?');
+      setConfirmationDescription('Do you want to scan a student for this item?');
+      setIsConfirmationVisible(true); // Show the modal
+    }
+  
+    if (type === 'Student' || userId) {
+      const student = await userService.getUserById(userId);
+      setScannedStudent({
+        userId: student.userId,
+        fName: student.fName,
+        lName: student.lName,
+      });
+      setIsScanningAgain(false);
+    }
+  
+    setIsScannerVisible(false); // Close the scanner after processing
+  };  
+
+  const handleConfirm = () => {
+    setScanType('student'); // Change scan mode to student
+    setIsScannerVisible(true); // Reopen the scanner for student scan
+    setIsScanningAgain(true);
+    setIsConfirmationVisible(false); // Close the modal
+  };  
+
+  const resetScannedStates = () => {
+    setScannedItem(null);
+    setScannedStudent(null);
+    setIsScanningAgain(false);
+    setIsScannerVisible(true);
+    reset = false;
   };
 
-  const closeScanner = () => {
-    setModalVisible(false); // Close the modal when needed
-  };
+  useEffect(() => {
+    if (reset) {
+      resetScannedStates();
+    }
+  }, [reset]);
+
+  useEffect(() => {
+    resetScannedStates();
+    fetchUserPrivilege();
+  }, [reset]);
+
+  useEffect(() => {
+    if (permission?.granted) {
+      setIsScannerVisible(true);
+    } else if (permission?.status === 'undetermined') {
+      requestPermission();
+    }
+  }, [permission]);
+
+  if ((scannedItem || scannedStudent) && !isScanningAgain) {
+    return (
+      <StudentWorkerView
+        scannedStudent={scannedStudent}
+        scannedItem={scannedItem}
+      />
+    );
+  }
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Barcode Scanner</Text>
+      {!permission || !permission.granted ? (
+        <View style={styles.permissionContainer}>
+          <Text>We need camera permission to scan barcodes.</Text>
+          <TouchableOpacity onPress={requestPermission} style={styles.permissionButton}>
+            <Text style={styles.permissionButtonText}>Grant Permission</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        isScannerVisible && (
+          <BarcodeScannerModal
+            visible={isScannerVisible}
+            onClose={() => setIsScannerVisible(false)}
+            onBarCodeScanned={handleScanResult}
+            scanType={scanType}
+          />
+        )
+      )}
 
-      <TouchableOpacity onPress={() => openScanner(null)} style={styles.scanButton}>
-        <Text style={styles.scanButtonText}>Scan Both Types</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity onPress={() => openScanner('item')} style={styles.scanButton}>
-        <Text style={styles.scanButtonText}>Scan Item (Code128)</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity onPress={() => openScanner('student')} style={styles.scanButton}>
-        <Text style={styles.scanButtonText}>Scan Student (Code39)</Text>
-      </TouchableOpacity>
-
-      {/* Scanner Modal */}
-      <BarcodeScannerModal
-        visible={isModalVisible}
-        onClose={closeScanner}
-        scanType={scanType}
-        onBarCodeScanned={handleBarCodeScanned}
+      {/* Confirmation modal */}
+      <ConfirmationModal
+        visible={isConfirmationVisible}
+        title={confirmationTitle}
+        description={confirmationDescription}
+        onConfirm={handleConfirm}
+        onCancel={() => {
+          setIsConfirmationVisible(false);
+          setIsScanningAgain(false);
+        }}
+        type="yesNo"
       />
     </View>
   );
@@ -63,18 +147,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  title: {
-    fontSize: 24,
-    marginBottom: 20,
-    fontWeight: 'bold',
+  permissionContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  scanButton: {
-    backgroundColor: '#4CAF50',
-    padding: 15,
+  permissionButton: {
+    backgroundColor: '#007BFF',
+    padding: 10,
     borderRadius: 5,
-    marginBottom: 10,
+    marginTop: 10,
   },
-  scanButtonText: {
+  permissionButtonText: {
     color: '#fff',
     fontSize: 16,
   },

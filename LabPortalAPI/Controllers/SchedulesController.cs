@@ -141,7 +141,7 @@ namespace LabPortal.Controllers
             // If labId is 0, return NotFound
             if (labId == 0)
             {
-                return NotFound($"No current lab found for user with ID {userId}.");
+                return Ok(0);
             }
 
             // Return the labId

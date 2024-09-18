@@ -36,6 +36,7 @@ import MobileProfile from './components/Mobile/Profile';
 import MobileSidebar from './components/Mobile/Sidebar';
 import DepartmentManager from './components/Desktop/DepartmentManager'; // Ensure correct import path
 import MobileLabManager from './components/Mobile/MobileLabManager';
+import StudentWorkerView from './components/Desktop/Views/StudentWorkerView';
 
 const Stack = createStackNavigator();
 
@@ -154,6 +155,7 @@ const App = () => {
               ) : (
                 <>
                   <Stack.Screen name="Main" component={MainPage} />
+                  <Stack.Screen name="StudentWorkerView" component={StudentWorkerView} />
                   <Stack.Screen name="ChangePassword" component={ChangePassword} />
                   <Stack.Screen name="Reports" component={Reports} />
                   <Stack.Screen name="Schedule" component={Schedule} />

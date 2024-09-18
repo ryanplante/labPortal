@@ -119,6 +119,9 @@ const Sidebar = ({ onProfilePress, onClose }: { onProfilePress: () => void; onCl
     await fetchUserData();
     if (user && permittedLevels.includes(user.privLvl)) {
       onClose();
+      if (screenName === 'Scanner') {
+        navigation.navigate(screenName, true);
+      }
       navigation.navigate(screenName);
     } else {
       crossPlatformAlert('Access Denied', 'You do not have permission to access this screen.');
