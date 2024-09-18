@@ -12,7 +12,8 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.ryanplantedev.labportal"
     },
     "android": {
       "adaptiveIcon": {
@@ -26,8 +27,9 @@
     },
     "extra": {
       "eas": {
-        "projectId": "bbdf3694-6f53-4ea2-8da3-e67d85634b43"
+        "projectId": "d3483867-2cff-4713-84d4-b06445720874"
       }
-    }
+    },
+    "owner": "srsquared"
   }
 }

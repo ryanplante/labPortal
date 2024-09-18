@@ -13,9 +13,13 @@ const UserManager = () => {
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [departments, setDepartments] = useState<{ [key: number]: string }>({});
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+
   const [actionsModalVisible, setActionsModalVisible] = useState(false);
   const [confirmationVisible, setConfirmationVisible] = useState(false);
-  const [confirmationAction, setConfirmationAction] = useState<() => void>(() => { });
+  const [confirmationType, setConfirmationType] = useState<'deleteUser' | 'deleteBan' | 'pardonBan' | null>(null);
+  const [actionData, setActionData] = useState<any>(null); // To hold the user/ban data
+  const [confirmationTitle, setConfirmationTitle] = useState('');
+  const [confirmationDescription, setConfirmationDescription] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null);
   const [isStaffFilter, setIsStaffFilter] = useState<string>('All');
@@ -30,8 +34,9 @@ const UserManager = () => {
   const [formData, setFormData] = useState<User | null>(null); // For holding the user data to create/update
   const [banData, setBanData] = useState<Ban | null>(null); // For holding the ban data to create/update
   const [banList, setBanList] = useState<Ban[]>([]); // State to store the list of bans
-  const [confirmationType, setConfirmationType] = useState<'deleteUser' | 'deleteBan' | 'pardonBan' | null>(null);
-  const [actionData, setActionData] = useState<any>(null); // To hold the user/ban data
+  const [formError, setFormError] = useState<string | null>(null);
+
+
 
   useEffect(() => {
     loadData();
@@ -80,11 +85,6 @@ const UserManager = () => {
     }
   };
 
-
-
-
-
-
   const zeroPadUserId = (userId: number, length: number = 8): string => {
     return userId.toString().padStart(length, '0');
   };
@@ -96,44 +96,103 @@ const UserManager = () => {
     setConfirmationVisible(true);
   };
   const handleDeleteBan = (banId: number) => {
+    setConfirmationTitle('Delete Ban');
+    setConfirmationDescription(`Are you sure you want to delete the ban for ${selectedUser!.fName} ${selectedUser!.lName}?`);
     setConfirmationType('deleteBan');
     setActionData(banId); // Store the banId in the action data
     setConfirmationVisible(true);
   };
 
   const handlePardonBan = (banId: number) => {
+    setConfirmationTitle('Pardon Ban');
+    setConfirmationDescription(`Are you sure you want to pardon the ban for ${selectedUser!.fName} ${selectedUser!.lName}?`);
     setConfirmationType('pardonBan');
     setActionData(banId); // Store the banId in the action data
     setConfirmationVisible(true);
   };
 
+  const handleCloseDynamicForm = () => {
+    setFormError(null);
+    setDynamicFormVisible(false);
+  };
+
   const handleConfirmAction = async () => {
-    alert(confirmationType);
+    let success = false;
+    let successMessage = '';
+    let failureMessage = '';
+
     if (confirmationType === 'deleteUser') {
+      successMessage = 'User deleted successfully.';
+      failureMessage = 'Failed to delete user.';
       try {
         await userService.deleteUser(actionData); // actionData holds userId
-        alert('User deleted successfully.');
+        success = true;
       } catch (error) {
-        alert('Failed to delete user.');
+        success = false;
       }
     } else if (confirmationType === 'deleteBan') {
+      successMessage = 'Ban deleted successfully.';
+      failureMessage = 'Failed to delete ban.';
       try {
         await userService.deleteBan(actionData); // actionData holds banId
-        alert('Ban deleted successfully.');
+        success = true;
       } catch (error) {
-        alert('Failed to delete ban.');
+        success = false;
       }
     } else if (confirmationType === 'pardonBan') {
+      successMessage = 'Ban pardoned successfully.';
+      failureMessage = 'Failed to pardon ban.';
       try {
         await userService.pardonBan(actionData); // actionData holds banId
-        alert('Ban pardoned successfully.');
+        success = true;
       } catch (error) {
-        alert('Failed to pardon ban.');
+        success = false;
       }
+    } else if (confirmationType === 'resetPassword') {
+      successMessage = 'Password reset successfully.';
+      failureMessage = 'Failed to reset password.';
+      try {
+        await updatePassword(actionData, 'password'); // actionData holds userId
+        success = true;
+      } catch (error) {
+        success = false;
+      }
+    } else if (confirmationType === 'lockUser') {
+      successMessage = 'User locked successfully.';
+      failureMessage = 'Failed to lock user.';
+      try {
+        await userService.lockUser(actionData); // actionData holds userId
+        success = true;
+      } catch (error) {
+        success = false;
+      }
+    } else if (confirmationType === 'unlockUser') {
+      successMessage = 'User unlocked successfully.';
+      failureMessage = 'Failed to unlock user.';
+      try {
+        await userService.unlockUser(actionData); // actionData holds userId
+        success = true;
+      } catch (error) {
+        success = false;
+      }
+
     }
-    setConfirmationVisible(false); // Hide modal after action
-    loadData(); // Reload data after performing action
+
+    if (success) {
+      setBanFormVisible(false);
+      setDynamicFormVisible(false);
+      setActionsModalVisible(false);
+    }
+
+    // Show result modal based on success or failure
+    setConfirmationTitle(success ? 'Success' : 'Failure');
+    setConfirmationDescription(success ? successMessage : failureMessage);
+    setConfirmationType('result'); // Use 'result' type for the OK modal
+    await loadData();
   };
+
+
+
 
 
 
@@ -149,24 +208,22 @@ const UserManager = () => {
     }
   };
 
-  const handleLockUnlock = async (user: User) => {
-    try {
-      if (user.isLockedOut) {
-        // Unlock user
-        await userService.unlockUser(user.userId);
-        alert(`User ${user.fName} ${user.lName} unlocked.`);
-      } else {
-        // Lock user
-        await userService.lockUser(user.userId);
-        alert(`User ${user.fName} ${user.lName} locked.`);
-      }
-      loadData(); // Reload the user data after locking/unlocking
-      setActionsModalVisible(false); // Close the modal
-    } catch (error) {
-      console.error('Error locking/unlocking user:', error);
-      alert('Failed to update user lock status.');
+  // Show confirmation for locking/unlocking the user  
+  const handleLockUnlock = (user: User) => {
+    if (user.isLockedOut) {
+      setConfirmationType('unlockUser');
+      setConfirmationTitle('Unlock Account');
+      setConfirmationDescription(`Are you sure you want to unlock the account for ${user.fName} ${user.lName}?`);
+    } else {
+      setConfirmationType('lockUser');
+      setConfirmationTitle('Lock Account');
+      setConfirmationDescription(`Are you sure you want to lock the account for ${user.fName} ${user.lName}?`);
     }
+    setActionData(user.userId); // Set the user ID for the action
+    setConfirmationVisible(true); // Show the confirmation modal
+    setActionsModalVisible(false); // Close the actions modal
   };
+
 
   const handleAddUser = () => {
     setFormData({
@@ -188,14 +245,49 @@ const UserManager = () => {
   };
 
   const handleSubmitUserForm = async (formData: User) => {
-    if (isUpdateMode) {
-      await userService.updateUser(formData.userId, formData); // Update user
-    } else {
-      await userService.createUser(formData); // Create user
+    const numericUserId = parseInt(formData.userId.toString(), 10);
+  
+    if (isNaN(numericUserId)) {
+      setFormError('User ID must be a valid number.');
+      return;
     }
+  
+    if (formData.userId.toString().length < 8) {
+      setFormError('User ID must be at least 8 characters long.');
+      return;
+    }
+  
+    if (formData.fName.length > 32 || formData.lName.length > 32 || formData.fName.length < 3 || formData.lName.length < 3) {
+      setFormError('First Name and Last Name must be between [3-32] characters.');
+      return;
+    }
+  
+    setFormError(null);
+  
+    const updatedFormData = {
+      ...formData,
+      userId: numericUserId, // Convert to number for backend
+    };
+  
+    let successMessage;
+    if (isUpdateMode) {
+      await userService.updateUser(updatedFormData.userId, updatedFormData); // Update user
+      successMessage = 'User updated successfully.';
+    } else {
+      await userService.createUser(updatedFormData); // Create user
+      successMessage = 'User created successfully.';
+    }
+  
+    setConfirmationTitle('Success');
+    setConfirmationDescription(successMessage);
+    setConfirmationType('result'); // Set the type to result so it just shows OK modal
+    setConfirmationVisible(true);
+  
     loadData(); // Reload data after submission
     setDynamicFormVisible(false); // Hide form
   };
+  
+
 
   const handleBanUser = (user: User) => {
     const existingBan = bannedUserIds.includes(user.userId);
@@ -225,39 +317,56 @@ const UserManager = () => {
   };
 
   const handleSubmitBanForm = async (banData: Ban) => {
+    if (!banData.reason || banData.reason.length > 150) {
+      setFormError('Ban reason is required and must not exceed 150 characters.');
+      return;
+    }
+  
+    if (banData.expirationDate <= new Date()) {
+      setFormError('Expiration date must be in the future.');
+      return;
+    }
+  
+    // If validation passes, proceed to submit
+    setFormError(null);
+    let successMessage;
     if (banData.banId) {
-      // Update existing ban
       await userService.updateBan(banData.banId, {
         userId: banData.userId,
         reason: banData.reason,
         expirationDate: banData.expirationDate,
       });
+      successMessage = 'Ban updated successfully.';
     } else {
-      // Create new ban
       await userService.createBan({
         userId: banData.userId,
         reason: banData.reason,
         expirationDate: banData.expirationDate,
       });
+      successMessage = 'Ban created successfully.';
     }
-
+  
+    setConfirmationTitle('Success');
+    setConfirmationDescription(successMessage);
+    setConfirmationType('result'); // Set the type to result so it just shows OK modal
+    setConfirmationVisible(true);
+  
     loadData(); // Reload data after submission
     setBanFormVisible(false); // Hide ban form
   };
+  
+
 
   const handleResetPassword = () => {
-    setConfirmationAction(async () => {
-      try {
-        await updatePassword(selectedUser!.userId, 'newPassword123');
-        setConfirmationVisible(false);
-        alert('Password reset successfully!');
-      } catch (error) {
-        console.error('Error resetting password:', error);
-      }
-    });
-    setConfirmationVisible(true);
-    setActionsModalVisible(false);
+    setConfirmationType('resetPassword');
+    setActionData(selectedUser!.userId); // Set user ID to action data
+    setConfirmationTitle('Reset Password');
+    setConfirmationDescription(`Are you sure you want to reset the password for ${selectedUser!.fName} ${selectedUser!.lName}?`);
+    setConfirmationVisible(true); // Show the confirmation modal
+    setActionsModalVisible(false); // Close the actions modal
   };
+
+
 
   const handleSearch = async () => {
     if (searchQuery.trim() === '') {
@@ -483,7 +592,8 @@ const UserManager = () => {
       <DynamicForm
         visible={banFormVisible}
         title="Manage Ban"
-        onClose={() => setBanFormVisible(false)}
+        onClose={handleCloseDynamicForm}
+        error={formError}
         components={[
           [
             <Text key="banReasonLabel" style={styles.label}>Ban Reason</Text>,
@@ -506,12 +616,12 @@ const UserManager = () => {
               <Text style={styles.submitButtonText}>Save Ban</Text>
             </TouchableOpacity>,
 
-            // Show delete and pardon buttons only if editing an existing ban
-            banData?.banId && banData?.banId !== 0 && (
+            // Conditionally render delete and pardon buttons only if editing an existing ban
+            banData?.banId && banData?.banId !== 0 ? (
               <>
                 <TouchableOpacity
                   key="deleteBanBtn"
-                  style={[styles.submitButton, styles.dangerButton]} // Apply a red button style for danger
+                  style={[styles.submitButton, styles.dangerButton]} // Apply a red button style for delete
                   onPress={() => handleDeleteBan(banData!.banId)}
                 >
                   <Text style={styles.submitButtonText}>Delete Ban</Text>
@@ -525,21 +635,38 @@ const UserManager = () => {
                   <Text style={styles.submitButtonText}>Pardon Ban</Text>
                 </TouchableOpacity>
               </>
-            ),
+            ) : null, // Return null when the condition is not met, instead of leaving it empty
           ],
         ]}
       />
 
 
+
       <DynamicForm
         visible={dynamicFormVisible}
         title={isUpdateMode ? 'Update User' : 'Create New User'}
-        onClose={() => setDynamicFormVisible(false)}
+        onClose={handleCloseDynamicForm}
+        error={formError}
         components={[
           [
             <Text key="userIdLabel" style={styles.label}>User ID</Text>,
-            <TextInput key="userId" style={styles.input} value={formData?.userId.toString() || '0'} editable={false} />,
-
+            <TextInput
+              key="userId"
+              style={styles.input}
+              value={
+                isUpdateMode && formData?.userId
+                  ? formData.userId.toString().padStart(8, '0')  // Zero-pad only in update mode
+                  : formData?.userId || ''  // Show the raw value otherwise
+              }
+              onChangeText={(value) => {
+                // Remove non-numeric characters and limit to 8 characters
+                const numericValue = value.replace(/\D/g, '');
+                const truncatedValue = numericValue.slice(0, 8); // Limit input to 8 digits
+                setFormData({ ...formData, userId: truncatedValue });
+              }}
+              editable={!isUpdateMode}  // Make it read-only if updating an existing user
+            />
+            ,
             <Text key="fNameLabel" style={styles.label}>First Name</Text>,
             <TextInput
               key="fName"
@@ -615,24 +742,18 @@ const UserManager = () => {
 
       <ConfirmationModal
         visible={confirmationVisible}
-        title={
-          confirmationType === 'deleteUser'
-            ? 'Confirm User Deletion'
-            : confirmationType === 'deleteBan'
-              ? 'Confirm Ban Deletion'
-              : 'Confirm Ban Pardon'
+        title={confirmationTitle}
+        description={confirmationDescription}
+        onConfirm={
+          confirmationType === 'result'
+            ? () => setConfirmationVisible(false) // Close modal for result
+            : handleConfirmAction // Proceed with action for confirmation
         }
-        description={
-          confirmationType === 'deleteUser'
-            ? 'Are you sure you want to delete this user?'
-            : confirmationType === 'deleteBan'
-              ? 'Are you sure you want to delete this ban?'
-              : 'Are you sure you want to pardon this ban?'
-        }
-        onConfirm={handleConfirmAction}
-        onCancel={() => setConfirmationVisible(false)}
-        type={confirmationType?.startsWith('delete') ? 'yesNoDanger' : 'okCancel'}
+        onCancel={() => setConfirmationVisible(false)} // Allow cancel only for confirmation, not result
+        type={confirmationType === 'result' ? 'ok' : 'yesNoDanger'} // Show OK for result, yes/no for confirmation
       />
+
+
     </View>
   );
 };

@@ -542,7 +542,7 @@ namespace LabPortal.Controllers
             var userDto = (response.Result as OkObjectResult).Value as UserDto; // hack to call Get user result
 
             // Allow only admins to update passwords
-            if (userDto.UserId != updatePasswordDto.UserId && userDto.PrivLvl == 5)
+            if (userDto.UserId != updatePasswordDto.UserId && userDto.PrivLvl != 5)
             {
                 return Forbid("You do not have permission to update this password.");
             }
