@@ -16,6 +16,8 @@ import ItemSearcher from '../../Modals/ItemSearcher';
 import PasswordModal from '../../Modals/PasswordModal';
 import { useCameraPermissionStatus } from '../useCameraPermissionStatus';
 import logService from '../../../services/logService';
+import itemService from '../../../services/itemService';
+import BarcodeScannerModal from '../../Modals/BarCodeScannerModal';
 
 // Types for entry and any other 
 type Entry = {
@@ -71,13 +73,15 @@ const StudentWorkerView = ({ scannedStudent, scannedItem }: Props) => {
   const [banConfirmationModalDescription, setBanConfirmationModalDescription] = useState<string>('');
   const { isGranted, isLoading, requestCameraPermission } = useCameraPermissionStatus();
   const [activeTabIndex, setActiveTabIndex] = useState(0);
+  const [isScannerVisible, setIsScannerVisible] = useState(false);
+  const [scanType, setScanType] = useState(null);
 
 
   useEffect(() => {
     if (scannedStudent || scannedItem) {
       // If scannedStudent is passed, set selectedStudent and open the form
       if (scannedStudent) {
-        
+
         setSelectedStudent({
           id: scannedStudent.userId,
           firstName: scannedStudent.fName,
@@ -92,7 +96,7 @@ const StudentWorkerView = ({ scannedStudent, scannedItem }: Props) => {
           serialNo: scannedItem.serialNum,    // Correct property name for serial number
         });
       }
-  
+
       setScanned(true); // Set the scanned state to true
       setFormOpen(true); // Open the form modal
       if (scannedItem) {
@@ -105,9 +109,9 @@ const StudentWorkerView = ({ scannedStudent, scannedItem }: Props) => {
       setScanned(false);
     }
   }, [scannedStudent, scannedItem]);
-  
-  
-  
+
+
+
 
 
 
@@ -144,7 +148,7 @@ const StudentWorkerView = ({ scannedStudent, scannedItem }: Props) => {
       }
       setUser(fetchedUser);
       const labId = await ScheduleService.getCurrentLabForUser(fetchedUser.userId);
-      if (labId == 0) { 
+      if (labId == 0) {
         setReadOnly(true); // Enable buttons if everything is fine
         // Show a modal for handling schedule exemption if labId is 0
         setConfirmationModalVisible(true);
@@ -204,7 +208,20 @@ const StudentWorkerView = ({ scannedStudent, scannedItem }: Props) => {
     }
   };
 
-
+  const handleScanResult = (scannedData) => {
+    if (scannedData.type === 'Student') {
+      setSelectedStudent({ id: scannedData.userId, firstName: scannedData.fName, lastName: scannedData.lName });
+    } else if (scannedData.type === 'Item') {
+      setSelectedItem({ id: scannedData.itemId, itemName: scannedData.description, serialNo: scannedData.serialNum });
+    }
+    setScanned(true); // Set the scanned state to true
+    setFormOpen(true); // Open the form modal
+    if (scannedItem) {
+      setActiveTabIndex(1); // Set the active tab to Item form if an item is scanned
+    }
+    setIsScannerVisible(false);
+  };
+  
 
   // Handle student selection from the searcher modal
   const handleStudentSelect = async (student: { userId: string, fName: string, lName: string }) => {
@@ -250,7 +267,7 @@ const StudentWorkerView = ({ scannedStudent, scannedItem }: Props) => {
     }
 
     setSelectedItem({
-      id: item.itemId, 
+      id: item.itemId,
       itemName: item.description,
       serialNo: item.serialNum,
     });
@@ -281,6 +298,11 @@ const StudentWorkerView = ({ scannedStudent, scannedItem }: Props) => {
     }
 
     return true;
+  };
+
+  const openScanner = (type) => {
+    setScanType(type);
+    setIsScannerVisible(true);
   };
 
   // Handle log creation and update
@@ -351,7 +373,6 @@ const StudentWorkerView = ({ scannedStudent, scannedItem }: Props) => {
       console.error('Error saving log:', error);
     }
   };
-
 
   // Handle editing of an entry
   const handleEdit = async (entry: Entry) => {
@@ -554,7 +575,7 @@ const StudentWorkerView = ({ scannedStudent, scannedItem }: Props) => {
             console.log('Requesting camera permission');
             requestCameraPermission(); // Request permission when pressed
           } else {
-            console.log('Scanner pressed');
+            openScanner('student');
           }
         }}
       >
@@ -602,10 +623,9 @@ const StudentWorkerView = ({ scannedStudent, scannedItem }: Props) => {
         style={styles.scannerButton}
         onPress={() => {
           if (!isGranted) {
-            console.log('Requesting camera permission');
             requestCameraPermission(); // Request permission when pressed
           } else {
-            console.log('Scanner pressed');
+            openScanner('item')
           }
         }}
       >
@@ -838,10 +858,10 @@ const StudentWorkerView = ({ scannedStudent, scannedItem }: Props) => {
           ]
         ]}
         tabs={['Student Form', 'Item Form']} // Define the tab titles
-        activeTabIndex={activeTabIndex} 
+        activeTabIndex={activeTabIndex}
         error={error}
         isSearcherOpen={isItemSearcherOpen || isStudentSearcherOpen}
-        hideTab={hideTab} 
+        hideTab={hideTab}
       />
 
 
@@ -884,6 +904,14 @@ const StudentWorkerView = ({ scannedStudent, scannedItem }: Props) => {
         visible={isPasswordModalVisible}
         onClose={handlePasswordSubmit} // Handle the password result
       />
+
+      <BarcodeScannerModal
+        visible={isScannerVisible}
+        onClose={() => setIsScannerVisible(false)}
+        onBarCodeScanned={handleScanResult}
+        scanType={scanType}
+      />
+
 
     </View>
   );
