@@ -113,7 +113,10 @@ const UserManager = () => {
 
   const handleCloseDynamicForm = () => {
     setFormError(null);
+    setFormData(null);
     setDynamicFormVisible(false);
+    setBanFormVisible(false);
+    setBanData(null);
   };
 
   const handleConfirmAction = async () => {
@@ -596,6 +599,11 @@ const UserManager = () => {
         error={formError}
         components={[
           [
+            banData && selectedUser && (
+              <Text key="banUserInfo" style={styles.label}>
+                {`Ban for: ${selectedUser.fName} ${selectedUser.lName} (${zeroPadUserId(selectedUser.userId)})`}
+              </Text>
+            ),
             <Text key="banReasonLabel" style={styles.label}>Ban Reason</Text>,
             <TextInput
               key="reason"
