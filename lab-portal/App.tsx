@@ -29,7 +29,7 @@ import MobileSchedule from './components/Mobile/Schedule';
 import MobileManageLabs from './components/Mobile/ManageLabs'; // Ensure correct import path
 import MobileLabSchedules from './components/Mobile/LabSchedules';
 import MobileChat from './components/Mobile/Chat';
-import MobileScanItem from './components/Mobile/ScanItem';
+import MobileScanItem, { ScanPlaceholder } from './components/Mobile/ScanItem';
 import MobileLogHistory from './components/Mobile/LogHistory';
 import MobileAdmin from './components/Mobile/Admin';
 import MobileProfile from './components/Mobile/Profile';
@@ -147,7 +147,7 @@ const App = () => {
                   <Stack.Screen name="MobileLabManager" component={MobileLabManager} />
                   <Stack.Screen name="LabSchedules" component={MobileLabSchedules} />
                   <Stack.Screen name="Chat" component={Chat} />
-                  <Stack.Screen name="ScanItem" component={MobileScanItem} />
+                  <Stack.Screen name="ScanItem" component={ScanPlaceholder} />
                   <Stack.Screen name="LogHistory" component={MobileLogHistory} />
                   <Stack.Screen name="Admin" component={MobileAdmin} />
                   <Stack.Screen name="Profile" component={MobileProfile} />
