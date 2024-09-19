@@ -208,6 +208,7 @@ const DepartmentManager = ({ navigation }) => {
           style={[styles.input, validationErrors.password ? styles.inputError : null, styles.passwordInput]}
           placeholder="Password"
           secureTextEntry={!formPasswordVisible}
+          maxLength={4}
           value={selectedDepartment?.password || ''}
           onChangeText={(text) => {
             setSelectedDepartment((prev) => prev ? { ...prev, password: text } : { deptId: 0, name: '', password: text });

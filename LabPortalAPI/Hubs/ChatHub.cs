@@ -196,26 +196,26 @@ namespace LabPortal.Hubs
             // After removing inactive users, check all rooms for empty or single occupancy
             var roomGroups = _userRooms.GroupBy(x => x.Value).ToList();
 
-            foreach (var roomGroup in roomGroups)
-            {
-                var roomName = roomGroup.Key;
-                var usersInRoom = roomGroup.Select(x => x.Key).ToList();
+            //foreach (var roomGroup in roomGroups)
+            //{
+            //    var roomName = roomGroup.Key;
+            //    var usersInRoom = roomGroup.Select(x => x.Key).ToList(); This seems to be broken so I'm removing it
 
-                if (usersInRoom.Count == 0)
-                {
-                    // If the room is empty, just delete the room
-                    Console.WriteLine($"Room {roomName} is empty and will be removed.");
-                }
-                else if (usersInRoom.Count == 1)
-                {
-                    // If only one user remains in the room, remove them
-                    var remainingUserConnectionId = usersInRoom.First();
-                    Console.WriteLine($"Room {roomName} has only one user left. Removing user with connectionId {remainingUserConnectionId}.");
+            //    if (usersInRoom.Count == 0)
+            //    {
+            //        // If the room is empty, just delete the room
+            //        Console.WriteLine($"Room {roomName} is empty and will be removed.");
+            //    }
+            //    else if (usersInRoom.Count == 1)
+            //    {
+            //        // If only one user remains in the room, remove them
+            //        var remainingUserConnectionId = usersInRoom.First();
+            //        Console.WriteLine($"Room {roomName} has only one user left. Removing user with connectionId {remainingUserConnectionId}.");
 
-                    // Remove the remaining user from the room
-                    await RemoveUserFromRoom(remainingUserConnectionId, "Your partner disconnected.");
-                }
-            }
+            //        // Remove the remaining user from the room
+            //        await RemoveUserFromRoom(remainingUserConnectionId, "Your partner disconnected.");
+            //    }
+            //}
         }
 
 

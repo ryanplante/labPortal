@@ -108,19 +108,28 @@ class UserService {
         }
     }
 
-    // PUT: /api/Users/UpdatePermission/{id}
+    // PUT: /api/Users/UpdatePermission
     async updatePermission(userId: number, newPermissionLevel: number): Promise<void> {
         try {
             const token = await this.getToken();
-            await axios.put(`${this.baseUrl}/UpdatePermission/${userId}`, newPermissionLevel, {
+
+            // Construct the body as an object matching the UpdatePermissionDto format
+            const body = {
+                UserId: userId,
+                PermissionLevel: newPermissionLevel
+            };
+
+            await axios.put(`${this.baseUrl}/UpdatePermission`, body, {
                 headers: { token: token, 'Content-Type': 'application/json' }
             });
+
             await this.audit('update', `Updated permission level for user with ID: ${userId} to ${newPermissionLevel}`, userId);
         } catch (error) {
             await this.handleError(error, 'updatePermission');
             throw error;
         }
     }
+
 
     // GET: /api/Users/FuzzySearchById/{id}
     async fuzzySearchById(id: number): Promise<User[]> {

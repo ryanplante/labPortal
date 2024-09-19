@@ -63,7 +63,7 @@ export const MobileProfile = () =>{
         // top: 0,
         // bottom: 0,
         // width: 300,
-        backgroundColor: '#e0e0e0',
+        // backgroundColor: '#e0e0e0',
         paddingVertical: 20,
         paddingHorizontal: 10,
         zIndex: 1,

@@ -926,8 +926,8 @@ const LabSchedules = () => {
     // Reset other form fields
     //setTimeIn(new Date());
     //setTimeOut(new Date());
-    handleExemptionTypeChange(4); // Default to 'Working outside of schedule'
-    setVerified(true);
+    //handleExemptionTypeChange(4); // Default to 'Working outside of schedule'
+    setVerified(false);
     setSelectedUser(isDeptHead? undefined : user?.userId); // So monitors can schedule themselves
     setSelectedLab(undefined);
     setFormError(null);
@@ -938,13 +938,21 @@ const LabSchedules = () => {
   const handleCloseForm = () => {
     setIsFormOpen(false);
     clearForm();
+    setSelectedSchedule(null);
   };
 
   const handleAddExemption = () => {
-    setSelectedSchedule(null);
+    if (selectedSchedule) {
+      handleExemptionTypeChange(1); // set the exemption type to calling out
+      setSelectedSchedule(null);
+    }
+    else {
+      handleExemptionTypeChange(4); // set the exemption type to working outside of schedule
+    }
+
     resetDateTimeValues();
     clearForm();
-    handleExemptionTypeChange(4); // set the exemption type to working outside of schedule
+    
     if (!isDeptHead) {
       setVerified(false);
       setSelectedUser(user?.userId);
