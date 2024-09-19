@@ -252,8 +252,8 @@ const UserManager = () => {
       return;
     }
   
-    if (formData.userId.toString().length < 8) {
-      setFormError('User ID must be at least 8 characters long.');
+    if (formData.userId.toString().length > 8) {
+      setFormError('User ID cannot be longer than 8 characters.');
       return;
     }
   
