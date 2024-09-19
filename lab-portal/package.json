@@ -1,6 +1,6 @@
 {
   "name": "lab-portal",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "main": "expo/AppEntry.js",
   "scripts": {
     "start": "SET ENVFILE=.env && expo start",
