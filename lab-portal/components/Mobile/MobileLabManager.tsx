@@ -268,6 +268,7 @@ const MobileLabManager = ({ route, navigation, department: initialDepartment }) 
       }
     }
   };
+  
 
   // Function to open the actions menu for a selected item
   const openActionsMenu = (item) => {
@@ -485,7 +486,9 @@ const MobileLabManager = ({ route, navigation, department: initialDepartment }) 
         <TouchableOpacity
           style={styles.addButton}
           onPress={() => {
-            setSearchModalVisible(true);
+            setEditingUser(null);
+            setIsEditing(false);
+            setEmployeeFormVisible(true);
           }}
         >
           <Text style={styles.addButtonText}>Add Employee</Text>
@@ -504,30 +507,16 @@ const MobileLabManager = ({ route, navigation, department: initialDepartment }) 
         formError={formError}
       />
 
-      {/* Employee Edit Form */}
-      <EditUserModal
-        visible={isEmployeeFormVisible}
-        title={'Update Employee'}
-        onClose={() => {
-          setEmployeeFormVisible(false);
-          setEditingUser(null);
-          setIsEditing(false);
-        }}
-        user={editingUser}
-        onSave={handleCreateOrUpdateUser}
-      />
-
       {/* Employee Add Form */}
       <EmployeeFormModal
-        visible={isEmployeeFormVisible}
-        title={'Add Employee'}
-        onClose={() => {
-          setEditingUser(null);
-          setIsEditing(false);
-        }}
-        onSave={handleCreateOrUpdateUser}
-        user={editingUser}
+        isEmployeeFormVisible={isEmployeeFormVisible}
         isEditing={isEditing}
+        setEmployeeFormVisible={setEmployeeFormVisible}
+        setEditingUser={setEditingUser}
+        setIsEditing={setIsEditing}
+        editingUser={editingUser}
+        handleCreateOrUpdateUser={handleCreateOrUpdateUser}
+        formError={formError}
       />
 
       <FuzzySearchModal
