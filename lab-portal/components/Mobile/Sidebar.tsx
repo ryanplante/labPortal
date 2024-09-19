@@ -59,7 +59,7 @@ const MobileSidebar = ({ onProfilePress }: MobileSidebarProps) => {
         <Text style={styles.menuText}>Profile</Text>
       </TouchableOpacity>
 
-      {(privLvl >= 4) && (
+      {/* {(privLvl >= 4) && (
         <TouchableOpacity style={styles.menuItem} onPress={() => handlePress('MobileLabManager', [4, 5])}>
           <Image source={require('../../assets/labs-icon.png')} style={styles.icon} />
           <Text style={styles.menuText}>Manage Labs</Text>
@@ -71,7 +71,7 @@ const MobileSidebar = ({ onProfilePress }: MobileSidebarProps) => {
           <Image source={require('../../assets/department-icon.png')} style={styles.icon} />
           <Text style={styles.menuText}>Department Manager</Text>
         </TouchableOpacity>
-      )}
+      )} */}
 
       {(privLvl >= 1 && privLvl <= 3) && (
         <TouchableOpacity style={styles.menuItem} onPress={() => handlePress('LabSchedules', [1, 2, 3])}>
@@ -122,7 +122,8 @@ const styles = StyleSheet.create({
   sidebar: {
     width: "100%",
     backgroundColor: '#002147',
-    height: 100,
+    height: 60,
+    paddingTop:10,
     flexDirection: "row",
     justifyContent: 'space-around',
     alignItems: 'center',

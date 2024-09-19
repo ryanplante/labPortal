@@ -13,11 +13,52 @@ import DepartmentHeadView from "../Desktop/Views/FacultyView";
 import AdminDeptView from "./Views/AdminDeptView";
 import AdminLabView from "./Views/AdminLabView";
 import AdminItemsView from "./Views/AdminItemsView";
+import ManageLabs from "../Desktop/ManageLabs";
+import { getUserByToken } from "../../services/loginService";
+import ManageLabsMobile from "./ManageLabs";
+import departmentService from "../../services/departmentService";
 
 const MobileAdmin = () => {
 	const [selectedView, setSelectedView] = useState("Users");
+	const [userDepartment, setUserDepartment] = useState(null)
+
+	const loadUserInfo = async () => {
+		try {
+		  const user = await getUserByToken();
+		//   setIsAdmin(user.privLvl >= 5);
+			console.log(user)
+			const departments = await departmentService.getAllDepartments()
+			const departmentObj = departments.find(dept => dept.deptId === user.userDept);
+			
+
+			console.log(departments)
+			console.log("below departments")
+			setUserDepartment(departmentObj)
+		  // Ensure selectedDepartment is set from initialDepartment or route params
+		//   if (!selectedDepartment) {
+		// 	setSelectedDepartment(initialDepartment || route.params?.department || { deptId: user.userDept });
+		//   }
+	
+		//   if (user.privLvl >= 5) {
+		// 	const fetchedDepartments = await DepartmentService.getAllDepartments();
+		// 	setDepartments(fetchedDepartments);
+	
+		// 	if (!selectedDepartment && initialDepartment) {
+		// 	  setSelectedDepartment(initialDepartment);
+		// 	}
+		//   }
+		} catch (error) {
+		  console.error('Error loading user info:', error);
+		}
+	  };
+
+	  useEffect(() =>{
+		loadUserInfo()
+
+	  }, [])
 
 	const renderView = () => {
+		console.log(userDepartment)
 		switch (selectedView) {
 			case "Users":
 				// console.log("users view");
@@ -27,7 +68,7 @@ const MobileAdmin = () => {
 				return <AdminDeptView />;
 			case "Labs":
 				// console.log("lab view");
-				return <AdminLabView />;
+				return <ManageLabsMobile route={{ params: { department: userDepartment } }} />;
 			case "Items":
 				// console.log("items view");
 				return <AdminItemsView />;
