@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { Picker, View, Text, StyleSheet } from 'react-native';
+
 import LabService from '../services/labsService'; // Service to fetch lab data
 import { getUserByToken } from '../services/loginService'; // To get logged-in user's department
-import { Picker } from '@react-native-picker/picker';
 
 interface Lab {
   labId: number;
@@ -32,7 +32,9 @@ const LabPicker = ({ selectedLabId, onLabChange, readOnly = false }: LabPickerPr
         const response = await LabService.getAllLabs();
         const filteredLabs = response?.$values.filter(lab => 
           (loggedInUser.privLvl === 5 || lab.deptId === departmentId) && lab.labId !== 0
-        );
+      );
+      
+
         setLabs(filteredLabs);
       } catch (error) {
         console.error('Failed to fetch labs:', error);
@@ -45,28 +47,27 @@ const LabPicker = ({ selectedLabId, onLabChange, readOnly = false }: LabPickerPr
     fetchLabs();
   }, []); // Fetch labs when the component mounts
 
-  // Mobile-friendly solution: Use a fallback for the selectedLabId in case it's undefined
-  const selectedLab = selectedLabId || 0; // Default to 0 (or a valid placeholder value) if null
-
   if (loading) {
     return <Text>Loading labs...</Text>; // Display loading state
   }
+
 
   return (
     <View style={styles.container}>
       <Text style={styles.label}>Select Lab:</Text>
       <Picker
-        selectedValue={selectedLab} // The currently selected lab, fallback to 0 if null
+        selectedValue={selectedLabId} // The currently selected lab
         style={styles.picker}
-        onValueChange={(itemValue) => onLabChange(itemValue === 0 ? null : itemValue)}  // Callback when a lab is selected
+        onValueChange={(itemValue) => onLabChange(itemValue === null ? null : itemValue)}  // Callback when a lab is selected
         enabled={!readOnly}
       >
-        <Picker.Item label="Choose Lab" value={0} /> {/* Placeholder with value 0 instead of null */}
+        <Picker.Item label="Choose Lab" value={null} /> {/* Placeholder */}
         {labs.map((lab) => (
           <Picker.Item key={lab.labId} label={`${lab.name} - ${lab.roomNum}`} value={lab.labId} />
         ))}
       </Picker>
     </View>
+
   );
 };
 
@@ -85,4 +86,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default LabPicker;
+export default LabPicker
