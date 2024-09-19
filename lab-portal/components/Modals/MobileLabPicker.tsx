@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Picker, View, Text, StyleSheet } from 'react-native';
-
-import LabService from '../services/labsService'; // Service to fetch lab data
-import { getUserByToken } from '../services/loginService'; // To get logged-in user's department
+import { View, Text, StyleSheet } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
+import LabService from '../../services/labsService'; // Service to fetch lab data
+import { getUserByToken } from '../../services/loginService'; // To get logged-in user's department
 
 interface Lab {
   labId: number;
@@ -17,7 +17,7 @@ interface LabPickerProps {
   readOnly?: boolean; 
 }
 
-const LabPicker = ({ selectedLabId, onLabChange, readOnly = false }: LabPickerProps) => {
+const MobileLabPicker = ({ selectedLabId, onLabChange, readOnly = false }: LabPickerProps) => {
   const [labs, setLabs] = useState<Lab[]>([]); // Holds the labs data
   const [loading, setLoading] = useState(true); // Loading state for fetching labs
 
@@ -50,24 +50,24 @@ const LabPicker = ({ selectedLabId, onLabChange, readOnly = false }: LabPickerPr
   if (loading) {
     return <Text>Loading labs...</Text>; // Display loading state
   }
-
+  
 
   return (
     <View style={styles.container}>
       <Text style={styles.label}>Select Lab:</Text>
       <Picker
-        selectedValue={selectedLabId} // The currently selected lab
+        selectedValue={selectedLabId ?? -1} // The currently selected lab
         style={styles.picker}
         onValueChange={(itemValue) => onLabChange(itemValue === null ? null : itemValue)}  // Callback when a lab is selected
         enabled={!readOnly}
       >
-        <Picker.Item label="Choose Lab" value={null} /> {/* Placeholder */}
+        {/* <Picker.Item label="Choose Lab" value={-1} /> Placeholder */}
         {labs.map((lab) => (
           <Picker.Item key={lab.labId} label={`${lab.name} - ${lab.roomNum}`} value={lab.labId} />
         ))}
       </Picker>
     </View>
-
+    
   );
 };
 
@@ -82,8 +82,9 @@ const styles = StyleSheet.create({
   },
   picker: {
     height: 50,
-    width: '100%',
+    width: 200,
   },
 });
 
-export default LabPicker
+
+export default MobileLabPicker

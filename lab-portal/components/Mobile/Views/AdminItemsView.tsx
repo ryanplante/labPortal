@@ -4,7 +4,7 @@ import ItemService from '../../../services/itemService';
 import LabService from '../../../services/labsService';
 import MobileDynamicForm from '../../Modals/MobileDynamicForm';
 import ConfirmationModal from '../../Modals/ConfirmationModal';
-import LabPicker from '../../LabPicker';
+import MobileLabPicker from '../../Modals/MobileLabPicker';
 import ActionsModal from '../../Modals/ActionsModal'; // Import ActionsModal
 import * as ImagePicker from 'expo-image-picker';
 // import { Picker } from '@react-native-picker/picker';
@@ -334,7 +334,7 @@ const AdminItemsView = () => {
             <Text style={styles.label}>
                 Lab <Text style={[styles.required, !validationErrors.lab && styles.hiddenAsterisk]}>*</Text>
             </Text>
-            <LabPicker
+            <MobileLabPicker
                 selectedLabId={selectedLabId}
                 onLabChange={(labId) => {
                     setSelectedLabId(labId);
@@ -422,7 +422,7 @@ const AdminItemsView = () => {
                     value={query}
                     onChangeText={setQuery}
                 /> */}
-                <LabPicker
+                <MobileLabPicker
                     selectedLabId={filterLabId} // Use filterLabId here for filtering
                     onLabChange={handleLabChange} // Filter the items on lab change
                 />
