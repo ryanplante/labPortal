@@ -97,7 +97,6 @@ const styles = StyleSheet.create({
   mainContent: {
     flex: 1,
     padding: 20,
-    marginLeft: 80, // Default margin when sidebar is not visible
   },
   tigerLogo: {
     position: 'absolute',

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image } from 'react-native';
+import { View, Text, StyleSheet, Image, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 interface LabCardProps {
@@ -22,7 +22,7 @@ const MobileLabCard = ({ labName, roomNumber, schedule, imageSrc }: LabCardProps
       <View style={styles.content}>
         <View style={styles.schedule}>
           {schedule.map((item, index) => (
-            <Text key={index}>{item.day}: {item.hours}</Text>
+            <Text key={index} style={styles.scheduleText}>{item.day}: {item.hours}</Text>
           ))}
         </View>
         <Image source={imageSrc} style={styles.image} />
@@ -31,20 +31,24 @@ const MobileLabCard = ({ labName, roomNumber, schedule, imageSrc }: LabCardProps
   );
 };
 
+const { width } = Dimensions.get('window'); // Get device width
+
 const styles = StyleSheet.create({
   card: {
-    width: 420,
-    height: 290,
+    width: '100%', // Use 100% of the container's width to avoid overflowing
+    maxWidth: 380, // Add a maxWidth to limit the size on larger screens
+    alignSelf: 'center', // Center the card horizontally
+    height: 250, // Adjusted height for mobile screens
     borderColor: '#000000',
     borderWidth: 1,
-    borderRadius: 42,
+    borderRadius: 20, // Reduced border radius
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 4,
     elevation: 4,
     padding: 15,
-    margin: 10,
+    marginVertical: 10, // Adjust margin to be more mobile-friendly
   },
   header: {
     flexDirection: 'row',
@@ -53,7 +57,7 @@ const styles = StyleSheet.create({
   },
   labHeader: {
     fontWeight: 'bold',
-    fontSize: 24,
+    fontSize: 18, // Reduced font size for mobile
     color: 'black',
   },
   content: {
@@ -65,8 +69,13 @@ const styles = StyleSheet.create({
     flex: 1,
     color: 'black',
   },
+  scheduleText: {
+    fontSize: 14, // Adjusted font size for better readability on mobile
+  },
   image: {
-    verticalAlign: 'middle'
+    width: 80, // Adjusted image size for mobile
+    height: 80,
+    borderRadius: 10, // Optional, for rounded image
   },
 });
 
