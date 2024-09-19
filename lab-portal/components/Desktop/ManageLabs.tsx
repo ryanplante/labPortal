@@ -28,7 +28,7 @@ const ManageLabs = ({ route, navigation, department: initialDepartment }) => {
   const [isDeleteModalVisible, setDeleteModalVisible] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
   const [formError, setFormError] = useState(null);
-  const [role, setRole] = useState('');
+  const [role, setRole] = useState('1');
   const [isUserSearcherOpen, setUserSearcherOpen] = useState(false);
 
   // Load user information on component mount

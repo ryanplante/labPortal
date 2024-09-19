@@ -4,7 +4,7 @@ import moment from 'moment-timezone';
 import UserSearcher from '../../Modals/UserSearcher';
 import DynamicForm from '../../Modals/DynamicForm';
 import PlatformSpecificTimePicker from '../../Modals/PlatformSpecificTimePicker';
-import { checkHeartbeat, deleteToken, getUserByToken } from '../../../services/loginService';
+import { deleteToken, getUserByToken } from '../../../services/loginService';
 import ScheduleService from '../../../services/scheduleService';
 import ItemService from '../../../services/itemService';
 import userService, { User } from '../../../services/userService';
@@ -16,7 +16,6 @@ import ItemSearcher from '../../Modals/ItemSearcher';
 import PasswordModal from '../../Modals/PasswordModal';
 import { useCameraPermissionStatus } from '../useCameraPermissionStatus';
 import logService from '../../../services/logService';
-import itemService from '../../../services/itemService';
 import BarcodeScannerModal from '../../Modals/BarCodeScannerModal';
 
 // Types for entry and any other 
@@ -363,7 +362,7 @@ const StudentWorkerView = ({ scannedStudent, scannedItem }: Props) => {
           ? prevEntries.map((entry) => (entry.id === editingEntryId ? newEntry : entry))
           : [...prevEntries, newEntry]
       );
-
+      setSelectedFilter(selectedItem ? 'Items' : 'Students');
       setEditingEntryId(newEntryId);
       resetForm();
       setFormOpen(false);
@@ -481,7 +480,6 @@ const StudentWorkerView = ({ scannedStudent, scannedItem }: Props) => {
     let filteredEntries = entries;
 
     // Filter by selectedTypeFilter (Students or Items)
-    console.log(filteredEntries);
     if (selectedTypeFilter === 'Students') {
       filteredEntries = filteredEntries.filter((entry) => entry.itemDescription === null);
     } else if (selectedTypeFilter === 'Items') {
@@ -1049,6 +1047,10 @@ const styles = StyleSheet.create({
   },
   disabledButton: {
     backgroundColor: '#cccccc',  // Gray out the button when disabled
+  },
+
+  warningIcon: {
+    color: 'red',
   },
 
   scannerButton: {

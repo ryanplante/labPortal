@@ -78,15 +78,9 @@ const ScannerScreen = ({ reset }) => {
   };
 
   useEffect(() => {
-    if (reset) {
-      resetScannedStates();
-    }
-  }, [reset]);
-
-  useEffect(() => {
     resetScannedStates();
     fetchUserPrivilege();
-  }, [reset]);
+  }, []);
 
   useEffect(() => {
     if (permission?.granted) {

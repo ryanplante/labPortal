@@ -101,18 +101,20 @@ const LogsHistory = () => {
                         return { ...log, studentName, monitorName, itemName, labName: lab.name };
                     })
                 );
-
+                console.log(chats);
                 const filteredChatLogs = chats.filter(log =>
-                    moment(log.timestamp).isBetween(startOfDay, endOfDay)
+                    moment.utc(log.timestamp).local().isBetween(startOfDay, endOfDay)
                 );
 
                 const updatedChatLogs = await Promise.all(
                     filteredChatLogs.map(async (log) => {
                         const userName = await userService.getNameById(log.userId);
-                        return { ...log, userName };
+                        // Convert UTC timestamp to local time
+                        const localTimestamp = moment.utc(log.timestamp).local().format('YYYY-MM-DD HH:mm:ss');
+                        return { ...log, userName, timestamp: localTimestamp };
                     })
                 );
-
+                
                 const updatedAuditLogs = await Promise.all(
                     audits.map(async (log) => {
                         const userName = await userService.getNameById(log.userID);
