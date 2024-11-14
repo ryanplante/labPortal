@@ -215,9 +215,9 @@ const LabSchedules = () => {
   // Confirm the deletion and proceed
   const confirmDelete = async () => {
     try {
-      if ((formMode === 'work' || 'school') && selectedSchedule.scheduleId != null) {
+      if ((formMode === 'work' || 'school') && selectedSchedule.scheduleId != undefined) {
         await ScheduleService.deleteSchedule(selectedSchedule.scheduleId);
-      } else if (formMode === 'exemption' && selectedSchedule.scheduleExemptionId != null) {
+      } else if (formMode === 'exemption' && selectedSchedule.scheduleExemptionId != undefined) {
         await ScheduleService.deleteScheduleExemption(selectedSchedule.scheduleExemptionId);
       }
       await fetchSchedules(); // Refresh after deleting
@@ -937,8 +937,8 @@ const LabSchedules = () => {
 
   const handleCloseForm = () => {
     setIsFormOpen(false);
-    clearForm();
-    setSelectedSchedule(null);
+    //clearForm();
+    //setSelectedSchedule(null);
   };
 
   const handleAddExemption = () => {

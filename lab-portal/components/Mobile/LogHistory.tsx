@@ -81,6 +81,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
                   const filteredSummaries = summaries.filter(log =>
                       moment(log.timein).isBetween(startOfDay, endOfDay)
                   );
+                  alert(filteredSummaries);
                   const filteredStudentLogs = filteredSummaries.filter(log => log.itemId === undefined);
                   const filteredItemLogs = filteredSummaries.filter(log => log.itemId !== undefined);
   
@@ -339,7 +340,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
                       <Text style={styles.datePickerLabel}>Filter by Date:</Text>
                       <PlatformSpecificDatePicker
                           dateTime={selectedDate}
-                          onDateTimeChange={(date) => setSelectedDate(date.$d)}
+                          onDateTimeChange={(date) => setSelectedDate(date)}
                       />
                   </View>
               </View>
